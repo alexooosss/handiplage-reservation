@@ -15,7 +15,8 @@ function timeToMinutes(hhmm) {
 
 // Retourne 'past' | 'active' | 'upcoming'
 function getSlotStatus(slot, date) {
-  const now = (date || new Date()).getHours() * 60 + (date || new Date()).getMinutes();
+  const d = date || new Date();
+  const now = d.getHours() * 60 + d.getMinutes();
   const start = timeToMinutes(slot.start);
   const end = timeToMinutes(slot.end);
   if (now >= end)   return 'past';
