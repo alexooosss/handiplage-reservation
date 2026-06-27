@@ -20,6 +20,9 @@
   --border:     #e2e8f0;
   --text:       #1a2340;
   --text-muted: #64748b;
+  --road-bg:     #b0bec5;
+  --building-bg: #78909c;
+  --shower-bg:   #8d6e63;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -130,7 +133,7 @@ header {
 }
 
 .beach-road {
-  background: #b0bec5;
+  background: var(--road-bg);
   height: 32px;
   display: flex;
   align-items: center;
@@ -152,9 +155,10 @@ header {
   align-items: center;
   justify-content: center;
   padding: 12px;
-  padding-right: 90px;
+  padding-right: 90px; /* réserve l'espace pour .beach-building (position:absolute, width:80px) */
 }
 
+/* Dimensions fixes : carte fidèle au plan PDF, interface tablette uniquement */
 .beach-map {
   position: relative;
   width: 600px;
@@ -185,7 +189,7 @@ header {
 .shower-marker {
   position: absolute;
   width: 22px; height: 22px;
-  background: #8d6e63;
+  background: var(--shower-bg);
   border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px;
@@ -273,7 +277,7 @@ header {
   position: absolute;
   right: 0; top: 32px; bottom: 0;
   width: 80px;
-  background: #78909c;
+  background: var(--building-bg);
   display: flex; align-items: center; justify-content: center;
 }
 
