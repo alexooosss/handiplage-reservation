@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1024, initial-scale=1">
+  <title>Handiplage — Staff</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="app-header">
+    <div class="logo">
+      <div class="logo-icon">🏖️</div>
+      <div class="logo-text">
+        <h1>Handiplage</h1>
+        <span>Juan-les-Pins · Antibes</span>
+      </div>
+    </div>
+    <nav class="slots-nav" id="slots-nav">
+      <!-- Injecté par app.js -->
+    </nav>
+    <div class="datetime" id="datetime">
+      <span class="time" id="clock">--:--</span>
+      <span id="date-label"></span>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- Panneau gauche : carte de plage -->
+    <div class="beach-panel" id="beach-panel">
+      <div class="beach-road">
+        <span class="parking-label">Parking</span>
+      </div>
+      <div class="beach-map-container">
+        <div class="beach-map" id="beach-map">
+          <!-- Injecté par map.js -->
+        </div>
+      </div>
+      <div class="beach-sea">
+        <span class="sea-label">Mer</span>
+      </div>
+      <div class="beach-building">
+        <span class="building-label">Accueil</span>
+      </div>
+    </div>
+
+    <!-- Panneau droit : gestion créneau -->
+    <div class="side-panel" id="side-panel">
+      <!-- Injecté par panel.js -->
+    </div>
+
+  </div>
+
+  <!-- MODALE -->
+  <dialog id="app-modal">
+    <!-- Injecté par modal.js -->
+  </dialog>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/slots.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
