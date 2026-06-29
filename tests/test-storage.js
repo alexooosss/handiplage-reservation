@@ -12,7 +12,8 @@ global.localStorage = {
 };
 
 const {
-  getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO
+  getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO,
+  getReservationList, addReservation, removeReservation
 } = require('../js/storage.js');
 
 const DATE = '2026-06-26';
@@ -75,6 +76,49 @@ const SLOT = 2;
 {
   const iso = getTodayISO();
   assert.match(iso, /^\d{4}-\d{2}-\d{2}$/);
+}
+
+// ── Reservation list ──
+
+// getReservationList — vide au départ
+{
+  localStorage.clear();
+  assert.deepStrictEqual(getReservationList(DATE, SLOT), []);
+}
+
+// addReservation — ajoute une entrée
+{
+  addReservation(DATE, SLOT, { nom: 'DUPONT', prenom: 'Marie', accompagnants: 1 });
+  const list = getReservationList(DATE, SLOT);
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].nom, 'DUPONT');
+  assert.strictEqual(list[0].prenom, 'Marie');
+}
+
+// addReservation — deuxième entrée
+{
+  addReservation(DATE, SLOT, { nom: 'MARTIN', prenom: 'André', accompagnants: 0 });
+  assert.strictEqual(getReservationList(DATE, SLOT).length, 2);
+}
+
+// removeReservation — supprime par index
+{
+  removeReservation(DATE, SLOT, 0);
+  const list = getReservationList(DATE, SLOT);
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].nom, 'MARTIN');
+}
+
+// removeReservation — index invalide → no-op sans crash
+{
+  assert.doesNotThrow(() => removeReservation(DATE, SLOT, 99));
+}
+
+// liste indépendante par créneau
+{
+  addReservation(DATE, 3, { nom: 'TEST', prenom: 'Autre', accompagnants: 0 });
+  assert.strictEqual(getReservationList(DATE, SLOT).length, 1);
+  assert.strictEqual(getReservationList(DATE, 3).length, 1);
 }
 
 console.log('✓ storage.js — tous les tests passent');

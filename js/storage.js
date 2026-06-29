@@ -39,6 +39,29 @@ function getTodayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// Retourne la liste des réservations en attente d'attribution d'emplacement
+// Format : [{ nom, prenom, accompagnants }, ...]
+function getReservationList(date, slotId) {
+  const raw = localStorage.getItem(`${_key(date, slotId)}_list`);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+// Ajoute une personne à la liste de réservations d'un créneau
+function addReservation(date, slotId, data) {
+  const list = getReservationList(date, slotId);
+  list.push(data);
+  localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
+}
+
+// Supprime une personne de la liste par son index
+function removeReservation(date, slotId, index) {
+  const list = getReservationList(date, slotId);
+  if (index < 0 || index >= list.length) return;
+  list.splice(index, 1);
+  localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO };
+  module.exports = { getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO, getReservationList, addReservation, removeReservation };
 }
