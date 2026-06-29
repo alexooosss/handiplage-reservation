@@ -335,6 +335,56 @@ header {
 
 .checkin-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(0,212,170,0.45); }
 
+.panel-actions {
+  display: flex;
+  gap: 6px;
+  margin: 8px 12px 4px;
+  flex-shrink: 0;
+}
+
+.add-resa-btn {
+  flex: 1;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border: none; border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 11px; font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.add-resa-btn:hover { filter: brightness(1.1); }
+
+.walkin-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #e65100, var(--orange));
+  color: #fff;
+  border: none; border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 11px; font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.walkin-btn:hover { filter: brightness(1.1); }
+
+.waiting-item {
+  border-left-color: var(--amber) !important;
+}
+
+.btn-assign {
+  background: var(--accent);
+  color: var(--navy);
+  border: none; border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 10px; font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.btn-assign:hover { filter: brightness(1.05); }
+
 .resa-list {
   flex: 1;
   overflow-y: auto;

@@ -1,107 +1,130 @@
 'use strict';
 
-// Rend le panneau droit pour un créneau donné
-// slot : objet SLOTS, reservations : {[spotId]: {...}}
-// onCheckinClick : function(), onItemClick : function(spotId)
-function renderPanel(container, slot, reservations, onCheckinClick, onItemClick) {
-  const { present, waiting, walkin, free, absent } = _categorize(reservations);
-  const urgents = [...present, ...walkin].filter(([, r]) => {
-    const ms = getTimeRemaining(r.checkinTime);
-    return getUrgencyLevel(ms) === 'critical' || getUrgencyLevel(ms) === 'expired';
-  });
-  const normal = [...present, ...walkin].filter(([spotId]) =>
-    !urgents.find(([id]) => id === spotId)
+// container   : #side-panel element
+// slot        : { id, label, start, end } or null
+// reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
+// waitingList : [{ nom, prenom, accompagnants }, ...] — from getReservationList()
+// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onItemClick(spotId) }
+function renderPanel(container, slot, reservations, waitingList, callbacks) {
+  const { present, walkin, absent } = _categorizeSpots(reservations);
+
+  // Sort present+walkin by time remaining ascending (urgent first)
+  const sortByTime = arr => arr.sort(([,a],[,b]) =>
+    getTimeRemaining(a.checkinTime, a.durationMs) - getTimeRemaining(b.checkinTime, b.durationMs)
   );
+  const presentSorted = sortByTime([...present, ...walkin]);
+
+  const presentCount = present.length + walkin.length;
+  const freeCount    = BEACH_CONFIG.spots.filter(s => {
+    const r = reservations[s.id];
+    return !r || r.status === 'free';
+  }).length;
 
   container.innerHTML = `
-    ${_renderHeader(slot, present.length + walkin.length, free.length, walkin.length)}
-    <button class="checkin-btn" id="checkin-btn">✚ Enregistrer une arrivée</button>
+    ${_renderHeader(slot, presentCount, freeCount, walkin.length, waitingList.length)}
+    <div class="panel-actions">
+      <button class="add-resa-btn" id="btn-add-resa">＋ Ajouter réservation</button>
+      <button class="walkin-btn"   id="btn-walkin">↓ Arrivée sans réservation</button>
+    </div>
     <div class="resa-list">
-      ${urgents.length  ? `<div class="resa-section-title">⚠ Départ imminent</div>${urgents.map(([id,r]) => _renderItem(id,r)).join('')}` : ''}
-      ${normal.length   ? `<div class="resa-section-title">Présents</div>${normal.map(([id,r]) => _renderItem(id,r)).join('')}` : ''}
-      ${waiting.length  ? `<div class="resa-section-title">Réservés · pas encore arrivés</div>${waiting.map(([id,r]) => _renderItem(id,r)).join('')}` : ''}
-      ${absent.length   ? `<div class="resa-section-title">Absents</div>${absent.map(([id,r]) => _renderItem(id,r)).join('')}` : ''}
-      ${free.length     ? `<div class="resa-section-title">Places libres</div>${free.map(id => _renderFreeItem(id)).join('')}` : ''}
-      ${(present.length + walkin.length + waiting.length + free.length) === 0
-          ? '<div class="empty-state"><div class="empty-icon">🏖️</div><p>Aucune réservation pour ce créneau</p></div>'
-          : ''}
+      ${waitingList.length ? `
+        <div class="resa-section-title">⏳ En attente d'arrivée (${waitingList.length})</div>
+        ${waitingList.map((r, i) => _renderWaitingItem(r, i)).join('')}
+      ` : ''}
+      ${presentSorted.length ? `
+        <div class="resa-section-title">✓ Présents sur la plage (${presentSorted.length})</div>
+        ${presentSorted.map(([id, r]) => _renderPresentItem(id, r)).join('')}
+      ` : ''}
+      ${absent.length ? `
+        <div class="resa-section-title">✕ Absents</div>
+        ${absent.map(([id, r]) => _renderAbsentItem(id, r)).join('')}
+      ` : ''}
+      ${(waitingList.length + presentSorted.length + absent.length) === 0 ? `
+        <div class="empty-state">
+          <div class="empty-icon">🏖️</div>
+          <p>Aucune réservation pour ce créneau</p>
+        </div>
+      ` : ''}
     </div>
     ${_renderLegend()}
   `;
 
-  container.querySelector('#checkin-btn').addEventListener('click', onCheckinClick);
+  document.getElementById('btn-add-resa').addEventListener('click', callbacks.onAddReservation);
+  document.getElementById('btn-walkin').addEventListener('click', callbacks.onWalkin);
+
+  container.querySelectorAll('.btn-assign[data-index]').forEach(btn => {
+    const idx = parseInt(btn.dataset.index);
+    btn.addEventListener('click', () => callbacks.onAssign(idx, waitingList[idx]));
+  });
+
   container.querySelectorAll('.resa-item[data-spot-id]').forEach(el => {
-    el.addEventListener('click', () => onItemClick(el.dataset.spotId));
+    el.addEventListener('click', () => callbacks.onItemClick(el.dataset.spotId));
   });
 }
 
-function _categorize(reservations) {
-  const present = [], waiting = [], walkin = [], absent = [], free = [];
+function _categorizeSpots(reservations) {
+  const present = [], walkin = [], absent = [];
   BEACH_CONFIG.spots.forEach(spot => {
     const r = reservations[spot.id];
-    if (!r || r.status === 'free') {
-      free.push(spot.id);
-    } else if (r.status === 'present' && r.type === 'reserved') {
-      present.push([spot.id, r]);
-    } else if (r.status === 'present' && r.type === 'walkin') {
-      walkin.push([spot.id, r]);
-    } else if (r.status === 'reserved_waiting') {
-      waiting.push([spot.id, r]);
-    } else if (r.status === 'absent') {
-      absent.push([spot.id, r]);
-    }
+    if (!r || r.status === 'free') return;
+    if (r.status === 'absent') { absent.push([spot.id, r]); return; }
+    if (r.type === 'walkin')   { walkin.push([spot.id, r]); return; }
+    present.push([spot.id, r]);
   });
-  const sortByTime = arr => arr.sort(([,a],[,b]) =>
-    getTimeRemaining(a.checkinTime) - getTimeRemaining(b.checkinTime)
-  );
-  return { present: sortByTime(present), waiting, walkin: sortByTime(walkin), free, absent };
+  return { present, walkin, absent };
 }
 
-function _renderHeader(slot, presentCount, freeCount, walkinCount) {
+function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount) {
   const now = new Date();
   const endMin = slot ? timeToMinutes(slot.end) : 0;
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const remainMin = Math.max(0, endMin - nowMin);
-  const countdownLabel = slot
-    ? `En cours · se termine dans ${remainMin}min`
-    : 'Aucun créneau actif';
+  const remainMin = slot ? Math.max(0, endMin - nowMin) : 0;
+  const subtitle = slot ? `Se termine dans ${remainMin} min` : 'Aucun créneau actif';
 
   return `
     <div class="panel-header">
       <h2>${slot ? slot.label : 'Sélectionner un créneau'}</h2>
-      <div class="slot-countdown">${countdownLabel}</div>
+      <div class="slot-countdown">${subtitle}</div>
       <div class="panel-stats">
-        <div class="stat-chip"><span class="stat-dot" style="background:var(--red)"></span>${presentCount + walkinCount} présents</div>
+        <div class="stat-chip"><span class="stat-dot" style="background:var(--amber)"></span>${waitingCount} en attente</div>
+        <div class="stat-chip"><span class="stat-dot" style="background:var(--red)"></span>${presentCount} présents</div>
         <div class="stat-chip"><span class="stat-dot" style="background:var(--green)"></span>${freeCount} libres</div>
-        <div class="stat-chip"><span class="stat-dot" style="background:var(--orange)"></span>${walkinCount} sans résa</div>
       </div>
     </div>
   `;
 }
 
-function _renderItem(spotId, resa) {
+function _renderWaitingItem(resa, index) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
-  const avatarColor = resa.status === 'walkin' ? 'var(--orange)' : resa.status === 'absent' ? 'var(--purple)' : 'var(--red-dark)';
-  let timerHtml = '';
-  if (resa.checkinTime && (resa.status === 'present' || resa.status === 'walkin')) {
-    const ms = getTimeRemaining(resa.checkinTime);
-    const urgency = getUrgencyLevel(ms);
-    timerHtml = `<div class="resa-timer ${urgency}">${formatCountdown(ms)}</div>`;
-  } else if (resa.status === 'reserved_waiting') {
-    timerHtml = `<div class="resa-timer muted">Pas arrivé·e</div>`;
-  } else if (resa.status === 'absent') {
-    timerHtml = `<div class="resa-timer muted">Absent·e</div>`;
-  }
   const accompLabel = resa.accompagnants === 0 ? 'seul·e'
-    : resa.accompagnants === 1 ? '1 accompagnant'
-    : '2 accompagnants';
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  return `
+    <div class="resa-item waiting-item" data-index="${index}">
+      <div class="resa-avatar" style="background:var(--amber)">${initials}</div>
+      <div class="resa-info">
+        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-meta">${accompLabel}</div>
+      </div>
+      <button class="btn-assign" data-index="${index}">Assigner</button>
+    </div>
+  `;
+}
 
+function _renderPresentItem(spotId, resa) {
+  const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
+  const avatarColor = resa.type === 'walkin' ? 'var(--orange)' : 'var(--red-dark)';
+  const ms = getTimeRemaining(resa.checkinTime, resa.durationMs);
+  const urgency = getUrgencyLevel(ms);
+  const timerHtml = `<div class="resa-timer ${urgency}">${formatCountdown(ms)}</div>`;
+  const accompLabel = resa.accompagnants === 0 ? 'seul·e'
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  const doubleLabel = resa.durationMs && resa.durationMs > 105 * 60 * 1000 ? ' · 2 créneaux' : '';
   return `
     <div class="resa-item" data-state="${resa.status}" data-spot-id="${spotId}">
       <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.prenom} ${resa.nom}</div>
-        <div class="resa-meta">${spotId} · ${accompLabel}</div>
+        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-meta">${spotId} · ${accompLabel}${doubleLabel}</div>
       </div>
       <span class="spot-num">${spotId}</span>
       ${timerHtml}
@@ -109,16 +132,17 @@ function _renderItem(spotId, resa) {
   `;
 }
 
-function _renderFreeItem(spotId) {
+function _renderAbsentItem(spotId, resa) {
+  const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
   return `
-    <div class="resa-item" data-state="free" data-spot-id="${spotId}">
-      <div class="resa-avatar" style="background:var(--green)">○</div>
+    <div class="resa-item" data-state="absent" data-spot-id="${spotId}">
+      <div class="resa-avatar" style="background:var(--purple)">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${spotId}</div>
-        <div class="resa-meta">Disponible</div>
+        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-meta">${spotId} · Absent·e</div>
       </div>
       <span class="spot-num">${spotId}</span>
-      <div class="resa-timer muted">Libre</div>
+      <div class="resa-timer muted">Absent·e</div>
     </div>
   `;
 }
@@ -126,10 +150,10 @@ function _renderFreeItem(spotId) {
 function _renderLegend() {
   return `
     <div class="panel-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>En attente</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Présent (réservé)</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Arrivée libre</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Libre</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Réservé, pas arrivé</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Absent·e</div>
     </div>
   `;
 }
