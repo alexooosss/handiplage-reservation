@@ -416,22 +416,53 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body plan-modal-body">
-      <div class="plan-section">
-        <div class="plan-section-hd">
-          <span class="plan-section-title">👤 Usagers</span>
-          <span class="plan-section-cap" id="cap-normal"></span>
+      <!-- Formulaire d'ajout inline -->
+      <div class="plan-inline-form">
+        <div class="plan-form-row">
+          <div class="plan-form-group">
+            <label>Prénom</label>
+            <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
+          </div>
+          <div class="plan-form-group">
+            <label>Nom</label>
+            <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+          </div>
+          <div class="plan-form-group">
+            <label>Acc.</label>
+            <div class="radio-group radio-sm" id="pf-accomp">
+              <div class="radio-btn selected" data-value="0">0</div>
+              <div class="radio-btn" data-value="1">1</div>
+              <div class="radio-btn" data-value="2">2</div>
+            </div>
+          </div>
+          <div class="plan-form-group">
+            <label>Type</label>
+            <div class="radio-group radio-sm" id="pf-type">
+              <div class="radio-btn selected" data-value="normal">Usager</div>
+              <div class="radio-btn" data-value="groupe">Groupe</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="pf-add" style="align-self:flex-end">＋ Ajouter</button>
         </div>
-        <div id="planning-list-normal"></div>
-        <button class="btn-primary plan-add-btn" id="btn-add-normal">＋ Ajouter un usager</button>
+        <div id="pf-error" style="color:var(--red);font-size:11px;min-height:14px"></div>
       </div>
-      <div class="plan-section-sep"></div>
-      <div class="plan-section">
-        <div class="plan-section-hd">
-          <span class="plan-section-title">👥 Groupes</span>
-          <span class="plan-section-cap" id="cap-groupe"></span>
+      <!-- Listes côte à côte -->
+      <div class="plan-lists">
+        <div class="plan-section">
+          <div class="plan-section-hd">
+            <span class="plan-section-title">👤 Usagers</span>
+            <span class="plan-section-cap" id="cap-normal"></span>
+          </div>
+          <div id="planning-list-normal"></div>
         </div>
-        <div id="planning-list-groupe"></div>
-        <button class="btn-primary plan-add-btn" id="btn-add-groupe">＋ Ajouter un groupe</button>
+        <div class="plan-section-sep"></div>
+        <div class="plan-section">
+          <div class="plan-section-hd">
+            <span class="plan-section-title">👥 Groupes</span>
+            <span class="plan-section-cap" id="cap-groupe"></span>
+          </div>
+          <div id="planning-list-groupe"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -440,38 +471,30 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     </div>
   `;
 
-  function _refreshSection(resaType, listId, capId, addBtnId, capacity) {
+  function _refreshSection(resaType, listId, capId, capacity) {
     const all   = getReservationList(dateISO, slot.id);
     const items = all.map((r, i) => ({ ...r, _idx: i }))
                      .filter(r => resaType === 'normal'
                        ? (!r.resaType || r.resaType === 'normal')
                        : r.resaType === 'groupe');
-    const count  = items.length;
-    const capEl  = document.getElementById(capId);
-    const addBtn = document.getElementById(addBtnId);
-    const listEl = document.getElementById(listId);
-
+    const count = items.length;
+    const capEl = document.getElementById(capId);
     if (capEl) {
       capEl.textContent = `${count} / ${capacity}`;
-      capEl.className   = 'plan-section-cap' + (count >= capacity ? ' full' : count >= capacity * 0.8 ? ' warn' : '');
+      capEl.className = 'plan-section-cap' + (count >= capacity ? ' full' : count >= capacity * 0.8 ? ' warn' : '');
     }
-    if (addBtn) {
-      addBtn.disabled = count >= capacity;
-      addBtn.title    = count >= capacity ? 'Capacité maximale atteinte' : '';
-    }
+    const listEl = document.getElementById(listId);
     if (!listEl) return;
-    if (items.length === 0) {
-      listEl.innerHTML = `<div class="planning-empty">Aucune réservation</div>`;
-      return;
-    }
-    listEl.innerHTML = items.map(r => {
-      const acc = r.accompagnants === 0 ? 'seul·e'
-        : r.accompagnants === 1 ? '1 acc.' : `${r.accompagnants} acc.`;
-      return `<div class="planning-list-item">
-        <span>${r.nom} ${r.prenom} — ${acc}</span>
-        <button class="btn-remove" data-index="${r._idx}">✕</button>
-      </div>`;
-    }).join('');
+    listEl.innerHTML = items.length === 0
+      ? `<div class="planning-empty">Aucune réservation</div>`
+      : items.map(r => {
+          const acc = r.accompagnants === 0 ? 'seul·e'
+            : r.accompagnants === 1 ? '1 acc.' : `${r.accompagnants} acc.`;
+          return `<div class="planning-list-item">
+            <span>${r.nom} ${r.prenom} — ${acc}</span>
+            <button class="btn-remove" data-index="${r._idx}">✕</button>
+          </div>`;
+        }).join('');
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
       btn.addEventListener('click', () => {
         callbacks.onRemove(parseInt(btn.dataset.index));
@@ -481,19 +504,59 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   }
 
   function _refreshAll() {
-    _refreshSection('normal', 'planning-list-normal', 'cap-normal', 'btn-add-normal', CAPACITY_NORMAL);
-    _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', 'btn-add-groupe', CAPACITY_GROUPE);
+    _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL);
+    _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE);
   }
+
+  _bindRadioGroup('pf-accomp');
+  _bindRadioGroup('pf-type');
+
+  document.getElementById('pf-prenom').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
+  });
+
+  document.getElementById('pf-add').addEventListener('click', () => {
+    const prenom = document.getElementById('pf-prenom').value.trim();
+    const nom    = document.getElementById('pf-nom').value.trim().toUpperCase();
+    const accompagnants = parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
+    const resaType      = document.querySelector('#pf-type .radio-btn.selected').dataset.value;
+    const errEl = document.getElementById('pf-error');
+
+    if (!prenom || !nom) {
+      errEl.textContent = 'Prénom et nom sont obligatoires.';
+      return;
+    }
+
+    // Vérifier la capacité
+    const all = getReservationList(dateISO, slot.id);
+    const count = all.filter(r => resaType === 'normal'
+      ? (!r.resaType || r.resaType === 'normal') : r.resaType === 'groupe').length;
+    const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
+    if (count >= limit) {
+      errEl.textContent = `Capacité maximale atteinte (${limit} ${resaType === 'normal' ? 'usagers' : 'groupes'}).`;
+      return;
+    }
+
+    errEl.textContent = '';
+    callbacks.onAdd({ nom, prenom, accompagnants, resaType });
+
+    // Réinitialiser les champs nom/prénom, garder le reste
+    document.getElementById('pf-prenom').value = '';
+    document.getElementById('pf-nom').value    = '';
+    document.getElementById('pf-prenom').focus();
+
+    _refreshAll();
+  });
+
+  // Ajouter au "Enter" sur les champs texte
+  ['pf-prenom', 'pf-nom'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('pf-add').click();
+    });
+  });
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
-
-  document.getElementById('btn-add-normal').addEventListener('click', () => {
-    openAddReservationModal(data => { callbacks.onAdd({ ...data, resaType: 'normal' }); _refreshAll(); });
-  });
-  document.getElementById('btn-add-groupe').addEventListener('click', () => {
-    openAddReservationModal(data => { callbacks.onAdd({ ...data, resaType: 'groupe' }); _refreshAll(); });
-  });
 
   if (callbacks.onGoLive) {
     document.getElementById('btn-go-live').addEventListener('click', () => { closeModal(); callbacks.onGoLive(); });
@@ -501,6 +564,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   _refreshAll();
   _dialog().showModal();
+  document.getElementById('pf-prenom').focus();
 }
 
 if (typeof module !== 'undefined') {
