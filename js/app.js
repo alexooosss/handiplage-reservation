@@ -4,6 +4,8 @@ const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
   let _selectionMode = null; // { index, resa } | null
+  let _currentView = 'carte'; // 'carte' | 'planning'
+  let _planningWeekOffset = 0;
 
   function init() {
     _date = getTodayISO();
@@ -17,6 +19,57 @@ const App = (() => {
     selectSlot(defaultSlot.id);
 
     setInterval(refresh, 30000);
+
+    // Planning tab button
+    const btnPlanning = document.getElementById('btn-planning-tab');
+    if (btnPlanning) {
+      btnPlanning.addEventListener('click', () => {
+        if (_currentView === 'planning') {
+          showView('carte');
+        } else {
+          showView('planning');
+        }
+      });
+    }
+  }
+
+  function showView(view) {
+    _currentView = view;
+    const beachPanel   = document.getElementById('beach-panel');
+    const sidePanel    = document.getElementById('side-panel');
+    const planningView = document.getElementById('planning-view');
+    const btnPlanning  = document.getElementById('btn-planning-tab');
+
+    if (view === 'planning') {
+      if (beachPanel)   beachPanel.style.display   = 'none';
+      if (sidePanel)    sidePanel.style.display     = 'none';
+      if (planningView) planningView.style.display  = 'flex';
+      if (btnPlanning)  btnPlanning.classList.add('active');
+      _renderPlanning();
+    } else {
+      if (beachPanel)   beachPanel.style.display   = '';
+      if (sidePanel)    sidePanel.style.display     = '';
+      if (planningView) planningView.style.display  = 'none';
+      if (btnPlanning)  btnPlanning.classList.remove('active');
+    }
+  }
+
+  function _renderPlanning() {
+    const container = document.getElementById('planning-view');
+    if (!container) return;
+
+    // Wire prev/next callbacks on the container before rendering
+    container._onPrev = () => { _planningWeekOffset--; _renderPlanning(); };
+    container._onNext = () => { _planningWeekOffset++; _renderPlanning(); };
+
+    renderPlanning(container, _planningWeekOffset, (dateISO, slot) => {
+      const isToday = dateISO === _date;
+      openSlotPlanningModal(dateISO, slot, {
+        onAdd:    data => { addReservation(dateISO, slot.id, data); _renderPlanning(); },
+        onRemove: idx  => { removeReservation(dateISO, slot.id, idx); _renderPlanning(); },
+        onGoLive: isToday ? () => { showView('carte'); selectSlot(slot.id); } : null,
+      });
+    });
   }
 
   function selectSlot(slotId) {
@@ -245,7 +298,7 @@ const App = (() => {
       `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
-  return { init, selectSlot, refresh };
+  return { init, selectSlot, refresh, showView };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

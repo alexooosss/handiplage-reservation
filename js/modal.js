@@ -400,6 +400,82 @@ function _bindRadioGroup(groupId) {
   });
 }
 
+// ── Modale Planning : liste des réservations d'un créneau pour une date ──
+// callbacks : { onAdd, onRemove(index), onGoLive } (onGoLive=null si pas aujourd'hui)
+function openSlotPlanningModal(dateISO, slot, callbacks) {
+  // Format date label: "Lundi 23 juin"
+  const d = new Date(dateISO + 'T00:00:00');
+  const dateLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const titleLabel = `${slot.label} · ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}`;
+
+  const goLiveBtn = callbacks.onGoLive
+    ? `<button class="btn-ghost" id="btn-go-live">&#9654; Vue live</button>`
+    : '';
+
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>${titleLabel}</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="planning-list"></div>
+    </div>
+    <div class="modal-footer">
+      ${goLiveBtn}
+      <button class="btn-secondary" id="modal-cancel">Fermer</button>
+      <button class="btn-primary"   id="btn-plan-add">＋ Ajouter</button>
+    </div>
+  `;
+
+  function _refreshPlanningList() {
+    const list = getReservationList(dateISO, slot.id);
+    const listEl = document.getElementById('planning-list');
+    if (!listEl) return;
+    if (list.length === 0) {
+      listEl.innerHTML = `<div class="planning-empty">Aucune réservation</div>`;
+      return;
+    }
+    listEl.innerHTML = list.map((r, i) => {
+      const accompStr = r.accompagnants === 0 ? 'seul·e'
+        : r.accompagnants === 1 ? '1 accompagnant' : `${r.accompagnants} accompagnants`;
+      return `
+        <div class="planning-list-item">
+          <span>${r.nom} ${r.prenom} — ${accompStr}</span>
+          <button class="btn-remove" data-index="${i}">✕</button>
+        </div>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('.btn-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index);
+        callbacks.onRemove(idx);
+        _refreshPlanningList();
+      });
+    });
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+  document.getElementById('btn-plan-add').addEventListener('click', () => {
+    openAddReservationModal(data => {
+      callbacks.onAdd(data);
+      _refreshPlanningList();
+    });
+  });
+
+  if (callbacks.onGoLive) {
+    document.getElementById('btn-go-live').addEventListener('click', () => {
+      closeModal();
+      callbacks.onGoLive();
+    });
+  }
+
+  _refreshPlanningList();
+  _dialog().showModal();
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, closeModal };
 }
