@@ -62,6 +62,15 @@ function removeReservation(date, slotId, index) {
   localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
 }
 
+// Met à jour le statut d'une entrée de la liste d'attente
+// status : 'waiting' | 'pas_venu' | 'annule'
+function updateReservationStatus(date, slotId, index, status) {
+  const list = getReservationList(date, slotId);
+  if (index < 0 || index >= list.length) return;
+  list[index].status = status;
+  localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO, getReservationList, addReservation, removeReservation };
+  module.exports = { getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO, getReservationList, addReservation, removeReservation, updateReservationStatus };
 }

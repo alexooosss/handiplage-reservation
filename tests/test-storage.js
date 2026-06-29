@@ -13,7 +13,7 @@ global.localStorage = {
 
 const {
   getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO,
-  getReservationList, addReservation, removeReservation
+  getReservationList, addReservation, removeReservation, updateReservationStatus
 } = require('../js/storage.js');
 
 const DATE = '2026-06-26';
@@ -119,6 +119,23 @@ const SLOT = 2;
   addReservation(DATE, 3, { nom: 'TEST', prenom: 'Autre', accompagnants: 0 });
   assert.strictEqual(getReservationList(DATE, SLOT).length, 1);
   assert.strictEqual(getReservationList(DATE, 3).length, 1);
+}
+
+// updateReservationStatus
+{
+  localStorage.clear();
+  addReservation(DATE, SLOT, { nom: 'BLANC', prenom: 'Jean', accompagnants: 0 });
+  updateReservationStatus(DATE, SLOT, 0, 'pas_venu');
+  const list = getReservationList(DATE, SLOT);
+  assert.strictEqual(list[0].status, 'pas_venu');
+  assert.strictEqual(list[0].nom, 'BLANC'); // autres champs préservés
+}
+{
+  updateReservationStatus(DATE, SLOT, 0, 'annule');
+  assert.strictEqual(getReservationList(DATE, SLOT)[0].status, 'annule');
+}
+{
+  assert.doesNotThrow(() => updateReservationStatus(DATE, SLOT, 99, 'pas_venu'));
 }
 
 console.log('✓ storage.js — tous les tests passent');
