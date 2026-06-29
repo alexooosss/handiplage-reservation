@@ -65,7 +65,12 @@ const App = (() => {
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
       onItemClick:      spotId => _onSpotClick(spotId, reservations, freeSpots),
       onDepartedClick:  spotId => openDepartedModal(spotId, reservations[spotId], _buildProfileHistory(reservations[spotId])),
-      onWaitingClick:   index  => openWaitingDetailModal(waitingList[index], _buildProfileHistory(waitingList[index])),
+      onWaitingClick:   index  => openWaitingDetailModal(waitingList[index], _buildProfileHistory(waitingList[index]), {
+        onUpdateAccompagnants: n => {
+          updateReservationField(_date, _selectedSlotId, index, 'accompagnants', n);
+          refresh();
+        },
+      }),
       onPasVenu:        index => { updateReservationStatus(_date, _selectedSlotId, index, 'pas_venu'); refresh(); },
       onAnnule:         index => { updateReservationStatus(_date, _selectedSlotId, index, 'annule');   refresh(); },
     });
@@ -92,6 +97,10 @@ const App = (() => {
         },
         onAbsent: id => {
           updateStatus(_date, _selectedSlotId, id, 'absent');
+          refresh();
+        },
+        onUpdateAccompagnants: n => {
+          updateSpotField(_date, _selectedSlotId, spotId, 'accompagnants', n);
           refresh();
         },
       }, _buildProfileHistory(resa));

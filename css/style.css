@@ -591,6 +591,9 @@ dialog::backdrop { background: rgba(10,22,40,0.7); }
 }
 
 .detail-row:last-child { border-bottom: none; }
+.detail-row-editable { cursor: pointer; }
+.detail-row-editable:hover { background: rgba(0,212,170,0.06); border-radius: 6px; }
+.edit-hint { font-size: 10px; opacity: 0.5; }
 .detail-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 .detail-value { font-size: 13px; font-weight: 700; color: var(--text); }
 .detail-timer { font-size: 22px; font-weight: 900; color: var(--red); font-variant-numeric: tabular-nums; }

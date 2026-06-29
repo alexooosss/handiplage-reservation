@@ -184,6 +184,34 @@ function openCheckinModal(freeSpots, preselectedSpotId, onConfirm) {
   document.getElementById('f-prenom').focus();
 }
 
+// Édition inline du nombre d'accompagnants dans n'importe quelle modale
+function _inlineEditAccompagnants(rowId, current, onSave) {
+  const row = document.getElementById(rowId);
+  row.innerHTML = `
+    <span class="detail-label">Accompagnants</span>
+    <span style="display:flex;gap:6px;align-items:center">
+      <div class="radio-group" id="f-accomp-inline">
+        <div class="radio-btn ${current===0?'selected':''}" data-value="0">0</div>
+        <div class="radio-btn ${current===1?'selected':''}" data-value="1">1</div>
+        <div class="radio-btn ${current===2?'selected':''}" data-value="2">2</div>
+      </div>
+      <button class="btn-primary" id="btn-save-accomp" style="padding:6px 12px;font-size:12px">✓</button>
+      <button class="btn-secondary" id="btn-cancel-accomp" style="padding:6px 10px;font-size:12px">✕</button>
+    </span>
+  `;
+  _bindRadioGroup('f-accomp-inline');
+  document.getElementById('btn-save-accomp').addEventListener('click', e => {
+    e.stopPropagation();
+    const newVal = parseInt(document.querySelector('#f-accomp-inline .radio-btn.selected').dataset.value);
+    closeModal();
+    onSave(newVal);
+  });
+  document.getElementById('btn-cancel-accomp').addEventListener('click', e => {
+    e.stopPropagation();
+    closeModal();
+  });
+}
+
 // Affiche l'historique du jour dans le corps de la modale au clic sur "Voir profil"
 function _bindProfilBtn(bodyId, btnId, history) {
   const btn = document.getElementById(btnId);
@@ -242,7 +270,7 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
       <div class="spot-detail">
         <div class="detail-row"><span class="detail-label">Emplacement</span><span class="detail-value">${spotId}</span></div>
         <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
-        <div class="detail-row"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel}</span></div>
+        <div class="detail-row detail-row-editable" id="accomp-row" title="Cliquer pour modifier"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel} <span class="edit-hint">✏️</span></span></div>
         <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value">${resa.type === 'walkin' ? 'Sans réservation' : 'Avec réservation'}${doubleLabel}</span></div>
         ${timerHtml}
       </div>
@@ -257,6 +285,11 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   _bindProfilBtn('spot-detail-body', 'btn-profil', history || []);
+  if (callbacks.onUpdateAccompagnants) {
+    document.getElementById('accomp-row').addEventListener('click', () =>
+      _inlineEditAccompagnants('accomp-row', resa.accompagnants, callbacks.onUpdateAccompagnants)
+    );
+  }
 
   if (resa.status === 'reserved_waiting') {
     document.getElementById('btn-checkin').addEventListener('click', () => { closeModal(); callbacks.onCheckin && callbacks.onCheckin(spotId); });
@@ -320,7 +353,9 @@ function openDepartedModal(spotId, resa, history) {
 }
 
 // ── Modale 6 : Détail d'une personne en liste d'attente ──
-function openWaitingDetailModal(resa, history) {
+// callbacks : { onUpdateAccompagnants }
+function openWaitingDetailModal(resa, history, callbacks) {
+  callbacks = callbacks || {};
   const accompLabel = resa.accompagnants === 0 ? 'Seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
   const statusLabel = resa.status === 'pas_venu' ? 'Pas venu·e'
@@ -334,7 +369,7 @@ function openWaitingDetailModal(resa, history) {
     <div class="modal-body" id="waiting-detail-body">
       <div class="spot-detail">
         <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
-        <div class="detail-row"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel}</span></div>
+        <div class="detail-row detail-row-editable" id="accomp-row" title="Cliquer pour modifier"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel} <span class="edit-hint">✏️</span></span></div>
         <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusLabel}</span></div>
       </div>
     </div>
@@ -347,6 +382,11 @@ function openWaitingDetailModal(resa, history) {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   _bindProfilBtn('waiting-detail-body', 'btn-profil', history || []);
+  if (callbacks.onUpdateAccompagnants) {
+    document.getElementById('accomp-row').addEventListener('click', () =>
+      _inlineEditAccompagnants('accomp-row', resa.accompagnants, callbacks.onUpdateAccompagnants)
+    );
+  }
 
   _dialog().showModal();
 }

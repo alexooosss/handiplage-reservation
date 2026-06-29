@@ -72,6 +72,22 @@ function updateReservationStatus(date, slotId, index, status) {
   localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
 }
 
+// Met à jour un champ d'un emplacement assigné
+function updateSpotField(date, slotId, spotId, field, value) {
+  const resas = getReservations(date, slotId);
+  if (!resas[spotId]) return;
+  resas[spotId][field] = value;
+  localStorage.setItem(_key(date, slotId), JSON.stringify(resas));
+}
+
+// Met à jour un champ d'une entrée de liste d'attente
+function updateReservationField(date, slotId, index, field, value) {
+  const list = getReservationList(date, slotId);
+  if (index < 0 || index >= list.length) return;
+  list[index][field] = value;
+  localStorage.setItem(`${_key(date, slotId)}_list`, JSON.stringify(list));
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { getReservations, saveCheckin, updateStatus, clearSlot, getTodayISO, getReservationList, addReservation, removeReservation, updateReservationStatus };
+  module.exports = { getReservations, saveCheckin, updateStatus, updateSpotField, updateReservationField, clearSlot, getTodayISO, getReservationList, addReservation, removeReservation, updateReservationStatus };
 }
