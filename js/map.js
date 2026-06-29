@@ -43,7 +43,7 @@ function renderMapStatic(container) {
 
 // Rend ou met à jour tous les spots selon l'état des réservations
 // reservations : { [spotId]: { nom, prenom, status, checkinTime, ... } }
-function renderMapSpots(container, reservations, onSpotClick) {
+function renderMapSpots(container, reservations, onSpotClick, selectionMode) {
   BEACH_CONFIG.spots.forEach(spot => {
     let el = container.querySelector(`[data-spot-id="${spot.id}"]`);
     const resa = reservations[spot.id];
@@ -64,6 +64,7 @@ function renderMapSpots(container, reservations, onSpotClick) {
 
     // Mise à jour de l'état
     el.dataset.state = state;
+    el.dataset.selectable = (selectionMode && state === 'free') ? 'true' : 'false';
     el.title = resa ? `${resa.prenom} ${resa.nom}` : spot.label;
 
     // Contenu (initiales ou numéro)

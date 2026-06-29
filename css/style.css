@@ -601,3 +601,45 @@ dialog::backdrop { background: rgba(10,22,40,0.7); }
 .resa-list::-webkit-scrollbar { width: 4px; }
 .resa-list::-webkit-scrollbar-track { background: transparent; }
 .resa-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Mode sélection d'emplacement ── */
+.selection-banner {
+  background: linear-gradient(135deg, var(--accent), #00b090);
+  color: var(--navy);
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+.selection-banner .banner-text { flex: 1; }
+
+.selection-banner .btn-cancel-selection {
+  background: rgba(0,0,0,0.15);
+  color: var(--navy);
+  border: none; border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px; font-weight: 800;
+  cursor: pointer;
+}
+
+.spot[data-selectable="true"] {
+  animation: pulse-selectable 1s ease-in-out infinite;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 0 3px var(--accent), 0 3px 10px rgba(0,0,0,0.22) !important;
+  cursor: crosshair !important;
+}
+
+@keyframes pulse-selectable {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

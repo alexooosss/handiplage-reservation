@@ -3,6 +3,7 @@
 const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
+  let _selectionMode = null; // { index, resa } | null
 
   function init() {
     _date = getTodayISO();
@@ -37,7 +38,26 @@ const App = (() => {
       .filter(s => !reservations[s.id] || reservations[s.id].status === 'free')
       .map(s => s.id);
 
-    renderMapSpots(mapEl, reservations, spotId => _onSpotClick(spotId, reservations, freeSpots));
+    const mapHandler = _selectionMode
+      ? spotId => _doAssignSpot(spotId, reservations, freeSpots)
+      : spotId => _onSpotClick(spotId, reservations, freeSpots);
+    renderMapSpots(mapEl, reservations, mapHandler, !!_selectionMode);
+
+    // Bandeau de sélection
+    const banner = document.getElementById('selection-banner');
+    if (_selectionMode) {
+      banner.style.display = 'flex';
+      banner.innerHTML = `
+        <span class="banner-text">👆 Cliquez sur un emplacement libre pour <strong>${_selectionMode.resa.nom} ${_selectionMode.resa.prenom}</strong></span>
+        <button class="btn-cancel-selection" id="btn-cancel-sel">✕ Annuler</button>
+      `;
+      document.getElementById('btn-cancel-sel').addEventListener('click', () => {
+        _selectionMode = null;
+        refresh();
+      });
+    } else {
+      banner.style.display = 'none';
+    }
 
     renderPanel(panelEl, slot, reservations, waitingList, {
       onAddReservation: () => _openAddReservation(),
@@ -94,40 +114,46 @@ const App = (() => {
 
   // ── Assigner un emplacement à une personne de la liste d'attente ──
   function _openAssign(index, resa, freeSpots) {
-    openAssignSpotModal(resa, freeSpots, spotId => {
-      const isDouble = _detectDoubleSlot(resa.nom, resa.prenom);
-      const durationMs = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
-      const checkinTime = Date.now();
+    _selectionMode = { index, resa };
+    refresh();
+  }
 
-      const checkinData = {
-        nom: resa.nom,
-        prenom: resa.prenom,
-        accompagnants: resa.accompagnants,
-        type: 'reserved',
-        checkinTime,
-        durationMs,
-        status: 'present',
-      };
+  function _doAssignSpot(spotId, reservations, freeSpots) {
+    const resa = reservations[spotId];
+    // Ignorer si le spot n'est pas libre
+    if (resa && resa.status !== 'free' && resa.status !== 'departed') return;
 
-      // Sauvegarder dans le créneau courant
-      saveCheckin(_date, _selectedSlotId, spotId, checkinData);
-      removeReservation(_date, _selectedSlotId, index);
+    const { index, resa: waitingResa } = _selectionMode;
+    _selectionMode = null;
 
-      if (isDouble) {
-        const nextSlotId = _selectedSlotId + 1;
-        // Sauvegarder aussi dans le créneau suivant (même emplacement, même timer)
-        saveCheckin(_date, nextSlotId, spotId, { ...checkinData });
-        // Retirer de la liste d'attente du créneau suivant
-        const nextList = getReservationList(_date, nextSlotId);
-        const nextIdx = nextList.findIndex(r =>
-          r.nom.toUpperCase() === resa.nom.toUpperCase() &&
-          r.prenom.toUpperCase() === resa.prenom.toUpperCase()
-        );
-        if (nextIdx !== -1) removeReservation(_date, nextSlotId, nextIdx);
-      }
+    const isDouble   = _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
+    const durationMs = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
+    const checkinTime = Date.now();
+    const checkinData = {
+      nom: waitingResa.nom,
+      prenom: waitingResa.prenom,
+      accompagnants: waitingResa.accompagnants,
+      type: 'reserved',
+      checkinTime,
+      durationMs,
+      status: 'present',
+    };
 
-      refresh();
-    });
+    saveCheckin(_date, _selectedSlotId, spotId, checkinData);
+    removeReservation(_date, _selectedSlotId, index);
+
+    if (isDouble) {
+      const nextSlotId = _selectedSlotId + 1;
+      saveCheckin(_date, nextSlotId, spotId, { ...checkinData });
+      const nextList = getReservationList(_date, nextSlotId);
+      const nextIdx = nextList.findIndex(r =>
+        r.nom.toUpperCase()    === waitingResa.nom.toUpperCase() &&
+        r.prenom.toUpperCase() === waitingResa.prenom.toUpperCase()
+      );
+      if (nextIdx !== -1) removeReservation(_date, nextSlotId, nextIdx);
+    }
+
+    refresh();
   }
 
   // Retourne true si la même personne (NOM+Prénom) est dans la liste du créneau suivant
