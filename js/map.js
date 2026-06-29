@@ -17,6 +17,11 @@ function renderMapStatic(container) {
     const el = document.createElement('div');
     el.className = 'tapis-v';
     el.style.left = `${t.x}px`;
+    if (t.top !== undefined) {
+      el.style.top    = `${t.top}px`;
+      el.style.bottom = 'auto';
+      el.style.height = `${t.height}px`;
+    }
     container.appendChild(el);
   });
 
@@ -42,7 +47,7 @@ function renderMapSpots(container, reservations, onSpotClick) {
   BEACH_CONFIG.spots.forEach(spot => {
     let el = container.querySelector(`[data-spot-id="${spot.id}"]`);
     const resa = reservations[spot.id];
-    const state = resa ? resa.status : 'free';
+    const state = (resa && resa.status !== 'departed') ? resa.status : 'free';
 
     if (!el) {
       // Création initiale

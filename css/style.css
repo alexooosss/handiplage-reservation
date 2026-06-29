@@ -162,7 +162,7 @@ header {
 .beach-map {
   position: relative;
   width: 780px;
-  height: 240px;
+  height: 260px;
   flex-shrink: 0;
 }
 
