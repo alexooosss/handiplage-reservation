@@ -44,6 +44,10 @@ function renderMapStatic(container) {
 // Rend ou met à jour tous les spots selon l'état des réservations
 // reservations : { [spotId]: { nom, prenom, status, checkinTime, ... } }
 function renderMapSpots(container, reservations, onSpotClick, selectionMode) {
+  // Stocker le handler courant sur le container pour que les listeners existants
+  // le récupèrent toujours à jour (les éléments ne sont créés qu'une fois)
+  container._spotClickHandler = onSpotClick;
+
   BEACH_CONFIG.spots.forEach(spot => {
     let el = container.querySelector(`[data-spot-id="${spot.id}"]`);
     const resa = reservations[spot.id];
@@ -58,7 +62,7 @@ function renderMapSpots(container, reservations, onSpotClick, selectionMode) {
       el.style.top  = `${spot.y - BEACH_CONFIG.spotSize / 2}px`;
       el.style.width  = `${BEACH_CONFIG.spotSize}px`;
       el.style.height = `${BEACH_CONFIG.spotSize}px`;
-      el.addEventListener('click', () => onSpotClick(spot.id));
+      el.addEventListener('click', () => container._spotClickHandler(spot.id));
       container.appendChild(el);
     }
 
