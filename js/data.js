@@ -85,6 +85,10 @@ const BEACH_CONFIG = {
   showers:   [],
 };
 
+// Capacités maximales par créneau dans le planning
+const CAPACITY_NORMAL = 25; // usagers individuels
+const CAPACITY_GROUPE = 10; // groupes
+
 if (typeof module !== 'undefined') {
-  module.exports = { BEACH_CONFIG };
+  module.exports = { BEACH_CONFIG, CAPACITY_NORMAL, CAPACITY_GROUPE };
 }

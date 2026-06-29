@@ -95,19 +95,30 @@ function renderPlanning(container, weekOffset, onCellClick) {
         return nowMinutes >= slotEndParts[0] * 60 + slotEndParts[1];
       })());
 
-      const list  = getReservationList(iso, slot.id);
-      const count = list.length;
+      const list   = getReservationList(iso, slot.id);
+      const normal = list.filter(r => !r.resaType || r.resaType === 'normal').length;
+      const groupe = list.filter(r => r.resaType === 'groupe').length;
 
       let classes = 'planning-cell';
       if (isToday) classes += ' today-col';
       if (isPast)  classes += ' past';
 
-      const countClass = count > 0 ? 'planning-cell-count has-resas' : 'planning-cell-count';
+      const nCls = normal >= CAPACITY_NORMAL ? 'phalf-count full'
+                 : normal >= CAPACITY_NORMAL * 0.8 ? 'phalf-count warn' : 'phalf-count';
+      const gCls = groupe >= CAPACITY_GROUPE ? 'phalf-count full'
+                 : groupe >= CAPACITY_GROUPE * 0.8 ? 'phalf-count warn' : 'phalf-count';
 
       gridHtml += `
         <div class="${classes}" data-date="${iso}" data-slot-id="${slot.id}">
-          <span class="${countClass}">${count}</span>
-          <span class="planning-cell-sub">rés.</span>
+          <div class="phalf">
+            <span class="${nCls}">${normal}/${CAPACITY_NORMAL}</span>
+            <span class="phalf-label">Usagers</span>
+          </div>
+          <div class="phalf-div"></div>
+          <div class="phalf">
+            <span class="${gCls}">${groupe}/${CAPACITY_GROUPE}</span>
+            <span class="phalf-label">Groupes</span>
+          </div>
         </div>
       `;
     });

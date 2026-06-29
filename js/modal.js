@@ -403,76 +403,103 @@ function _bindRadioGroup(groupId) {
 // ── Modale Planning : liste des réservations d'un créneau pour une date ──
 // callbacks : { onAdd, onRemove(index), onGoLive } (onGoLive=null si pas aujourd'hui)
 function openSlotPlanningModal(dateISO, slot, callbacks) {
-  // Format date label: "Lundi 23 juin"
   const d = new Date(dateISO + 'T00:00:00');
   const dateLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const titleLabel = `${slot.label} · ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}`;
 
   const goLiveBtn = callbacks.onGoLive
-    ? `<button class="btn-ghost" id="btn-go-live">&#9654; Vue live</button>`
-    : '';
+    ? `<button class="btn-ghost" id="btn-go-live">&#9654; Vue live</button>` : '';
 
   _dialog().innerHTML = `
     <div class="modal-header">
       <h3>${titleLabel}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
-    <div class="modal-body">
-      <div id="planning-list"></div>
+    <div class="modal-body plan-modal-body">
+      <div class="plan-section">
+        <div class="plan-section-hd">
+          <span class="plan-section-title">👤 Usagers</span>
+          <span class="plan-section-cap" id="cap-normal"></span>
+        </div>
+        <div id="planning-list-normal"></div>
+        <button class="btn-primary plan-add-btn" id="btn-add-normal">＋ Ajouter un usager</button>
+      </div>
+      <div class="plan-section-sep"></div>
+      <div class="plan-section">
+        <div class="plan-section-hd">
+          <span class="plan-section-title">👥 Groupes</span>
+          <span class="plan-section-cap" id="cap-groupe"></span>
+        </div>
+        <div id="planning-list-groupe"></div>
+        <button class="btn-primary plan-add-btn" id="btn-add-groupe">＋ Ajouter un groupe</button>
+      </div>
     </div>
     <div class="modal-footer">
       ${goLiveBtn}
       <button class="btn-secondary" id="modal-cancel">Fermer</button>
-      <button class="btn-primary"   id="btn-plan-add">＋ Ajouter</button>
     </div>
   `;
 
-  function _refreshPlanningList() {
-    const list = getReservationList(dateISO, slot.id);
-    const listEl = document.getElementById('planning-list');
+  function _refreshSection(resaType, listId, capId, addBtnId, capacity) {
+    const all   = getReservationList(dateISO, slot.id);
+    const items = all.map((r, i) => ({ ...r, _idx: i }))
+                     .filter(r => resaType === 'normal'
+                       ? (!r.resaType || r.resaType === 'normal')
+                       : r.resaType === 'groupe');
+    const count  = items.length;
+    const capEl  = document.getElementById(capId);
+    const addBtn = document.getElementById(addBtnId);
+    const listEl = document.getElementById(listId);
+
+    if (capEl) {
+      capEl.textContent = `${count} / ${capacity}`;
+      capEl.className   = 'plan-section-cap' + (count >= capacity ? ' full' : count >= capacity * 0.8 ? ' warn' : '');
+    }
+    if (addBtn) {
+      addBtn.disabled = count >= capacity;
+      addBtn.title    = count >= capacity ? 'Capacité maximale atteinte' : '';
+    }
     if (!listEl) return;
-    if (list.length === 0) {
+    if (items.length === 0) {
       listEl.innerHTML = `<div class="planning-empty">Aucune réservation</div>`;
       return;
     }
-    listEl.innerHTML = list.map((r, i) => {
-      const accompStr = r.accompagnants === 0 ? 'seul·e'
-        : r.accompagnants === 1 ? '1 accompagnant' : `${r.accompagnants} accompagnants`;
-      return `
-        <div class="planning-list-item">
-          <span>${r.nom} ${r.prenom} — ${accompStr}</span>
-          <button class="btn-remove" data-index="${i}">✕</button>
-        </div>
-      `;
+    listEl.innerHTML = items.map(r => {
+      const acc = r.accompagnants === 0 ? 'seul·e'
+        : r.accompagnants === 1 ? '1 acc.' : `${r.accompagnants} acc.`;
+      return `<div class="planning-list-item">
+        <span>${r.nom} ${r.prenom} — ${acc}</span>
+        <button class="btn-remove" data-index="${r._idx}">✕</button>
+      </div>`;
     }).join('');
-
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.index);
-        callbacks.onRemove(idx);
-        _refreshPlanningList();
+        callbacks.onRemove(parseInt(btn.dataset.index));
+        _refreshAll();
       });
     });
+  }
+
+  function _refreshAll() {
+    _refreshSection('normal', 'planning-list-normal', 'cap-normal', 'btn-add-normal', CAPACITY_NORMAL);
+    _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', 'btn-add-groupe', CAPACITY_GROUPE);
   }
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
 
-  document.getElementById('btn-plan-add').addEventListener('click', () => {
-    openAddReservationModal(data => {
-      callbacks.onAdd(data);
-      _refreshPlanningList();
-    });
+  document.getElementById('btn-add-normal').addEventListener('click', () => {
+    openAddReservationModal(data => { callbacks.onAdd({ ...data, resaType: 'normal' }); _refreshAll(); });
+  });
+  document.getElementById('btn-add-groupe').addEventListener('click', () => {
+    openAddReservationModal(data => { callbacks.onAdd({ ...data, resaType: 'groupe' }); _refreshAll(); });
   });
 
   if (callbacks.onGoLive) {
-    document.getElementById('btn-go-live').addEventListener('click', () => {
-      closeModal();
-      callbacks.onGoLive();
-    });
+    document.getElementById('btn-go-live').addEventListener('click', () => { closeModal(); callbacks.onGoLive(); });
   }
 
-  _refreshPlanningList();
+  _refreshAll();
   _dialog().showModal();
 }
 
