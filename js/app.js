@@ -44,6 +44,8 @@ const App = (() => {
       onWalkin:         () => _openWalkin(freeSpots),
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
       onItemClick:      spotId => _onSpotClick(spotId, reservations, freeSpots),
+      onPasVenu:        index => { updateReservationStatus(_date, _selectedSlotId, index, 'pas_venu'); refresh(); },
+      onAnnule:         index => { updateReservationStatus(_date, _selectedSlotId, index, 'annule');   refresh(); },
     });
   }
 
@@ -63,7 +65,7 @@ const App = (() => {
           refresh();
         },
         onDepart: id => {
-          updateStatus(_date, _selectedSlotId, id, 'free');
+          updateStatus(_date, _selectedSlotId, id, 'departed');
           refresh();
         },
         onAbsent: id => {
