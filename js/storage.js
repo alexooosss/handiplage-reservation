@@ -20,11 +20,12 @@ function saveCheckin(date, slotId, spotId, data) {
   localStorage.setItem(_key(date, slotId), JSON.stringify(resas));
 }
 
-// Met à jour uniquement le statut d'un emplacement existant
-function updateStatus(date, slotId, spotId, status) {
+// Met à jour le statut d'un emplacement existant + champs optionnels
+function updateStatus(date, slotId, spotId, status, extras) {
   const resas = getReservations(date, slotId);
   if (!resas[spotId]) return;
   resas[spotId].status = status;
+  if (extras) Object.assign(resas[spotId], extras);
   localStorage.setItem(_key(date, slotId), JSON.stringify(resas));
 }
 

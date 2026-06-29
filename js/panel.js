@@ -175,12 +175,19 @@ function _renderDepartedItem(spotId, resa) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
   const accompLabel = resa.accompagnants === 0 ? 'seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  let dureeLabel = '';
+  if (resa.checkinTime && resa.departTime) {
+    const ms = resa.departTime - resa.checkinTime;
+    const h  = Math.floor(ms / 3600000);
+    const m  = Math.floor((ms % 3600000) / 60000);
+    dureeLabel = ` · ${h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`} sur la plage`;
+  }
   return `
     <div class="resa-item" data-state="departed">
       <div class="resa-avatar" style="background:var(--grey)">${initials}</div>
       <div class="resa-info">
         <div class="resa-name">${resa.nom} ${resa.prenom}</div>
-        <div class="resa-meta">${spotId} · ${accompLabel} · Parti·e</div>
+        <div class="resa-meta">${spotId} · ${accompLabel}${dureeLabel}</div>
       </div>
       <span class="spot-num">${spotId}</span>
       <div class="resa-timer muted">Parti·e</div>

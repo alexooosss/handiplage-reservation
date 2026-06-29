@@ -85,7 +85,7 @@ const App = (() => {
           refresh();
         },
         onDepart: id => {
-          updateStatus(_date, _selectedSlotId, id, 'departed');
+          updateStatus(_date, _selectedSlotId, id, 'departed', { departTime: Date.now() });
           refresh();
         },
         onAbsent: id => {
@@ -107,8 +107,25 @@ const App = (() => {
   // ── Arrivée sans réservation (walk-in) ──
   function _openWalkin(freeSpots, preselectedSpotId) {
     openCheckinModal(freeSpots, preselectedSpotId, (spotId, data) => {
-      saveCheckin(_date, _selectedSlotId, spotId, { ...data, durationMs: DURATION_MS });
+      const checkinData = { ...data, durationMs: DURATION_MS };
+      saveCheckin(_date, _selectedSlotId, spotId, checkinData);
+      _registerOverflow(spotId, checkinData);
       refresh();
+    });
+  }
+
+  // Inscrit la personne dans tous les créneaux suivants dont le début est
+  // avant la fin de son temps (débordement horaire)
+  function _registerOverflow(spotId, checkinData) {
+    const endTime = checkinData.checkinTime + checkinData.durationMs;
+    SLOTS.forEach(slot => {
+      if (slot.id <= _selectedSlotId) return;
+      const [h, m] = slot.start.split(':').map(Number);
+      const slotStart = new Date();
+      slotStart.setHours(h, m, 0, 0);
+      if (slotStart.getTime() < endTime) {
+        saveCheckin(_date, slot.id, spotId, { ...checkinData });
+      }
     });
   }
 
@@ -142,9 +159,9 @@ const App = (() => {
     saveCheckin(_date, _selectedSlotId, spotId, checkinData);
     removeReservation(_date, _selectedSlotId, index);
 
+    // Si double réservation, retirer de la liste d'attente du créneau suivant
     if (isDouble) {
       const nextSlotId = _selectedSlotId + 1;
-      saveCheckin(_date, nextSlotId, spotId, { ...checkinData });
       const nextList = getReservationList(_date, nextSlotId);
       const nextIdx = nextList.findIndex(r =>
         r.nom.toUpperCase()    === waitingResa.nom.toUpperCase() &&
@@ -152,6 +169,9 @@ const App = (() => {
       );
       if (nextIdx !== -1) removeReservation(_date, nextSlotId, nextIdx);
     }
+
+    // Propager sur les créneaux suivants si le temps déborde
+    _registerOverflow(spotId, checkinData);
 
     refresh();
   }
