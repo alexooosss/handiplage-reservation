@@ -80,6 +80,9 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   container.querySelectorAll('.resa-item[data-spot-id]').forEach(el => {
     el.addEventListener('click', () => callbacks.onItemClick(el.dataset.spotId));
   });
+  container.querySelectorAll('.departed-item[data-spot-id]').forEach(el => {
+    el.addEventListener('click', () => callbacks.onDepartedClick && callbacks.onDepartedClick(el.dataset.spotId));
+  });
 }
 
 function _categorizeSpots(reservations) {
@@ -183,7 +186,7 @@ function _renderDepartedItem(spotId, resa) {
     dureeLabel = ` · ${h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`} sur la plage`;
   }
   return `
-    <div class="resa-item" data-state="departed">
+    <div class="resa-item departed-item" data-state="departed" data-spot-id="${spotId}" style="cursor:pointer">
       <div class="resa-avatar" style="background:var(--grey)">${initials}</div>
       <div class="resa-info">
         <div class="resa-name">${resa.nom} ${resa.prenom}</div>

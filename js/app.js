@@ -64,6 +64,7 @@ const App = (() => {
       onWalkin:         () => _openWalkin(freeSpots),
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
       onItemClick:      spotId => _onSpotClick(spotId, reservations, freeSpots),
+      onDepartedClick:  spotId => openDepartedModal(spotId, reservations[spotId], _buildProfileHistory(reservations[spotId])),
       onPasVenu:        index => { updateReservationStatus(_date, _selectedSlotId, index, 'pas_venu'); refresh(); },
       onAnnule:         index => { updateReservationStatus(_date, _selectedSlotId, index, 'annule');   refresh(); },
     });
@@ -174,6 +175,23 @@ const App = (() => {
     _registerOverflow(spotId, checkinData);
 
     refresh();
+  }
+
+  // Retourne l'historique du jour d'une personne : tous ses passages dans tous les créneaux
+  function _buildProfileHistory(resa) {
+    if (!resa) return [];
+    const nom    = resa.nom.toUpperCase();
+    const prenom = resa.prenom.toUpperCase();
+    const result = [];
+    SLOTS.forEach(slot => {
+      const resas = getReservations(_date, slot.id);
+      Object.entries(resas).forEach(([sid, r]) => {
+        if (r.nom?.toUpperCase() === nom && r.prenom?.toUpperCase() === prenom) {
+          result.push({ slot, spotId: sid, resa: r });
+        }
+      });
+    });
+    return result;
   }
 
   // Retourne true si la même personne (NOM+Prénom) est dans la liste du créneau suivant

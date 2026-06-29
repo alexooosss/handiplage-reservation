@@ -236,6 +236,77 @@ function openSpotDetailModal(spotId, resa, callbacks) {
   _dialog().showModal();
 }
 
+// ── Modale 5 : Détail d'une personne partie ──
+// history : [{ slot, spotId, resa }] — passages du jour (calculé dans app.js)
+function openDepartedModal(spotId, resa, history) {
+  const accompLabel = resa.accompagnants === 0 ? 'Seul·e'
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+
+  const fmt = ts => {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+
+  let dureeStr = '—';
+  if (resa.checkinTime && resa.departTime) {
+    const ms = resa.departTime - resa.checkinTime;
+    const h  = Math.floor(ms / 3600000);
+    const m  = Math.floor((ms % 3600000) / 60000);
+    dureeStr = h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
+  }
+
+  const typeLabel = resa.type === 'walkin' ? 'Sans réservation' : 'Avec réservation';
+  const doubleLabel = resa.durationMs && resa.durationMs > 105 * 60 * 1000 ? ' · double créneau' : '';
+
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>↩ ${resa.prenom} ${resa.nom}</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="departed-body">
+      <div class="spot-detail">
+        <div class="detail-row"><span class="detail-label">Emplacement</span><span class="detail-value">${spotId}</span></div>
+        <div class="detail-row"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel}</span></div>
+        <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value">${typeLabel}${doubleLabel}</span></div>
+        <div class="detail-row"><span class="detail-label">Arrivée</span><span class="detail-value">${fmt(resa.checkinTime)}</span></div>
+        <div class="detail-row"><span class="detail-label">Départ</span><span class="detail-value">${fmt(resa.departTime)}</span></div>
+        <div class="detail-row"><span class="detail-label">Temps sur la plage</span><span class="detail-value">${dureeStr}</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modal-cancel">Fermer</button>
+      <button class="btn-primary" id="btn-profil">👤 Voir le profil</button>
+    </div>
+  `;
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+  document.getElementById('btn-profil').addEventListener('click', () => {
+    const body = document.getElementById('departed-body');
+    const rows = history.length === 0
+      ? '<p style="color:var(--grey);font-size:13px;margin:0">Aucune autre présence enregistrée aujourd\'hui.</p>'
+      : history.map(({ slot, spotId: sid, resa: r }) => {
+          const statusIcon = r.status === 'departed' ? '↩' : r.status === 'present' ? '✓' : r.status === 'walkin' ? '↓' : '⏳';
+          const times = r.checkinTime
+            ? ` · ${fmt(r.checkinTime)}${r.departTime ? ` → ${fmt(r.departTime)}` : ''}`
+            : '';
+          return `<div class="detail-row">
+            <span class="detail-label">${slot.label}</span>
+            <span class="detail-value">${statusIcon} ${sid}${times}</span>
+          </div>`;
+        }).join('');
+    body.innerHTML = `
+      <p style="font-size:11px;color:var(--accent);font-weight:700;margin:0 0 10px">HISTORIQUE DU JOUR</p>
+      <div class="spot-detail">${rows}</div>
+    `;
+    document.getElementById('btn-profil').style.display = 'none';
+  });
+
+  _dialog().showModal();
+}
+
 function _bindRadioGroup(groupId) {
   document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -246,5 +317,5 @@ function _bindRadioGroup(groupId) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, closeModal };
 }
