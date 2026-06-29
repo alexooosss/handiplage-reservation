@@ -155,14 +155,14 @@ header {
   align-items: center;
   justify-content: center;
   padding: 12px;
-  padding-right: 90px; /* réserve l'espace pour .beach-building (position:absolute, width:80px) */
+  overflow-x: auto;
 }
 
 /* Dimensions fixes : carte fidèle au plan PDF, interface tablette uniquement */
 .beach-map {
   position: relative;
-  width: 600px;
-  height: 360px;
+  width: 780px;
+  height: 240px;
   flex-shrink: 0;
 }
 
