@@ -65,6 +65,7 @@ const App = (() => {
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
       onItemClick:      spotId => _onSpotClick(spotId, reservations, freeSpots),
       onDepartedClick:  spotId => openDepartedModal(spotId, reservations[spotId], _buildProfileHistory(reservations[spotId])),
+      onWaitingClick:   index  => openWaitingDetailModal(waitingList[index], _buildProfileHistory(waitingList[index])),
       onPasVenu:        index => { updateReservationStatus(_date, _selectedSlotId, index, 'pas_venu'); refresh(); },
       onAnnule:         index => { updateReservationStatus(_date, _selectedSlotId, index, 'annule');   refresh(); },
     });
@@ -93,7 +94,7 @@ const App = (() => {
           updateStatus(_date, _selectedSlotId, id, 'absent');
           refresh();
         },
-      });
+      }, _buildProfileHistory(resa));
     }
   }
 
@@ -177,19 +178,27 @@ const App = (() => {
     refresh();
   }
 
-  // Retourne l'historique du jour d'une personne : tous ses passages dans tous les créneaux
+  // Retourne l'historique du jour d'une personne : spots assignés + présences en liste d'attente
   function _buildProfileHistory(resa) {
     if (!resa) return [];
     const nom    = resa.nom.toUpperCase();
     const prenom = resa.prenom.toUpperCase();
     const result = [];
     SLOTS.forEach(slot => {
+      // Spots assignés
       const resas = getReservations(_date, slot.id);
       Object.entries(resas).forEach(([sid, r]) => {
         if (r.nom?.toUpperCase() === nom && r.prenom?.toUpperCase() === prenom) {
           result.push({ slot, spotId: sid, resa: r });
         }
       });
+      // Liste d'attente (si pas déjà trouvé dans les spots de ce créneau)
+      const alreadyInSlot = result.some(e => e.slot.id === slot.id);
+      if (!alreadyInSlot) {
+        const list = getReservationList(_date, slot.id);
+        const found = list.find(r => r.nom?.toUpperCase() === nom && r.prenom?.toUpperCase() === prenom);
+        if (found) result.push({ slot, spotId: null, resa: { ...found, status: found.status || 'reserved_waiting' } });
+      }
     });
     return result;
   }

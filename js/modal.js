@@ -184,9 +184,39 @@ function openCheckinModal(freeSpots, preselectedSpotId, onConfirm) {
   document.getElementById('f-prenom').focus();
 }
 
+// Affiche l'historique du jour dans le corps de la modale au clic sur "Voir profil"
+function _bindProfilBtn(bodyId, btnId, history) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const fmt = ts => {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      return `${String(d.getHours()).padStart(2,'0')}h${String(d.getMinutes()).padStart(2,'0')}`;
+    };
+    const rows = history.length === 0
+      ? '<p style="color:var(--grey);font-size:13px;margin:0">Aucune présence enregistrée aujourd\'hui.</p>'
+      : history.map(({ slot, spotId: sid, resa: r }) => {
+          const icon = { departed:'↩', present:'✓', walkin:'↓', absent:'✕', reserved_waiting:'⏳' }[r.status] || '·';
+          const spotInfo = sid ? ` ${sid}` : '';
+          const times = r.checkinTime ? ` · ${fmt(r.checkinTime)}${r.departTime ? ` → ${fmt(r.departTime)}` : ''}` : '';
+          return `<div class="detail-row">
+            <span class="detail-label">${slot.label}</span>
+            <span class="detail-value">${icon}${spotInfo}${times}</span>
+          </div>`;
+        }).join('');
+    document.getElementById(bodyId).innerHTML = `
+      <p style="font-size:11px;color:var(--accent);font-weight:700;margin:0 0 10px">HISTORIQUE DU JOUR</p>
+      <div class="spot-detail">${rows}</div>
+    `;
+    btn.style.display = 'none';
+  });
+}
+
 // ── Modale 4 : Détail d'un emplacement occupé ──
 // callbacks : { onCheckin, onDepart, onAbsent }
-function openSpotDetailModal(spotId, resa, callbacks) {
+// history   : [{ slot, spotId, resa }] — historique du jour (optionnel)
+function openSpotDetailModal(spotId, resa, callbacks, history) {
   const ms = resa.checkinTime ? getTimeRemaining(resa.checkinTime, resa.durationMs) : null;
   const urgency = ms !== null ? getUrgencyLevel(ms) : 'ok';
 
@@ -208,7 +238,7 @@ function openSpotDetailModal(spotId, resa, callbacks) {
       <h3>${spotId} — ${resa.prenom} ${resa.nom}${doubleLabel}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" id="spot-detail-body">
       <div class="spot-detail">
         <div class="detail-row"><span class="detail-label">Emplacement</span><span class="detail-value">${spotId}</span></div>
         <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
@@ -218,6 +248,7 @@ function openSpotDetailModal(spotId, resa, callbacks) {
       </div>
     </div>
     <div class="modal-footer">
+      <button class="btn-ghost" id="btn-profil">👤 Profil</button>
       <button class="btn-secondary" id="modal-cancel">Fermer</button>
       ${actionBtns}
     </div>
@@ -225,6 +256,7 @@ function openSpotDetailModal(spotId, resa, callbacks) {
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  _bindProfilBtn('spot-detail-body', 'btn-profil', history || []);
 
   if (resa.status === 'reserved_waiting') {
     document.getElementById('btn-checkin').addEventListener('click', () => { closeModal(); callbacks.onCheckin && callbacks.onCheckin(spotId); });
@@ -282,27 +314,39 @@ function openDepartedModal(spotId, resa, history) {
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  _bindProfilBtn('departed-body', 'btn-profil', history || []);
 
-  document.getElementById('btn-profil').addEventListener('click', () => {
-    const body = document.getElementById('departed-body');
-    const rows = history.length === 0
-      ? '<p style="color:var(--grey);font-size:13px;margin:0">Aucune autre présence enregistrée aujourd\'hui.</p>'
-      : history.map(({ slot, spotId: sid, resa: r }) => {
-          const statusIcon = r.status === 'departed' ? '↩' : r.status === 'present' ? '✓' : r.status === 'walkin' ? '↓' : '⏳';
-          const times = r.checkinTime
-            ? ` · ${fmt(r.checkinTime)}${r.departTime ? ` → ${fmt(r.departTime)}` : ''}`
-            : '';
-          return `<div class="detail-row">
-            <span class="detail-label">${slot.label}</span>
-            <span class="detail-value">${statusIcon} ${sid}${times}</span>
-          </div>`;
-        }).join('');
-    body.innerHTML = `
-      <p style="font-size:11px;color:var(--accent);font-weight:700;margin:0 0 10px">HISTORIQUE DU JOUR</p>
-      <div class="spot-detail">${rows}</div>
-    `;
-    document.getElementById('btn-profil').style.display = 'none';
-  });
+  _dialog().showModal();
+}
+
+// ── Modale 6 : Détail d'une personne en liste d'attente ──
+function openWaitingDetailModal(resa, history) {
+  const accompLabel = resa.accompagnants === 0 ? 'Seul·e'
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  const statusLabel = resa.status === 'pas_venu' ? 'Pas venu·e'
+    : resa.status === 'annule' ? 'Annulé·e' : 'En attente';
+
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>⏳ ${resa.prenom} ${resa.nom}</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="waiting-detail-body">
+      <div class="spot-detail">
+        <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
+        <div class="detail-row"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel}</span></div>
+        <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusLabel}</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="btn-profil">👤 Profil</button>
+      <button class="btn-secondary" id="modal-cancel">Fermer</button>
+    </div>
+  `;
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  _bindProfilBtn('waiting-detail-body', 'btn-profil', history || []);
 
   _dialog().showModal();
 }
@@ -317,5 +361,5 @@ function _bindRadioGroup(groupId) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, closeModal };
 }

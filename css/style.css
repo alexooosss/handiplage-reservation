@@ -572,6 +572,14 @@ dialog::backdrop { background: rgba(10,22,40,0.7); }
   font-size: 13px; font-weight: 700; cursor: pointer;
 }
 
+.btn-ghost {
+  padding: 11px 14px;
+  background: transparent; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  margin-right: auto;
+}
+
 /* Spot detail in modal */
 .spot-detail {
   display: flex; flex-direction: column; gap: 10px;

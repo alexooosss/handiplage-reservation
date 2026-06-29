@@ -83,6 +83,12 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   container.querySelectorAll('.departed-item[data-spot-id]').forEach(el => {
     el.addEventListener('click', () => callbacks.onDepartedClick && callbacks.onDepartedClick(el.dataset.spotId));
   });
+  container.querySelectorAll('.waiting-item[data-index]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('button')) return; // ne pas interférer avec les boutons d'action
+      callbacks.onWaitingClick && callbacks.onWaitingClick(parseInt(el.dataset.index));
+    });
+  });
 }
 
 function _categorizeSpots(reservations) {
@@ -141,7 +147,7 @@ function _renderWaitingItem(resa, index, showActions) {
     </div>
   ` : '';
   return `
-    <div class="resa-item waiting-item">
+    <div class="resa-item waiting-item" data-index="${index}" style="cursor:pointer">
       <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>
       <div class="resa-info">
         <div class="resa-name">${resa.nom} ${resa.prenom}</div>
