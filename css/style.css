@@ -385,6 +385,33 @@ header {
 
 .btn-assign:hover { filter: brightness(1.05); }
 
+.waiting-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.btn-pas-venu {
+  background: #fee2e2;
+  color: var(--red-dark);
+  border: none; border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 9px; font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-annule {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  border: none; border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 9px; font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .resa-list {
   flex: 1;
   overflow-y: auto;

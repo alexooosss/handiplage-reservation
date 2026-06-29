@@ -3,10 +3,11 @@
 // container   : #side-panel element
 // slot        : { id, label, start, end } or null
 // reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
-// waitingList : [{ nom, prenom, accompagnants }, ...] — from getReservationList()
-// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onItemClick(spotId) }
+// waitingList : [{ nom, prenom, accompagnants, status }, ...] — from getReservationList()
+// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(index), onAnnule(index), onItemClick(spotId) }
 function renderPanel(container, slot, reservations, waitingList, callbacks) {
-  const { present, walkin, absent } = _categorizeSpots(reservations);
+  const { present, walkin, absent, departed } = _categorizeSpots(reservations);
+  const { waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
 
   // Sort present+walkin by time remaining ascending (urgent first)
   const sortByTime = arr => arr.sort(([,a],[,b]) =>
@@ -17,29 +18,41 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   const presentCount = present.length + walkin.length;
   const freeCount    = BEACH_CONFIG.spots.filter(s => {
     const r = reservations[s.id];
-    return !r || r.status === 'free';
+    return !r || r.status === 'free' || r.status === 'departed';
   }).length;
 
   container.innerHTML = `
-    ${_renderHeader(slot, presentCount, freeCount, walkin.length, waitingList.length)}
+    ${_renderHeader(slot, presentCount, freeCount, walkin.length, waiting.length)}
     <div class="panel-actions">
       <button class="add-resa-btn" id="btn-add-resa">＋ Ajouter réservation</button>
-      <button class="walkin-btn"   id="btn-walkin">↓ Arrivée sans réservation</button>
+      <button class="walkin-btn"   id="btn-walkin">↓ Sans réservation</button>
     </div>
     <div class="resa-list">
-      ${waitingList.length ? `
-        <div class="resa-section-title">⏳ En attente d'arrivée (${waitingList.length})</div>
-        ${waitingList.map((r, i) => _renderWaitingItem(r, i)).join('')}
+      ${waiting.length ? `
+        <div class="resa-section-title">⏳ En attente d'arrivée (${waiting.length})</div>
+        ${waiting.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), true)).join('')}
       ` : ''}
       ${presentSorted.length ? `
-        <div class="resa-section-title">✓ Présents sur la plage (${presentSorted.length})</div>
+        <div class="resa-section-title">✓ Présents (${presentSorted.length})</div>
         ${presentSorted.map(([id, r]) => _renderPresentItem(id, r)).join('')}
       ` : ''}
+      ${departed.length ? `
+        <div class="resa-section-title">↩ Partis (${departed.length})</div>
+        ${departed.map(([id, r]) => _renderDepartedItem(id, r)).join('')}
+      ` : ''}
       ${absent.length ? `
-        <div class="resa-section-title">✕ Absents</div>
+        <div class="resa-section-title">✕ Absents (${absent.length})</div>
         ${absent.map(([id, r]) => _renderAbsentItem(id, r)).join('')}
       ` : ''}
-      ${(waitingList.length + presentSorted.length + absent.length) === 0 ? `
+      ${pasVenus.length ? `
+        <div class="resa-section-title">⊘ Pas venus (${pasVenus.length})</div>
+        ${pasVenus.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
+      ` : ''}
+      ${annules.length ? `
+        <div class="resa-section-title">✗ Annulés (${annules.length})</div>
+        ${annules.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
+      ` : ''}
+      ${(waiting.length + presentSorted.length + departed.length + absent.length + pasVenus.length + annules.length) === 0 ? `
         <div class="empty-state">
           <div class="empty-icon">🏖️</div>
           <p>Aucune réservation pour ce créneau</p>
@@ -54,24 +67,39 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
 
   container.querySelectorAll('.btn-assign[data-index]').forEach(btn => {
     const idx = parseInt(btn.dataset.index);
-    btn.addEventListener('click', () => callbacks.onAssign(idx, waitingList[idx]));
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAssign(idx, waitingList[idx]); });
   });
-
+  container.querySelectorAll('.btn-pas-venu[data-index]').forEach(btn => {
+    const idx = parseInt(btn.dataset.index);
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onPasVenu(idx); });
+  });
+  container.querySelectorAll('.btn-annule[data-index]').forEach(btn => {
+    const idx = parseInt(btn.dataset.index);
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAnnule(idx); });
+  });
   container.querySelectorAll('.resa-item[data-spot-id]').forEach(el => {
     el.addEventListener('click', () => callbacks.onItemClick(el.dataset.spotId));
   });
 }
 
 function _categorizeSpots(reservations) {
-  const present = [], walkin = [], absent = [];
+  const present = [], walkin = [], absent = [], departed = [];
   BEACH_CONFIG.spots.forEach(spot => {
     const r = reservations[spot.id];
     if (!r || r.status === 'free') return;
-    if (r.status === 'absent') { absent.push([spot.id, r]); return; }
-    if (r.type === 'walkin')   { walkin.push([spot.id, r]); return; }
+    if (r.status === 'departed') { departed.push([spot.id, r]); return; }
+    if (r.status === 'absent')   { absent.push([spot.id, r]);   return; }
+    if (r.type === 'walkin')     { walkin.push([spot.id, r]);   return; }
     present.push([spot.id, r]);
   });
-  return { present, walkin, absent };
+  return { present, walkin, absent, departed };
+}
+
+function _categorizeWaiting(waitingList) {
+  const waiting  = waitingList.filter(r => !r.status || r.status === 'waiting');
+  const pasVenus = waitingList.filter(r => r.status === 'pas_venu');
+  const annules  = waitingList.filter(r => r.status === 'annule');
+  return { waiting, pasVenus, annules };
 }
 
 function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount) {
@@ -94,18 +122,29 @@ function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount)
   `;
 }
 
-function _renderWaitingItem(resa, index) {
+function _renderWaitingItem(resa, index, showActions) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
   const accompLabel = resa.accompagnants === 0 ? 'seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  const statusLabel = resa.status === 'pas_venu' ? ' · Pas venu·e'
+    : resa.status === 'annule' ? ' · Annulé·e' : '';
+  const avatarColor = resa.status === 'pas_venu' ? 'var(--grey)'
+    : resa.status === 'annule' ? 'var(--grey)' : 'var(--amber)';
+  const actions = showActions ? `
+    <div class="waiting-actions">
+      <button class="btn-assign"   data-index="${index}">Assigner</button>
+      <button class="btn-pas-venu" data-index="${index}">Pas venu</button>
+      <button class="btn-annule"   data-index="${index}">Annuler</button>
+    </div>
+  ` : '';
   return `
-    <div class="resa-item waiting-item" data-index="${index}">
-      <div class="resa-avatar" style="background:var(--amber)">${initials}</div>
+    <div class="resa-item waiting-item">
+      <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>
       <div class="resa-info">
         <div class="resa-name">${resa.nom} ${resa.prenom}</div>
-        <div class="resa-meta">${accompLabel}</div>
+        <div class="resa-meta">${accompLabel}${statusLabel}</div>
       </div>
-      <button class="btn-assign" data-index="${index}">Assigner</button>
+      ${actions}
     </div>
   `;
 }
@@ -132,6 +171,23 @@ function _renderPresentItem(spotId, resa) {
   `;
 }
 
+function _renderDepartedItem(spotId, resa) {
+  const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
+  const accompLabel = resa.accompagnants === 0 ? 'seul·e'
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  return `
+    <div class="resa-item" data-state="departed">
+      <div class="resa-avatar" style="background:var(--grey)">${initials}</div>
+      <div class="resa-info">
+        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-meta">${spotId} · ${accompLabel} · Parti·e</div>
+      </div>
+      <span class="spot-num">${spotId}</span>
+      <div class="resa-timer muted">Parti·e</div>
+    </div>
+  `;
+}
+
 function _renderAbsentItem(spotId, resa) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
   return `
@@ -152,8 +208,8 @@ function _renderLegend() {
     <div class="panel-legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>En attente</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Présent (réservé)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Arrivée libre</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Absent·e</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Sans réservation</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--grey)"></div>Parti·e / Absent·e</div>
     </div>
   `;
 }
