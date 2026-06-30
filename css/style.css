@@ -1436,3 +1436,90 @@ dialog.plan-dialog {
   text-align: center;
   padding: 12px 8px;
 }
+
+/* ── Pass Handiplage ── */
+.pass-block {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 12px 0 0;
+}
+.pass-block-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--blue-dark);
+  margin-bottom: 10px;
+}
+.pass-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.pass-badge-active   { background: rgba(0,212,170,.12); color: var(--accent); }
+.pass-badge-inactive { background: #f3f4f6; color: #888; }
+.pass-badge-season   { background: #fff3cd; color: #856404; }
+.pass-remaining-row  { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.pass-remaining-count { font-size: 22px; font-weight: 900; color: var(--blue-dark); }
+.pass-remaining-label { font-size: 13px; color: #666; }
+.pass-bar-wrap {
+  height: 6px;
+  background: #eef2f8;
+  border-radius: 3px;
+  margin: 4px 0 8px;
+  overflow: hidden;
+}
+.pass-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width .3s; }
+.pass-bar-fill.low   { background: var(--amber); }
+.pass-bar-fill.empty { background: var(--red); }
+.pass-meta    { font-size: 11px; color: #888; margin-bottom: 10px; }
+.pass-actions { display: flex; justify-content: flex-end; }
+
+/* ── Autocomplete pass ── */
+.pass-suggest-wrap { position: relative; }
+.pass-suggest-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 2000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.pass-suggest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+.pass-suggest-item:last-child { border-bottom: none; }
+.pass-suggest-item:hover:not(.exhausted) { background: rgba(0,212,170,.06); }
+.pass-suggest-item.exhausted { opacity: .55; cursor: not-allowed; }
+.pass-suggest-remaining { font-size: 11px; font-weight: 700; color: var(--accent); }
+.pass-suggest-remaining.empty { color: var(--red); }
+.pass-link-info {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  gap: 4px;
+}
+.pass-link-info button {
+  font-size: 11px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  margin-left: 6px;
+}
