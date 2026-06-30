@@ -138,4 +138,21 @@ const SLOT = 2;
   assert.doesNotThrow(() => updateReservationStatus(DATE, SLOT, 99, 'pas_venu'));
 }
 
+// addReservation — stocke inscriptionId optionnel
+{
+  localStorage.clear();
+  addReservation('2026-07-01', 3, { nom: 'MARTIN', prenom: 'André', accompagnants: 0, inscriptionId: 'abc123' });
+  const list = getReservationList('2026-07-01', 3);
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].inscriptionId, 'abc123', 'inscriptionId conservé');
+}
+
+// addReservation — sans inscriptionId (compatibilité ascendante)
+{
+  addReservation('2026-07-01', 3, { nom: 'DUPONT', prenom: 'Claire', accompagnants: 1 });
+  const list = getReservationList('2026-07-01', 3);
+  assert.strictEqual(list.length, 2);
+  assert.strictEqual(list[1].inscriptionId, undefined, 'pas d\'inscriptionId si non fourni');
+}
+
 console.log('✓ storage.js — tous les tests passent');
