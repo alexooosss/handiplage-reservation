@@ -23,7 +23,7 @@ global.getInscriptions = () => [
 ];
 
 const {
-  isPassSeason, getPassMonthKey, getPassResetDate,
+  isPassSeason, getPassMonthKey, getPassMonthLabel, getPassResetDate,
   getPassRemaining, getInscriptionsWithActivePass, PASS_QUOTA,
 } = require('../js/pass.js');
 
@@ -50,6 +50,12 @@ const {
 // ── PASS_QUOTA ──
 {
   assert.strictEqual(PASS_QUOTA, 40);
+}
+
+// ── getPassMonthLabel ──
+{
+  const label = getPassMonthLabel();
+  assert.match(label, /^[a-zéû]+ \d{4}$/, 'format "mois année" en minuscules');
 }
 
 // ── getInscriptionsWithActivePass ──
@@ -148,6 +154,14 @@ if (isPassSeason()) {
   for (let i = 0; i < PASS_QUOTA + 5; i++) spots['P' + i] = { inscriptionId: 'abc', status: 'present' };
   localStorage.setItem(`handiplage_${month}-20_slot1`, JSON.stringify(spots));
   assert.strictEqual(getPassRemaining('abc'), 0, 'quota dépassé => 0, jamais négatif');
+
+  // Préfixe ancré : une clé dont le mois ressemble au préfixe sans être le même mois
+  // (ex. "...-071_slot1" pour le mois "07") ne doit jamais être comptée
+  localStorage.clear();
+  localStorage.setItem(`handiplage_${month}1_slot1`, JSON.stringify({
+    P1: { inscriptionId: 'abc', status: 'present' },
+  }));
+  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA, 'préfixe non ancré au mois => clé ignorée');
 }
 
 console.log('✓ test-pass.js OK');

@@ -24,7 +24,7 @@ function getPassResetDate() {
 
 function getPassRemaining(inscriptionId) {
   if (!inscriptionId || !isPassSeason()) return 0;
-  const prefix = 'handiplage_' + getPassMonthKey(); // ex. "handiplage_2026-07"
+  const prefix = 'handiplage_' + getPassMonthKey() + '-'; // ex. "handiplage_2026-07-"
   let count = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
