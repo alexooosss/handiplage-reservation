@@ -1010,7 +1010,8 @@ dialog::backdrop { background: rgba(10,22,40,0.7); }
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  flex-shrink: 0;
 }
 .mc-table {
   width: 100%;
