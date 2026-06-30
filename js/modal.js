@@ -9,8 +9,10 @@ function closeModal() {
 
 // ── Modale 1 : Ajouter une réservation à la liste d'attente ──
 // Appelée avant l'arrivée de la personne (saisie anticipée)
-// onConfirm({ nom, prenom, accompagnants })
+// onConfirm({ nom, prenom, accompagnants, inscriptionId })
 function openAddReservationModal(onConfirm) {
+  let _linkedInscriptionId = null;
+
   _dialog().innerHTML = `
     <div class="modal-header">
       <h3>＋ Ajouter une réservation</h3>
@@ -18,7 +20,7 @@ function openAddReservationModal(onConfirm) {
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group pass-suggest-wrap" id="prenom-wrap">
           <label>Prénom</label>
           <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
         </div>
@@ -26,6 +28,10 @@ function openAddReservationModal(onConfirm) {
           <label>Nom</label>
           <input type="text" id="f-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
         </div>
+      </div>
+      <div id="pass-link-info" class="pass-link-info" style="display:none">
+        🎫 Lié au pass de <strong id="pass-link-name"></strong>
+        <button type="button" id="pass-unlink">✕ Dissocier</button>
       </div>
       <div class="form-group">
         <label>Nombre d'accompagnants</label>
@@ -45,26 +51,90 @@ function openAddReservationModal(onConfirm) {
   _bindRadioGroup('f-accompagnants');
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
-  document.getElementById('f-prenom').addEventListener('input', e => {
+
+  const prenomInp = document.getElementById('f-prenom');
+  const nomInp    = document.getElementById('f-nom');
+
+  prenomInp.addEventListener('input', function(e) {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
+    _showSuggestions();
+  });
+  nomInp.addEventListener('input', _showSuggestions);
+
+  document.getElementById('pass-unlink').addEventListener('click', function() {
+    _linkedInscriptionId = null;
+    document.getElementById('pass-link-info').style.display = 'none';
   });
 
-  document.getElementById('modal-confirm').addEventListener('click', () => {
-    const prenom = document.getElementById('f-prenom').value.trim();
-    const nom    = document.getElementById('f-nom').value.trim().toUpperCase();
+  function _showSuggestions() {
+    _removeSuggestions();
+    if (typeof getInscriptionsWithActivePass === 'undefined') return;
+    const q = (prenomInp.value + ' ' + nomInp.value).trim().toLowerCase();
+    if (q.length < 2) return;
+    const matches = getInscriptionsWithActivePass().filter(function(i) {
+      return (i.nom + ' ' + i.prenom).toLowerCase().includes(q)
+          || (i.prenom + ' ' + i.nom).toLowerCase().includes(q);
+    });
+    if (matches.length === 0) return;
+    const dd = document.createElement('div');
+    dd.className = 'pass-suggest-dropdown';
+    dd.id = 'pass-suggest-dd';
+    matches.forEach(function(insc) {
+      const remaining = getPassRemaining(insc.id);
+      const exhausted = remaining === 0;
+      const item = document.createElement('div');
+      item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
+      item.innerHTML = `<span>${insc.nom} ${insc.prenom}</span>`
+        + `<span class="pass-suggest-remaining${exhausted ? ' empty' : ''}">`
+        + (exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes')
+        + '</span>';
+      if (!exhausted) {
+        item.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          prenomInp.value      = insc.prenom;
+          nomInp.value         = insc.nom;
+          _linkedInscriptionId = insc.id;
+          document.getElementById('pass-link-name').textContent = insc.prenom + ' ' + insc.nom;
+          document.getElementById('pass-link-info').style.display = 'flex';
+          _removeSuggestions();
+        });
+      }
+      dd.appendChild(item);
+    });
+    document.getElementById('prenom-wrap').appendChild(dd);
+  }
+
+  function _removeSuggestions() {
+    const dd = document.getElementById('pass-suggest-dd');
+    if (dd) dd.remove();
+  }
+
+  prenomInp.addEventListener('blur', function() { setTimeout(_removeSuggestions, 150); });
+  nomInp.addEventListener('blur',    function() { setTimeout(_removeSuggestions, 150); });
+
+  document.getElementById('modal-confirm').addEventListener('click', function() {
+    const prenom = prenomInp.value.trim();
+    const nom    = nomInp.value.trim().toUpperCase();
     const accompagnants = parseInt(
       document.querySelector('#f-accompagnants .radio-btn.selected').dataset.value
     );
-    if (!prenom || !nom) {
-      alert('Prénom et nom sont obligatoires.');
-      return;
+    if (!prenom || !nom) { alert('Prénom et nom sont obligatoires.'); return; }
+
+    if (_linkedInscriptionId) {
+      const remaining = getPassRemaining(_linkedInscriptionId);
+      if (remaining === 0) {
+        alert('Pass épuisé ce mois. Cette personne ne peut plus réserver avant le '
+          + getPassResetDate() + '.');
+        return;
+      }
     }
+
     closeModal();
-    onConfirm({ nom, prenom, accompagnants });
+    onConfirm({ nom, prenom, accompagnants, inscriptionId: _linkedInscriptionId });
   });
 
   _dialog().showModal();
-  document.getElementById('f-prenom').focus();
+  prenomInp.focus();
 }
 
 // ── Modale 2 : Assigner un emplacement à une personne arrivée ──
