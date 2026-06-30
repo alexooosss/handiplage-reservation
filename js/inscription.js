@@ -117,6 +117,7 @@ function _showForm(container, insc) {
     +   '<h2>' + (isNew ? 'Nouvelle inscription' : 'Inscription — ' + _escI(v.nom) + ' ' + _escI(v.prenom)) + '</h2>'
     +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + chk(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + chk(v.statut,'refuse') + '>Refusé ✗</option></select></div>' : '')
     + '</div>'
+    + (!isNew && v.statut === 'valide' ? _renderPassBlock(v) : '')
     + '<form id="insc-form" class="insc-form">'
 
     // IDENTITÉ
@@ -294,6 +295,50 @@ function _showForm(container, insc) {
     });
   }
 
+  // ── Pass ──
+  function _reRenderPassBlock(updatedInsc) {
+    const existing = mainEl.querySelector('.pass-block');
+    const newHtml  = _renderPassBlock(updatedInsc);
+    if (existing) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = newHtml;
+      existing.replaceWith(tmp.firstElementChild || document.createElement('div'));
+    } else if (newHtml) {
+      const formHeader = mainEl.querySelector('.insc-form-header');
+      if (formHeader) formHeader.insertAdjacentHTML('afterend', newHtml);
+    }
+    _bindPassButtons();
+  }
+
+  function _bindPassButtons() {
+    const activateBtn   = document.getElementById('pass-activate');
+    const deactivateBtn = document.getElementById('pass-deactivate');
+    if (activateBtn) {
+      activateBtn.addEventListener('click', function() {
+        const list = getInscriptions();
+        const idx  = list.findIndex(function(i) { return i.id === v.id; });
+        if (idx === -1) return;
+        list[idx].pass = { actif: true, activatedAt: new Date().toISOString().slice(0, 10) };
+        saveInscriptions(list);
+        _reRenderPassBlock(list[idx]);
+        _refreshSidebar(container);
+      });
+    }
+    if (deactivateBtn) {
+      deactivateBtn.addEventListener('click', function() {
+        const list = getInscriptions();
+        const idx  = list.findIndex(function(i) { return i.id === v.id; });
+        if (idx === -1) return;
+        list[idx].pass = Object.assign({}, list[idx].pass, { actif: false });
+        saveInscriptions(list);
+        _reRenderPassBlock(list[idx]);
+        _refreshSidebar(container);
+      });
+    }
+  }
+
+  if (!isNew) _bindPassButtons();
+
   document.getElementById('insc-cancel').addEventListener('click', function() { renderInscription(container); });
   document.getElementById('insc-form').addEventListener('submit', function(e) { e.preventDefault(); _handleSubmit(container, isNew ? null : v.id, isNew ? null : v); });
 }
@@ -426,6 +471,55 @@ function _readFiles(input1, input2, data, callback) {
       callback(data);
     });
   });
+}
+
+function _renderPassBlock(insc) {
+  const today    = new Date();
+  const inSeason = [6,7,8,9].includes(today.getMonth() + 1);
+  const pass     = insc.pass || null;
+  const actif    = !!(pass && pass.actif);
+
+  if (!inSeason && !pass) return ''; // hors saison, jamais activé
+
+  let inner = '';
+  if (!actif) {
+    const badgeCls = inSeason ? 'pass-badge-inactive' : 'pass-badge-season';
+    const badgeLbl = inSeason ? 'Inactif' : 'Hors saison';
+    inner = `
+      <div class="pass-block-hd">🎫 Pass Handiplage
+        <span class="pass-badge ${badgeCls}">${badgeLbl}</span>
+      </div>
+      <p class="pass-meta">${inSeason ? 'Ce pass donne accès à 40 réservations par mois (juin–septembre).' : 'Le pass est valide de juin à septembre.'}</p>
+      ${inSeason ? '<div class="pass-actions"><button type="button" class="btn-primary" id="pass-activate">Activer le pass</button></div>' : ''}
+    `;
+  } else {
+    const remaining  = (typeof getPassRemaining === 'function') ? getPassRemaining(insc.id) : 0;
+    const pct        = Math.round((remaining / 40) * 100);
+    const fillCls    = remaining === 0 ? 'empty' : remaining <= 10 ? 'low' : '';
+    const monthLabel = (typeof getPassMonthLabel === 'function') ? getPassMonthLabel() : '';
+    const resetDate  = (typeof getPassResetDate  === 'function') ? getPassResetDate()  : '';
+    const sinceDate  = pass.activatedAt
+      ? new Date(pass.activatedAt + 'T12:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' })
+      : '';
+    inner = `
+      <div class="pass-block-hd">🎫 Pass Handiplage
+        <span class="pass-badge pass-badge-active">● Actif${sinceDate ? ' depuis le ' + sinceDate : ''}</span>
+      </div>
+      <p class="pass-meta">Saison : juin → septembre ${today.getFullYear()}</p>
+      <div class="pass-remaining-row">
+        <span class="pass-remaining-count">${remaining}</span>
+        <span class="pass-remaining-label">/ 40 réservations restantes${monthLabel ? ' (' + monthLabel + ')' : ''}</span>
+      </div>
+      <div class="pass-bar-wrap">
+        <div class="pass-bar-fill ${fillCls}" style="width:${pct}%"></div>
+      </div>
+      <p class="pass-meta">Réinitialisation le ${resetDate}</p>
+      <div class="pass-actions">
+        <button type="button" class="btn-ghost" id="pass-deactivate">Désactiver le pass</button>
+      </div>
+    `;
+  }
+  return `<div class="pass-block">${inner}</div>`;
 }
 
 if (typeof module !== 'undefined') {
