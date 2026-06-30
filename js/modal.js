@@ -3,6 +3,7 @@
 const _dialog = () => document.getElementById('app-modal');
 
 function closeModal() {
+  _dialog().className = '';
   _dialog().close();
 }
 
@@ -288,7 +289,7 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
   if (callbacks.onUpdateAccompagnants) {
     document.getElementById('accomp-row').addEventListener('click', () =>
       _inlineEditAccompagnants('accomp-row', resa.accompagnants, callbacks.onUpdateAccompagnants)
-    );
+    , { once: true });
   }
 
   if (resa.status === 'reserved_waiting') {
@@ -385,7 +386,7 @@ function openWaitingDetailModal(resa, history, callbacks) {
   if (callbacks.onUpdateAccompagnants) {
     document.getElementById('accomp-row').addEventListener('click', () =>
       _inlineEditAccompagnants('accomp-row', resa.accompagnants, callbacks.onUpdateAccompagnants)
-    );
+    , { once: true });
   }
 
   _dialog().showModal();
@@ -450,7 +451,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <div class="plan-lists">
         <div class="plan-section">
           <div class="plan-section-hd">
-            <span class="plan-section-title">👤 Usagers</span>
+            <span class="plan-section-title">👤 Réservations</span>
             <span class="plan-section-cap" id="cap-normal"></span>
           </div>
           <div id="planning-list-normal"></div>
@@ -464,37 +465,75 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
           <div id="planning-list-groupe"></div>
         </div>
       </div>
+      <!-- Personnes sans réservation (walk-ins du jour) -->
+      <div id="plan-walkins-section" style="display:none" class="plan-walkins-section">
+        <div class="plan-section-hd" style="padding:10px 16px 4px">
+          <span class="plan-section-title">🚶 Sans réservation</span>
+          <span class="plan-section-cap" id="cap-walkins"></span>
+        </div>
+        <div id="planning-list-walkins" style="padding:0 16px 10px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
     </div>
     <div class="modal-footer">
+      <button class="btn-ghost" id="btn-export-pdf">📄 Exporter PDF</button>
       ${goLiveBtn}
       <button class="btn-secondary" id="modal-cancel">Fermer</button>
     </div>
   `;
 
+  function _fmtCheckinTime(ts) {
+    const d = new Date(ts);
+    return String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
+  }
+
   function _refreshSection(resaType, listId, capId, capacity) {
-    const all   = getReservationList(dateISO, slot.id);
-    const items = all.map((r, i) => ({ ...r, _idx: i }))
-                     .filter(r => resaType === 'normal'
-                       ? (!r.resaType || r.resaType === 'normal')
-                       : r.resaType === 'groupe');
-    const count = items.length;
+    const all     = getReservationList(dateISO, slot.id);
+    const pending = all.map((r, i) => ({ ...r, _idx: i }))
+                       .filter(r => resaType === 'normal'
+                         ? (!r.resaType || r.resaType === 'normal')
+                         : r.resaType === 'groupe');
+
+    // Les usagers ayant une réservation et déjà arrivés (assignés à un spot)
+    // s'affichent aussi dans la section Utilisateurs (type 'reserved' dans spots)
+    const arrived = resaType === 'normal'
+      ? Object.entries(getReservations(dateISO, slot.id))
+              .filter(([, r]) => r.type === 'reserved')
+              .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
+      : [];
+
+    const total = pending.length + arrived.length;
     const capEl = document.getElementById(capId);
     if (capEl) {
-      capEl.textContent = `${count} / ${capacity}`;
-      capEl.className = 'plan-section-cap' + (count >= capacity ? ' full' : count >= capacity * 0.8 ? ' warn' : '');
+      capEl.textContent = total + ' / ' + capacity;
+      capEl.className = 'plan-section-cap' + (total >= capacity ? ' full' : total >= capacity * 0.8 ? ' warn' : '');
     }
     const listEl = document.getElementById(listId);
     if (!listEl) return;
-    listEl.innerHTML = items.length === 0
-      ? `<div class="planning-empty">Aucune réservation</div>`
-      : items.map(r => {
-          const acc = r.accompagnants === 0 ? 'seul·e'
-            : r.accompagnants === 1 ? '1 acc.' : `${r.accompagnants} acc.`;
-          return `<div class="planning-list-item">
-            <span>${r.nom} ${r.prenom} — ${acc}</span>
-            <button class="btn-remove" data-index="${r._idx}">✕</button>
-          </div>`;
-        }).join('');
+
+    if (total === 0) {
+      listEl.innerHTML = '<div class="planning-empty">Aucune réservation</div>';
+      return;
+    }
+
+    const pendingHtml = pending.map(r => {
+      const acc = r.accompagnants === 0 ? 'seul·e'
+        : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+      return '<div class="planning-list-item">'
+        + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + '</span>'
+        + '<button class="btn-remove" data-index="' + r._idx + '">✕</button>'
+        + '</div>';
+    }).join('');
+
+    const arrivedHtml = arrived.map(r => {
+      const acc  = r.accompagnants === 0 ? 'seul·e'
+        : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+      const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
+      return '<div class="planning-list-item planning-list-present">'
+        + '<span>✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
+        + '</div>';
+    }).join('');
+
+    listEl.innerHTML = arrivedHtml + pendingHtml;
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
       btn.addEventListener('click', () => {
         callbacks.onRemove(parseInt(btn.dataset.index));
@@ -503,9 +542,30 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     });
   }
 
+  function _refreshWalkins() {
+    const spots = getReservations(dateISO, slot.id);
+    const items = Object.entries(spots).filter(([, r]) => r.type === 'walkin');
+    const section = document.getElementById('plan-walkins-section');
+    if (!section) return;
+    if (items.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    const capEl = document.getElementById('cap-walkins');
+    if (capEl) capEl.textContent = items.length;
+    const listEl = document.getElementById('planning-list-walkins');
+    if (!listEl) return;
+    listEl.innerHTML = items.map(([spotId, r]) => {
+      const acc = r.accompagnants === 0 ? 'seul·e'
+        : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+      return '<div class="planning-list-item">'
+        + '<span>' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + spotId + ')</span>'
+        + '</div>';
+    }).join('');
+  }
+
   function _refreshAll() {
     _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL);
     _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE);
+    _refreshWalkins();
   }
 
   _bindRadioGroup('pf-accomp');
@@ -527,13 +587,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       return;
     }
 
-    // Vérifier la capacité
+    // Vérifier la capacité (liste en attente + déjà arrivés)
     const all = getReservationList(dateISO, slot.id);
     const count = all.filter(r => resaType === 'normal'
       ? (!r.resaType || r.resaType === 'normal') : r.resaType === 'groupe').length;
+    const arrivedCount = resaType === 'normal'
+      ? Object.values(getReservations(dateISO, slot.id)).filter(r => r.type === 'reserved').length
+      : 0;
     const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
-    if (count >= limit) {
-      errEl.textContent = `Capacité maximale atteinte (${limit} ${resaType === 'normal' ? 'usagers' : 'groupes'}).`;
+    if (count + arrivedCount >= limit) {
+      errEl.textContent = `Capacité maximale atteinte (${limit} ${resaType === 'normal' ? 'réservations' : 'groupes'}).`;
       return;
     }
 
@@ -557,12 +620,14 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('btn-export-pdf').addEventListener('click', () => exportSlotPDF(dateISO, slot));
 
   if (callbacks.onGoLive) {
     document.getElementById('btn-go-live').addEventListener('click', () => { closeModal(); callbacks.onGoLive(); });
   }
 
   _refreshAll();
+  _dialog().classList.add('plan-dialog');
   _dialog().showModal();
   document.getElementById('pf-prenom').focus();
 }

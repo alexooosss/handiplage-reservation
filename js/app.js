@@ -4,11 +4,13 @@ const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
   let _selectionMode = null; // { index, resa } | null
-  let _currentView = 'carte'; // 'carte' | 'planning'
+  let _currentView = 'carte'; // 'carte' | 'planning' | 'mc' | 'inscription'
   let _planningWeekOffset = 0;
+  let _mcDate = null;
 
   function init() {
-    _date = getTodayISO();
+    _date   = getTodayISO();
+    _mcDate = _date;
     _renderHeader();
     _renderClock();
     setInterval(_renderClock, 1000);
@@ -24,11 +26,23 @@ const App = (() => {
     const btnPlanning = document.getElementById('btn-planning-tab');
     if (btnPlanning) {
       btnPlanning.addEventListener('click', () => {
-        if (_currentView === 'planning') {
-          showView('carte');
-        } else {
-          showView('planning');
-        }
+        showView(_currentView === 'planning' ? 'carte' : 'planning');
+      });
+    }
+
+    // Main courante tab button
+    const btnMc = document.getElementById('btn-mc-tab');
+    if (btnMc) {
+      btnMc.addEventListener('click', () => {
+        showView(_currentView === 'mc' ? 'carte' : 'mc');
+      });
+    }
+
+    // Inscription tab button
+    const btnInsc = document.getElementById('btn-insc-tab');
+    if (btnInsc) {
+      btnInsc.addEventListener('click', () => {
+        showView(_currentView === 'inscription' ? 'carte' : 'inscription');
       });
     }
   }
@@ -38,20 +52,61 @@ const App = (() => {
     const beachPanel   = document.getElementById('beach-panel');
     const sidePanel    = document.getElementById('side-panel');
     const planningView = document.getElementById('planning-view');
+    const mcView       = document.getElementById('mc-view');
+    const inscView     = document.getElementById('insc-view');
     const btnPlanning  = document.getElementById('btn-planning-tab');
+    const btnMc        = document.getElementById('btn-mc-tab');
+    const btnInsc      = document.getElementById('btn-insc-tab');
+
+    // Masquer tout
+    if (beachPanel)   beachPanel.style.display   = 'none';
+    if (sidePanel)    sidePanel.style.display     = 'none';
+    if (planningView) planningView.style.display  = 'none';
+    if (mcView)       mcView.style.display        = 'none';
+    if (inscView)     inscView.style.display      = 'none';
+    if (btnPlanning)  btnPlanning.classList.remove('active');
+    if (btnMc)        btnMc.classList.remove('active');
+    if (btnInsc)      btnInsc.classList.remove('active');
 
     if (view === 'planning') {
-      if (beachPanel)   beachPanel.style.display   = 'none';
-      if (sidePanel)    sidePanel.style.display     = 'none';
-      if (planningView) planningView.style.display  = 'flex';
+      if (planningView) planningView.style.display = 'flex';
       if (btnPlanning)  btnPlanning.classList.add('active');
       _renderPlanning();
+    } else if (view === 'mc') {
+      if (mcView) mcView.style.display = 'flex';
+      if (btnMc)  btnMc.classList.add('active');
+      _renderMc();
+    } else if (view === 'inscription') {
+      if (inscView) inscView.style.display = 'flex';
+      if (btnInsc)  btnInsc.classList.add('active');
+      _renderInscription();
     } else {
-      if (beachPanel)   beachPanel.style.display   = '';
-      if (sidePanel)    sidePanel.style.display     = '';
-      if (planningView) planningView.style.display  = 'none';
-      if (btnPlanning)  btnPlanning.classList.remove('active');
+      if (beachPanel) beachPanel.style.display = '';
+      if (sidePanel)  sidePanel.style.display  = '';
     }
+  }
+
+  function _mcDateOffset(iso, delta) {
+    const d = new Date(iso + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function _renderInscription() {
+    const container = document.getElementById('insc-view');
+    if (!container) return;
+    renderInscription(container);
+  }
+
+  function _renderMc() {
+    const container = document.getElementById('mc-view');
+    if (!container) return;
+    if (!_mcDate) _mcDate = _date;
+    container._onMcPrev  = () => { _mcDate = _mcDateOffset(_mcDate, -1); _renderMc(); };
+    container._onMcNext  = () => { const next = _mcDateOffset(_mcDate, +1); if (next <= _date) { _mcDate = next; _renderMc(); } };
+    container._onMcToday = () => { _mcDate = _date; _renderMc(); };
+    container._onMcGoto  = d  => { _mcDate = d; _renderMc(); };
+    renderMc(container, _mcDate);
   }
 
   function _renderPlanning() {

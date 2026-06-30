@@ -12,16 +12,14 @@
   <!-- HEADER -->
   <header id="app-header">
     <div class="logo">
-      <div class="logo-icon">🏖️</div>
-      <div class="logo-text">
-        <h1>Handiplage</h1>
-        <span>Juan-les-Pins · Antibes</span>
-      </div>
+      <img src="logo-handiplage.png" alt="Handiplage Antibes" class="logo-img">
     </div>
     <nav class="slots-nav" id="slots-nav">
       <!-- Injecté par app.js -->
     </nav>
     <button id="btn-planning-tab" class="planning-tab-btn">&#128197; Planning</button>
+    <button id="btn-mc-tab" class="planning-tab-btn">&#128221; Main courante</button>
+    <button id="btn-insc-tab" class="planning-tab-btn">&#128203; Inscription</button>
     <div class="datetime" id="datetime">
       <span class="time" id="clock">--:--</span>
       <span id="date-label"></span>
@@ -58,6 +56,12 @@
     <!-- Vue Planning -->
     <div id="planning-view" style="display:none" class="planning-view"></div>
 
+    <!-- Vue Main courante -->
+    <div id="mc-view" style="display:none" class="mc-view"></div>
+
+    <!-- Vue Inscription -->
+    <div id="insc-view" style="display:none" class="insc-view"></div>
+
   </div>
 
   <!-- MODALE -->
@@ -69,11 +73,14 @@
   <script src="js/data.js"></script>
   <script src="js/slots.js"></script>
   <script src="js/timer.js"></script>
+  <script src="js/logo.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/map.js"></script>
   <script src="js/panel.js"></script>
   <script src="js/modal.js"></script>
   <script src="js/planning.js"></script>
+  <script src="js/mc.js"></script>
+  <script src="js/inscription.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
