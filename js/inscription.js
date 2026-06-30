@@ -268,7 +268,18 @@ function _showForm(container, insc) {
       statutEl.addEventListener('change', function() {
         const list = getInscriptions();
         const idx  = list.findIndex(function(i) { return i.id === v.id; });
-        if (idx !== -1) { list[idx].statut = statutEl.value; saveInscriptions(list); _refreshSidebar(container); }
+        if (idx !== -1) {
+          list[idx].statut = statutEl.value;
+          saveInscriptions(list);
+          _refreshSidebar(container);
+          const updatedInsc = list[idx];
+          const existingBlock = mainEl.querySelector('.pass-block');
+          if (updatedInsc.statut !== 'valide') {
+            if (existingBlock) existingBlock.remove();
+          } else {
+            _reRenderPassBlock(updatedInsc);
+          }
+        }
       });
     }
     // Supprimer
@@ -318,7 +329,7 @@ function _showForm(container, insc) {
         const list = getInscriptions();
         const idx  = list.findIndex(function(i) { return i.id === v.id; });
         if (idx === -1) return;
-        list[idx].pass = { actif: true, activatedAt: new Date().toISOString().slice(0, 10) };
+        list[idx].pass = Object.assign({}, list[idx].pass, { actif: true, activatedAt: new Date().toISOString().slice(0, 10) });
         saveInscriptions(list);
         _reRenderPassBlock(list[idx]);
         _refreshSidebar(container);
