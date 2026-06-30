@@ -68,6 +68,11 @@ function openAddReservationModal(onConfirm) {
 
   function _showSuggestions() {
     _removeSuggestions();
+    // Toute frappe après une sélection efface le lien (évite un nom/inscriptionId divergents)
+    if (_linkedInscriptionId) {
+      _linkedInscriptionId = null;
+      document.getElementById('pass-link-info').style.display = 'none';
+    }
     if (typeof getInscriptionsWithActivePass === 'undefined') return;
     const q = (prenomInp.value + ' ' + nomInp.value).trim().toLowerCase();
     if (q.length < 2) return;
@@ -80,14 +85,18 @@ function openAddReservationModal(onConfirm) {
     dd.className = 'pass-suggest-dropdown';
     dd.id = 'pass-suggest-dd';
     matches.forEach(function(insc) {
-      const remaining = getPassRemaining(insc.id);
+      const remaining = (typeof getPassRemaining === 'function') ? getPassRemaining(insc.id) : null;
+      if (remaining === null) return;
       const exhausted = remaining === 0;
       const item = document.createElement('div');
       item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
-      item.innerHTML = `<span>${insc.nom} ${insc.prenom}</span>`
-        + `<span class="pass-suggest-remaining${exhausted ? ' empty' : ''}">`
-        + (exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes')
-        + '</span>';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = insc.nom + ' ' + insc.prenom;
+      const remSpan = document.createElement('span');
+      remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
+      remSpan.textContent = exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes';
+      item.appendChild(nameSpan);
+      item.appendChild(remSpan);
       if (!exhausted) {
         item.addEventListener('mousedown', function(e) {
           e.preventDefault();
@@ -120,7 +129,7 @@ function openAddReservationModal(onConfirm) {
     );
     if (!prenom || !nom) { alert('Prénom et nom sont obligatoires.'); return; }
 
-    if (_linkedInscriptionId) {
+    if (_linkedInscriptionId && typeof getPassRemaining === 'function') {
       const remaining = getPassRemaining(_linkedInscriptionId);
       if (remaining === 0) {
         alert('Pass épuisé ce mois. Cette personne ne peut plus réserver avant le '
