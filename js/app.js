@@ -273,6 +273,7 @@ const App = (() => {
       checkinTime,
       durationMs,
       status: 'present',
+      inscriptionId: waitingResa.inscriptionId || null,
     };
 
     saveCheckin(_date, _selectedSlotId, spotId, checkinData);
