@@ -486,7 +486,7 @@ function _readFiles(input1, input2, data, callback) {
 
 function _renderPassBlock(insc) {
   const today    = new Date();
-  const inSeason = [6,7,8,9].includes(today.getMonth() + 1);
+  const inSeason = (typeof isPassSeason === 'function') ? isPassSeason() : [6,7,8,9].includes(today.getMonth() + 1);
   const pass     = insc.pass || null;
   const actif    = !!(pass && pass.actif);
 
