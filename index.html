@@ -77,12 +77,17 @@
   <script src="js/auth.js"></script>
   <script>
     (async function () {
-      var session = await getSession();
-      if (!session || getUserRole(session) !== 'staff') {
+      try {
+        const session = await getSession();
+        if (!session || getUserRole(session) !== 'staff') {
+          window.location.href = '/login.html';
+          return;
+        }
+        document.getElementById('btn-logout').addEventListener('click', signOut);
+      } catch (err) {
+        console.error('Auth check failed:', err);
         window.location.href = '/login.html';
-        return;
       }
-      document.getElementById('btn-logout').addEventListener('click', signOut);
     })();
   </script>
   <script src="js/data.js"></script>
