@@ -67,3 +67,9 @@ CREATE TABLE main_courante (
   updated_at  timestamptz NOT NULL DEFAULT now(),
   UNIQUE (date, creneau_id)
 );
+
+-- Indexes for RLS policy performance and common query patterns
+CREATE INDEX idx_inscriptions_user_id ON inscriptions(user_id);
+CREATE INDEX idx_reservations_inscription_id ON reservations(inscription_id);
+CREATE INDEX idx_reservations_date_creneau ON reservations(date, creneau_id);
+CREATE INDEX idx_main_courante_date_creneau ON main_courante(date, creneau_id);
