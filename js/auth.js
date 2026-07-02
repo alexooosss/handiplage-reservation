@@ -38,6 +38,9 @@ async function requireStaffAuth() {
 // Appelle l'Edge Function pour inviter un usager par email
 async function inviteUser(email, inscriptionId) {
   const session = await getSession();
+  if (!session) {
+    throw new Error('Session requise pour inviter un usager');
+  }
   const response = await fetch(window.SUPABASE_CONFIG.url + '/functions/v1/invite-user', {
     method: 'POST',
     headers: {
@@ -47,8 +50,14 @@ async function inviteUser(email, inscriptionId) {
     body: JSON.stringify({ email, inscriptionId })
   });
   if (!response.ok) {
-    const body = await response.json();
-    throw new Error(body.error || 'Erreur invitation');
+    let error = 'Erreur invitation';
+    try {
+      const body = await response.json();
+      error = body.error || error;
+    } catch (e) {
+      // Réponse non-JSON, utiliser le message par défaut
+    }
+    throw new Error(error);
   }
 }
 
