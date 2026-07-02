@@ -29,7 +29,7 @@ async function requireStaffAuth() {
     return null;
   }
   if (getUserRole(session) !== 'staff') {
-    window.location.href = '/usager.html';
+    window.location.href = '/login.html';
     return null;
   }
   return session;

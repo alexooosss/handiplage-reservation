@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion — Handiplage</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #e3f2fd;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.12);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .card h1 {
+      font-size: 1.4rem;
+      color: #1565c0;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      font-size: .875rem;
+      color: #333;
+      margin-bottom: .25rem;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: .55rem .75rem;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      transition: border-color .15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: .65rem;
+      background: #1565c0;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    button[type="submit"]:hover { background: #0d47a1; }
+    button[type="submit"]:disabled { background: #90a4ae; cursor: not-allowed; }
+
+    #error-msg {
+      color: #c62828;
+      font-size: .875rem;
+      margin-top: .75rem;
+      min-height: 1.2em;
+    }
+
+    #success-msg {
+      color: #2e7d32;
+      font-size: .875rem;
+      margin-top: .75rem;
+      min-height: 1.2em;
+    }
+
+    .forgot-link {
+      display: block;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: .85rem;
+      color: #1565c0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .forgot-link:hover { color: #0d47a1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Handiplage — Connexion</h1>
+    <form id="login-form" novalidate>
+      <label for="email">Adresse e-mail</label>
+      <input type="email" id="email" name="email" autocomplete="email" required />
+
+      <label for="password">Mot de passe</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required />
+
+      <button type="submit" id="submit-btn">Se connecter</button>
+    </form>
+
+    <p id="error-msg" role="alert" aria-live="polite"></p>
+    <p id="success-msg" aria-live="polite"></p>
+
+    <button class="forgot-link" id="forgot-btn" type="button">Mot de passe oublié ?</button>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async function () {
+      // Redirect if already logged in
+      try {
+        const session = await getSession();
+        if (session) {
+          const role = getUserRole(session);
+          if (role === 'staff') {
+            window.location.href = '/index.html';
+            return;
+          }
+          if (role === 'user') {
+            window.location.href = '/usager.html';
+            return;
+          }
+        }
+      } catch (e) {
+        // Pas de session ou erreur réseau — afficher le formulaire normalement
+      }
+
+      const form = document.getElementById('login-form');
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const submitBtn = document.getElementById('submit-btn');
+      const errorMsg = document.getElementById('error-msg');
+      const successMsg = document.getElementById('success-msg');
+      const forgotBtn = document.getElementById('forgot-btn');
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        errorMsg.textContent = '';
+        successMsg.textContent = '';
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+          errorMsg.textContent = 'Veuillez remplir tous les champs.';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Connexion…';
+
+        try {
+          const data = await signIn(email, password);
+          const role = getUserRole(data.session);
+          if (role === 'staff') {
+            window.location.href = '/index.html';
+          } else if (role === 'user') {
+            window.location.href = '/usager.html';
+          } else {
+            errorMsg.textContent = 'Rôle inconnu. Contactez l\'administrateur.';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Se connecter';
+          }
+        } catch (err) {
+          const msg = err && err.message ? err.message : 'Erreur de connexion.';
+          if (msg.toLowerCase().includes('invalid login credentials') ||
+              msg.toLowerCase().includes('invalid credentials')) {
+            errorMsg.textContent = 'Identifiants incorrects. Vérifiez votre e-mail et mot de passe.';
+          } else if (msg.toLowerCase().includes('email not confirmed')) {
+            errorMsg.textContent = 'Votre adresse e-mail n\'a pas encore été confirmée.';
+          } else {
+            errorMsg.textContent = 'Erreur de connexion : ' + msg;
+          }
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Se connecter';
+        }
+      });
+
+      forgotBtn.addEventListener('click', async function () {
+        errorMsg.textContent = '';
+        successMsg.textContent = '';
+        const email = emailInput.value.trim();
+        if (!email) {
+          errorMsg.textContent = 'Entrez votre adresse e-mail ci-dessus pour réinitialiser le mot de passe.';
+          return;
+        }
+        try {
+          await supabase.auth.resetPasswordForEmail(email);
+          successMsg.textContent = 'Un e-mail de réinitialisation a été envoyé à ' + email + '. Vérifiez votre boîte de réception.';
+        } catch (err) {
+          errorMsg.textContent = 'Impossible d\'envoyer l\'e-mail de réinitialisation. Réessayez.';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
