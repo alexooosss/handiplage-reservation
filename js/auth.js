@@ -6,18 +6,18 @@ function getUserRole(session) {
 }
 
 async function signIn(email, password) {
-  const result = await supabase.auth.signInWithPassword({ email, password });
+  const result = await supabaseClient.auth.signInWithPassword({ email, password });
   if (result.error) throw result.error;
   return result.data;
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   window.location.href = '/login.html';
 }
 
 async function getSession() {
-  const result = await supabase.auth.getSession();
+  const result = await supabaseClient.auth.getSession();
   return result.data.session;
 }
 

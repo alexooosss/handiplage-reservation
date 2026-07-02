@@ -203,7 +203,7 @@
           return;
         }
         try {
-          await supabase.auth.resetPasswordForEmail(email);
+          await supabaseClient.auth.resetPasswordForEmail(email);
           successMsg.textContent = 'Un e-mail de réinitialisation a été envoyé à ' + email + '. Vérifiez votre boîte de réception.';
         } catch (err) {
           errorMsg.textContent = 'Impossible d\'envoyer l\'e-mail de réinitialisation. Réessayez.';
