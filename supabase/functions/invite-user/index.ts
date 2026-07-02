@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
   // Vérifier que l'appelant est bien staff
   const callerClient = createClient(supabaseUrl, anonKey)
-  const token = authHeader.replace('Bearer ', '')
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
   const { data: { user }, error: userError } = await callerClient.auth.getUser(token)
 
   if (userError || !user || user.user_metadata?.role !== 'staff') {
@@ -72,10 +72,13 @@ Deno.serve(async (req) => {
 
   // Lier le user_id à l'inscription si fourni
   if (inscriptionId && invited.user) {
-    await adminClient
+    const { error: linkError } = await adminClient
       .from('inscriptions')
       .update({ user_id: invited.user.id })
       .eq('id', inscriptionId)
+    if (linkError) {
+      console.error('inscriptionId link failed:', linkError.message, { inscriptionId })
+    }
   }
 
   return new Response(JSON.stringify({ success: true }), {
