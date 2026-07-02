@@ -1,0 +1,11 @@
+[build]
+  # Génère js/env.js à partir des variables d'environnement Netlify
+  command = "[ -z \"$SUPABASE_URL\" ] && echo \"ERROR: SUPABASE_URL is not set\" && exit 1; [ -z \"$SUPABASE_ANON_KEY\" ] && echo \"ERROR: SUPABASE_ANON_KEY is not set\" && exit 1; printf 'window.SUPABASE_CONFIG={url:\"%s\",anonKey:\"%s\"};' \"$SUPABASE_URL\" \"$SUPABASE_ANON_KEY\" > js/env.js"
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -24,6 +24,7 @@
       <span class="time" id="clock">--:--</span>
       <span id="date-label"></span>
     </div>
+    <button id="btn-logout" class="planning-tab-btn" style="margin-left:auto">Déconnexion</button>
   </header>
 
   <!-- MAIN -->
@@ -70,6 +71,25 @@
   </dialog>
 
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async function () {
+      try {
+        const session = await getSession();
+        if (!session || getUserRole(session) !== 'staff') {
+          window.location.href = '/login.html';
+          return;
+        }
+        document.getElementById('btn-logout').addEventListener('click', signOut);
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        window.location.href = '/login.html';
+      }
+    })();
+  </script>
   <script src="js/data.js"></script>
   <script src="js/slots.js"></script>
   <script src="js/timer.js"></script>
