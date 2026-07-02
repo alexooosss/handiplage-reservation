@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handiplage — Connexion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, sans-serif;
+      background: #e3f2fd; display: flex;
+      align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .login-card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12);
+      padding: 40px 32px; width: 360px;
+    }
+    .login-card h1 {
+      margin: 0 0 6px; font-size: 22px; color: #1565c0;
+    }
+    .login-card p.sub {
+      margin: 0 0 28px; color: #666; font-size: 14px;
+    }
+    label { display: block; font-size: 13px; font-weight: 600;
+            color: #444; margin-bottom: 4px; }
+    input[type=email], input[type=password] {
+      width: 100%; padding: 10px 12px; border: 1px solid #ccc;
+      border-radius: 8px; font-size: 14px; margin-bottom: 16px;
+    }
+    input:focus { outline: none; border-color: #1565c0; }
+    button[type=submit] {
+      width: 100%; padding: 12px; background: #1565c0;
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    button:hover { background: #1976d2; }
+    #login-error {
+      display: none; margin-top: 12px; color: #c62828;
+      font-size: 13px; text-align: center;
+    }
+    .forgot { text-align: center; margin-top: 16px; font-size: 12px; }
+    .forgot a { color: #1565c0; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Handiplage Antibes</h1>
+    <p class="sub">Connectez-vous pour accéder à votre espace</p>
+    <form id="login-form">
+      <label for="login-email">Adresse email</label>
+      <input type="email" id="login-email" autocomplete="email" required>
+      <label for="login-password">Mot de passe</label>
+      <input type="password" id="login-password" autocomplete="current-password" required>
+      <button type="submit">Se connecter</button>
+      <div id="login-error"></div>
+    </form>
+    <div class="forgot">
+      <a href="#" id="forgot-link">Mot de passe oublié ?</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Si déjà connecté, rediriger immédiatement
+    (async function () {
+      const session = await getSession();
+      if (session) {
+        window.location.href = getUserRole(session) === 'staff' ? '/index.html' : '/usager.html';
+      }
+    })();
+
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errEl = document.getElementById('login-error');
+      errEl.style.display = 'none';
+      try {
+        const data = await signIn(email, password);
+        const role = getUserRole({ user: data.user });
+        window.location.href = role === 'staff' ? '/index.html' : '/usager.html';
+      } catch (err) {
+        errEl.textContent = err.message === 'Invalid login credentials'
+          ? 'Email ou mot de passe incorrect'
+          : err.message;
+        errEl.style.display = 'block';
+      }
+    });
+
+    document.getElementById('forgot-link').addEventListener('click', async function (e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      if (!email) {
+        alert('Saisissez votre email dans le champ ci-dessus puis cliquez à nouveau.');
+        return;
+      }
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/login.html'
+      });
+      alert('Email de réinitialisation envoyé à ' + email);
+    });
+  </script>
+</body>
+</html>
