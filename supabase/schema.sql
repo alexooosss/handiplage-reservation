@@ -51,8 +51,12 @@ CREATE TABLE reservations (
   statut          text NOT NULL DEFAULT 'attente'
                     CHECK (statut IN ('attente', 'present', 'parti', 'absent', 'annule')),
   spot_id         text,
+  resa_type       text NOT NULL DEFAULT 'normal'
+                    CHECK (resa_type IN ('normal', 'groupe')),
   checkin_time    timestamptz,
-  created_at      timestamptz NOT NULL DEFAULT now()
+  depart_time     timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (date, creneau_id, spot_id)
 );
 
 -- Table main courante
