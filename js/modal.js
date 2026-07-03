@@ -20,13 +20,13 @@ function openAddReservationModal(onConfirm) {
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group pass-suggest-wrap" id="prenom-wrap">
-          <label>Prénom</label>
-          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
-        </div>
-        <div class="form-group">
+        <div class="form-group pass-suggest-wrap" id="nom-wrap">
           <label>Nom</label>
           <input type="text" id="f-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
         </div>
       </div>
       <div id="pass-link-info" class="pass-link-info" style="display:none">
@@ -73,44 +73,49 @@ function openAddReservationModal(onConfirm) {
       _linkedInscriptionId = null;
       document.getElementById('pass-link-info').style.display = 'none';
     }
-    if (typeof getInscriptionsWithActivePass === 'undefined') return;
-    const q = (prenomInp.value + ' ' + nomInp.value).trim().toLowerCase();
+    const q = (nomInp.value + ' ' + prenomInp.value).trim().toLowerCase();
     if (q.length < 2) return;
-    const matches = getInscriptionsWithActivePass().filter(function(i) {
+    const all = (typeof getCachedInscriptions === 'function') ? getCachedInscriptions() : [];
+    const matches = all.filter(function(i) {
       return (i.nom + ' ' + i.prenom).toLowerCase().includes(q)
           || (i.prenom + ' ' + i.nom).toLowerCase().includes(q);
-    });
+    }).slice(0, 8);
     if (matches.length === 0) return;
     const dd = document.createElement('div');
     dd.className = 'pass-suggest-dropdown';
     dd.id = 'pass-suggest-dd';
     matches.forEach(function(insc) {
-      const remaining = (typeof getPassRemaining === 'function') ? getPassRemaining(insc.id) : null;
-      if (remaining === null) return;
+      const remaining = (typeof getPassRemaining === 'function' && insc.pass)
+        ? getPassRemaining(insc.id) : null;
       const exhausted = remaining === 0;
       const item = document.createElement('div');
       item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
       const nameSpan = document.createElement('span');
       nameSpan.textContent = insc.nom + ' ' + insc.prenom;
-      const remSpan = document.createElement('span');
-      remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
-      remSpan.textContent = exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes';
       item.appendChild(nameSpan);
-      item.appendChild(remSpan);
+      if (remaining !== null) {
+        const remSpan = document.createElement('span');
+        remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
+        remSpan.textContent = exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes';
+        item.appendChild(remSpan);
+      }
       if (!exhausted) {
         item.addEventListener('mousedown', function(e) {
           e.preventDefault();
-          prenomInp.value      = insc.prenom;
-          nomInp.value         = insc.nom;
-          _linkedInscriptionId = insc.id;
-          document.getElementById('pass-link-name').textContent = insc.prenom + ' ' + insc.nom;
-          document.getElementById('pass-link-info').style.display = 'flex';
+          nomInp.value        = insc.nom.toUpperCase();
+          prenomInp.value     = insc.prenom;
+          _linkedInscriptionId = insc.pass ? insc.id : null;
+          if (_linkedInscriptionId) {
+            document.getElementById('pass-link-name').textContent = insc.prenom + ' ' + insc.nom;
+            document.getElementById('pass-link-info').style.display = 'flex';
+          }
           _removeSuggestions();
+          prenomInp.focus();
         });
       }
       dd.appendChild(item);
     });
-    document.getElementById('prenom-wrap').appendChild(dd);
+    document.getElementById('nom-wrap').appendChild(dd);
   }
 
   function _removeSuggestions() {
@@ -143,7 +148,7 @@ function openAddReservationModal(onConfirm) {
   });
 
   _dialog().showModal();
-  prenomInp.focus();
+  nomInp.focus();
 }
 
 // ── Modale 2 : Assigner un emplacement à une personne arrivée ──
