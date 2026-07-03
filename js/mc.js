@@ -1,5 +1,7 @@
 'use strict';
 
+var _mcCurrentData = null;
+
 const MC_COLS = [
   { key: 'resa',         label: 'Usagers\nrésas',      auto: true  },
   { key: 'walkin',       label: 'Usagers\nsans résa',   auto: true  },
@@ -27,18 +29,23 @@ async function renderMc(container, date) {
   const todayISO = new Date().toISOString().slice(0, 10);
   const isToday  = date === todayISO;
   const data     = await getMcData(date);
+  _mcCurrentData = data;
 
   // Auto-remplissage resa/walkin (depuis les données réelles du jour)
   await Promise.all(SLOTS.map(async s => {
-    if (!data.slots[s.id]) data.slots[s.id] = _mcDefault().slots[s.id];
-    const vals = Object.values(await getReservations(date, s.id));
-    data.slots[s.id].resa   = vals.filter(r => r.type === 'reserved').length;
-    data.slots[s.id].walkin = vals.filter(r => r.type === 'walkin').length;
+    if (!_mcCurrentData.slots[s.id]) _mcCurrentData.slots[s.id] = _mcDefault().slots[s.id];
+    try {
+      const vals = Object.values(await getReservations(date, s.id));
+      _mcCurrentData.slots[s.id].resa   = vals.filter(r => r.type === 'reserved').length;
+      _mcCurrentData.slots[s.id].walkin = vals.filter(r => r.type === 'walkin').length;
+    } catch (e) {
+      // Laisse resa/walkin à 0 si le créneau échoue — n'interrompt pas le rendu
+    }
   }));
   // Ne sauvegarder que si une MC existe déjà (évite de créer des entrées vides à la navigation)
-  if (!data._isNew) await saveMcData(date, data);
+  if (!_mcCurrentData._isNew) await saveMcData(date, _mcCurrentData);
 
-  const st        = data.staff;
+  const st        = _mcCurrentData.staff;
   const policeCls = st.police         ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
   const plageCls  = st.plage_nettoyee ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
   const allDates  = await getMcDates();
@@ -95,7 +102,7 @@ async function renderMc(container, date) {
     let rowTotal = 0;
     html += '<tr><td class="mc-row-label">' + c.label.replace(/\n/g, '<br>') + '</td>';
     SLOTS.forEach(s => {
-      const sd  = data.slots[s.id] || {};
+      const sd  = _mcCurrentData.slots[s.id] || {};
       const val = (sd[c.key] !== undefined ? sd[c.key] : 0);
       rowTotal += Number(val) || 0;
       if (c.auto) {
@@ -118,7 +125,7 @@ async function renderMc(container, date) {
     +   '<textarea id="mc-note-inp" placeholder="Saisir une note ou un événement notable… (Entrée pour valider, Maj+Entrée pour saut de ligne)"></textarea>'
     +   '<button class="btn-primary" id="mc-note-add">＋ Ajouter</button>'
     + '</div>'
-    + '<div id="mc-notes-list">' + _renderNotes(data.notes) + '</div>'
+    + '<div id="mc-notes-list">' + _renderNotes(_mcCurrentData.notes) + '</div>'
     + '</div>';
 
   container.innerHTML = html;
@@ -129,9 +136,14 @@ async function renderMc(container, date) {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('blur', async () => {
-      const d = await getMcData(date);
-      d.staff[staffMap[id]] = el.value.trim();
-      await saveMcData(date, d);
+      try {
+        const d = _mcCurrentData;
+        if (!d) return;
+        d.staff[staffMap[id]] = el.value.trim();
+        await saveMcData(date, d);
+      } catch (e) {
+        console.error('MC save error:', e);
+      }
     });
   });
 
@@ -140,32 +152,42 @@ async function renderMc(container, date) {
     const btn = document.getElementById(id);
     if (!btn) return;
     btn.addEventListener('click', async () => {
-      const d = await getMcData(date);
-      if (d.staff[key] === undefined) d.staff[key] = false;
-      d.staff[key] = !d.staff[key];
-      await saveMcData(date, d);
-      btn.textContent = d.staff[key] ? 'OUI' : 'NON';
-      btn.className   = d.staff[key] ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
+      try {
+        const d = _mcCurrentData;
+        if (!d) return;
+        if (d.staff[key] === undefined) d.staff[key] = false;
+        d.staff[key] = !d.staff[key];
+        await saveMcData(date, d);
+        btn.textContent = d.staff[key] ? 'OUI' : 'NON';
+        btn.className   = d.staff[key] ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
+      } catch (e) {
+        console.error('MC save error:', e);
+      }
     });
   });
 
   // ── Wiring compteurs ──
   container.querySelectorAll('input.mc-count').forEach(inp => {
     inp.addEventListener('input', async () => {
-      const d = await getMcData(date);
-      const slotId = parseInt(inp.dataset.slot);
-      const key    = inp.dataset.key;
-      if (!d.slots[slotId]) d.slots[slotId] = _mcDefault().slots[slotId];
-      d.slots[slotId][key] = Math.max(0, parseInt(inp.value) || 0);
-      await saveMcData(date, d);
-      // Mise à jour de la cellule total de cette colonne
-      const totEl = document.getElementById('mc-tot-' + key);
-      if (totEl) {
-        let total = 0;
-        container.querySelectorAll('input.mc-count[data-key="' + key + '"]').forEach(i => {
-          total += Math.max(0, parseInt(i.value) || 0);
-        });
-        totEl.textContent = total;
+      try {
+        const d = _mcCurrentData;
+        if (!d) return;
+        const slotId = parseInt(inp.dataset.slot);
+        const key    = inp.dataset.key;
+        if (!d.slots[slotId]) d.slots[slotId] = _mcDefault().slots[slotId];
+        d.slots[slotId][key] = Math.max(0, parseInt(inp.value) || 0);
+        await saveMcData(date, d);
+        // Mise à jour de la cellule total de cette colonne
+        const totEl = document.getElementById('mc-tot-' + key);
+        if (totEl) {
+          let total = 0;
+          container.querySelectorAll('input.mc-count[data-key="' + key + '"]').forEach(i => {
+            total += Math.max(0, parseInt(i.value) || 0);
+          });
+          totEl.textContent = total;
+        }
+      } catch (e) {
+        console.error('MC save error:', e);
       }
     });
   });
@@ -174,16 +196,21 @@ async function renderMc(container, date) {
   const noteAddBtn = document.getElementById('mc-note-add');
   const noteInp    = document.getElementById('mc-note-inp');
   async function _addNote() {
-    const text     = noteInp.value.trim();
-    const reporter = (document.getElementById('mc-note-reporter') || {}).value || '';
-    if (!text) return;
-    const d = await getMcData(date);
-    if (!d.notes) d.notes = [];
-    d.notes.unshift({ ts: Date.now(), text, reporter: reporter.trim() });
-    await saveMcData(date, d);
-    noteInp.value = '';
-    document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
-    _bindNoteDelete(date, container);
+    try {
+      const text     = noteInp.value.trim();
+      const reporter = (document.getElementById('mc-note-reporter') || {}).value || '';
+      if (!text) return;
+      const d = _mcCurrentData;
+      if (!d) return;
+      if (!d.notes) d.notes = [];
+      d.notes.unshift({ ts: Date.now(), text, reporter: reporter.trim() });
+      await saveMcData(date, d);
+      noteInp.value = '';
+      document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
+      _bindNoteDelete(date, container);
+    } catch (e) {
+      console.error('MC save error:', e);
+    }
   }
   noteAddBtn.addEventListener('click', _addNote);
   noteInp.addEventListener('keydown', e => {
@@ -245,11 +272,16 @@ function _renderNotes(notes) {
 function _bindNoteDelete(date, container) {
   container.querySelectorAll('.mc-note-del').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const d = await getMcData(date);
-      d.notes.splice(parseInt(btn.dataset.idx), 1);
-      await saveMcData(date, d);
-      document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
-      _bindNoteDelete(date, container);
+      try {
+        const d = _mcCurrentData;
+        if (!d) return;
+        d.notes.splice(parseInt(btn.dataset.idx), 1);
+        await saveMcData(date, d);
+        document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
+        _bindNoteDelete(date, container);
+      } catch (e) {
+        console.error('MC save error:', e);
+      }
     });
   });
 }
