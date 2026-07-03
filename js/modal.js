@@ -91,12 +91,14 @@ function openAddReservationModal(onConfirm) {
       const item = document.createElement('div');
       item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
       const nameSpan = document.createElement('span');
-      nameSpan.textContent = insc.nom + ' ' + insc.prenom;
+      nameSpan.textContent = insc.nom.toUpperCase() + ' ' + insc.prenom;
       item.appendChild(nameSpan);
-      if (remaining !== null) {
+      if (insc.pass) {
         const remSpan = document.createElement('span');
         remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
-        remSpan.textContent = exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes';
+        remSpan.textContent = exhausted
+          ? '🎫 Pass 2026 · épuisé'
+          : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
         item.appendChild(remSpan);
       }
       if (!exhausted) {
