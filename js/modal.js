@@ -506,14 +506,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <!-- Formulaire d'ajout inline -->
       <div class="plan-inline-form">
         <div class="plan-form-row">
-          <div class="plan-form-group" style="position:relative">
-            <label>Nom</label>
-            <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
-            <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:160px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
-          </div>
-          <div class="plan-form-group">
-            <label>Prénom</label>
-            <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
+          <div style="position:relative;display:flex;gap:8px">
+            <div class="plan-form-group">
+              <label>Nom</label>
+              <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+            </div>
+            <div class="plan-form-group">
+              <label>Prénom</label>
+              <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
+            </div>
+            <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
           </div>
           <div class="plan-form-group">
             <label>Acc.</label>
