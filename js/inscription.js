@@ -1,28 +1,12 @@
 'use strict';
 
-const INSC_KEY = 'handiplage_inscriptions';
-
-function getInscriptions() {
-  const raw = localStorage.getItem(INSC_KEY);
-  if (!raw) return [];
-  try { return JSON.parse(raw); } catch { return []; }
-}
-
-function saveInscriptions(list) {
-  localStorage.setItem(INSC_KEY, JSON.stringify(list));
-}
-
-function _genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
 function _escI(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Vue principale ──
-function renderInscription(container) {
-  const inscriptions = getInscriptions();
+async function renderInscription(container) {
+  const inscriptions = await getInscriptions();
 
   container.innerHTML = '<div class="insc-layout">'
     + '<div class="insc-sidebar">'
@@ -41,9 +25,10 @@ function renderInscription(container) {
     + '</div>'
     + '</div>';
 
-  document.getElementById('insc-search').addEventListener('input', function() {
+  document.getElementById('insc-search').addEventListener('input', async function() {
     const q = this.value.toLowerCase();
-    document.getElementById('insc-list').innerHTML = _renderListItems(getInscriptions(), q);
+    const list = await getInscriptions();
+    document.getElementById('insc-list').innerHTML = _renderListItems(list, q);
     _bindListItems(container);
   });
 
@@ -79,10 +64,11 @@ function _renderListItems(list, query) {
 
 function _bindListItems(container) {
   container.querySelectorAll('.insc-list-item').forEach(function(el) {
-    el.addEventListener('click', function() {
+    el.addEventListener('click', async function() {
       container.querySelectorAll('.insc-list-item').forEach(function(e) { e.classList.remove('active'); });
       el.classList.add('active');
-      const insc = getInscriptions().find(function(i) { return i.id === el.dataset.id; });
+      const list = await getInscriptions();
+      const insc = list.find(function(i) { return i.id === el.dataset.id; });
       if (insc) _showForm(container, insc);
     });
   });
@@ -116,6 +102,7 @@ function _showForm(container, insc) {
     + '<div class="insc-form-header">'
     +   '<h2>' + (isNew ? 'Nouvelle inscription' : 'Inscription — ' + _escI(v.nom) + ' ' + _escI(v.prenom)) + '</h2>'
     +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + chk(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + chk(v.statut,'refuse') + '>Refusé ✗</option></select></div>' : '')
+    +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'
     + '</div>'
     + (!isNew && v.statut === 'valide' ? _renderPassBlock(v) : '')
     + '<form id="insc-form" class="insc-form">'
@@ -265,19 +252,25 @@ function _showForm(container, insc) {
   if (!isNew) {
     const statutEl = document.getElementById('insc-statut');
     if (statutEl) {
-      statutEl.addEventListener('change', function() {
-        const list = getInscriptions();
-        const idx  = list.findIndex(function(i) { return i.id === v.id; });
-        if (idx !== -1) {
-          list[idx].statut = statutEl.value;
-          saveInscriptions(list);
-          _refreshSidebar(container);
-          const updatedInsc = list[idx];
+      statutEl.addEventListener('change', async function() {
+        const newStatut = statutEl.value;
+        const updated = await updateInscription(v.id, { statut: newStatut });
+        await _refreshSidebar(container);
+        if (newStatut !== 'valide') {
           const existingBlock = mainEl.querySelector('.pass-block');
-          if (updatedInsc.statut !== 'valide') {
-            if (existingBlock) existingBlock.remove();
-          } else {
-            _reRenderPassBlock(updatedInsc);
+          if (existingBlock) existingBlock.remove();
+        } else {
+          _reRenderPassBlock(updated);
+          if (updated.mail) {
+            inviteUser(updated.mail, updated.id)
+              .then(function() {
+                const msgEl = mainEl.querySelector('.insc-invite-msg');
+                if (msgEl) {
+                  msgEl.textContent = 'Email d\'invitation envoyé à ' + updated.mail;
+                  msgEl.style.display = 'block';
+                }
+              })
+              .catch(function() {}); // silencieux si déjà invité
           }
         }
       });
@@ -285,25 +278,41 @@ function _showForm(container, insc) {
     // Supprimer
     const delBtn = document.getElementById('insc-delete');
     if (delBtn) {
-      delBtn.addEventListener('click', function() {
+      delBtn.addEventListener('click', async function() {
         if (!confirm('Supprimer cette inscription définitivement ?')) return;
-        saveInscriptions(getInscriptions().filter(function(i) { return i.id !== v.id; }));
-        renderInscription(container);
+        await deleteInscription(v.id);
+        await renderInscription(container);
       });
     }
     // Supprimer fichiers
     const del1 = document.getElementById('del-doc1');
-    if (del1) del1.addEventListener('click', function() {
-      const list = getInscriptions(); const idx = list.findIndex(function(i){return i.id===v.id;});
-      if (idx!==-1){list[idx].justificatif1=null;list[idx].justificatif1Name='';saveInscriptions(list);}
-      const ex = document.getElementById('doc1-existing'); if(ex) ex.remove();
-    });
+    if (del1) {
+      del1.addEventListener('click', async function() {
+        const newMeta = Object.assign({}, v);
+        ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
+        newMeta.justificatif1 = null;
+        newMeta.justificatif1Name = '';
+        await updateInscription(v.id, { metadata: newMeta });
+        v.justificatif1 = null;
+        v.justificatif1Name = '';
+        const ex = document.getElementById('doc1-existing');
+        if (ex) ex.remove();
+      });
+    }
     const del2 = document.getElementById('del-doc2');
-    if (del2) del2.addEventListener('click', function() {
-      const list = getInscriptions(); const idx = list.findIndex(function(i){return i.id===v.id;});
-      if (idx!==-1){list[idx].justificatif2=null;list[idx].justificatif2Name='';saveInscriptions(list);}
-      const ex = document.getElementById('doc2-existing'); if(ex) ex.remove();
-    });
+    if (del2) {
+      del2.addEventListener('click', async function() {
+        const newMeta = Object.assign({}, v);
+        ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
+        newMeta.justificatif2 = null;
+        newMeta.justificatif2Name = '';
+        await updateInscription(v.id, { metadata: newMeta });
+        v.justificatif2 = null;
+        v.justificatif2Name = '';
+        const ex = document.getElementById('doc2-existing');
+        if (ex) ex.remove();
+      });
+    }
   }
 
   // ── Pass ──
@@ -325,42 +334,51 @@ function _showForm(container, insc) {
     const activateBtn   = document.getElementById('pass-activate');
     const deactivateBtn = document.getElementById('pass-deactivate');
     if (activateBtn) {
-      activateBtn.addEventListener('click', function() {
-        const list = getInscriptions();
-        const idx  = list.findIndex(function(i) { return i.id === v.id; });
-        if (idx === -1) return;
-        list[idx].pass = Object.assign({}, list[idx].pass, { actif: true, activatedAt: new Date().toISOString().slice(0, 10) });
-        saveInscriptions(list);
-        _reRenderPassBlock(list[idx]);
-        _refreshSidebar(container);
+      activateBtn.addEventListener('click', async function() {
+        const updated = await updateInscription(v.id, {
+          pass_actif: true,
+          pass_activated_at: new Date().toISOString().slice(0, 10),
+        });
+        _reRenderPassBlock(updated);
+        await _refreshSidebar(container);
       });
     }
     if (deactivateBtn) {
-      deactivateBtn.addEventListener('click', function() {
-        const list = getInscriptions();
-        const idx  = list.findIndex(function(i) { return i.id === v.id; });
-        if (idx === -1) return;
-        list[idx].pass = Object.assign({}, list[idx].pass, { actif: false });
-        saveInscriptions(list);
-        _reRenderPassBlock(list[idx]);
-        _refreshSidebar(container);
+      deactivateBtn.addEventListener('click', async function() {
+        const updated = await updateInscription(v.id, { pass_actif: false });
+        _reRenderPassBlock(updated);
+        await _refreshSidebar(container);
       });
     }
   }
 
   if (!isNew) _bindPassButtons();
 
-  document.getElementById('insc-cancel').addEventListener('click', function() { renderInscription(container); });
-  document.getElementById('insc-form').addEventListener('submit', function(e) { e.preventDefault(); _handleSubmit(container, isNew ? null : v.id, isNew ? null : v); });
+  document.getElementById('insc-cancel').addEventListener('click', async function() {
+    await renderInscription(container);
+  });
+  document.getElementById('insc-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    _handleSubmit(container, isNew ? null : v.id, isNew ? null : v);
+  });
 }
 
-function _refreshSidebar(container) {
-  const insc = getInscriptions();
+async function _refreshSidebar(container) {
+  const insc = await getInscriptions();
   const searchEl = document.getElementById('insc-search');
   const q = searchEl ? searchEl.value.toLowerCase() : '';
   const listEl = document.getElementById('insc-list');
   if (listEl) listEl.innerHTML = _renderListItems(insc, q);
   _bindListItems(container);
+}
+
+function _buildMetadata(data) {
+  const structured = ['id', 'nom', 'prenom', 'mail', 'telephone', 'statut', 'pass', 'createdAt', 'updatedAt'];
+  const meta = {};
+  Object.keys(data).forEach(function(k) {
+    if (structured.indexOf(k) === -1) meta[k] = data[k];
+  });
+  return meta;
 }
 
 function _handleSubmit(container, existingId, existingData) {
@@ -423,9 +441,6 @@ function _handleSubmit(container, existingId, existingData) {
   const atChecked = Array.from(document.querySelectorAll('input[name="at"]:checked')).map(function(el) { return el.value; });
 
   const inscData = {
-    id:                existingId || _genId(),
-    createdAt:         existingData ? existingData.createdAt : Date.now(),
-    updatedAt:         Date.now(),
     statut:            existingData ? existingData.statut : 'en_attente',
     nom, prenom,
     dateNaissance:     { jour: parseInt(dobJ), mois: parseInt(dobM), annee: parseInt(dobY) },
@@ -449,21 +464,24 @@ function _handleSubmit(container, existingId, existingData) {
     justificatif2Name: existingData ? existingData.justificatif2Name : '',
   };
 
-  _readFiles(g('f-doc1'), g('f-doc2'), inscData, function(data) {
-    const list = getInscriptions();
-    if (existingId) {
-      const idx = list.findIndex(function(i) { return i.id === existingId; });
-      if (idx !== -1) list[idx] = data; else list.push(data);
-    } else {
-      list.push(data);
-    }
+  _readFiles(g('f-doc1'), g('f-doc2'), inscData, async function(data) {
     try {
-      saveInscriptions(list);
-    } catch (e) {
-      errEl.textContent = 'Erreur de stockage : les documents joints sont trop volumineux. Réessayez sans fichiers joints.';
-      return;
+      if (existingId) {
+        await updateInscription(existingId, {
+          nom:       data.nom,
+          prenom:    data.prenom,
+          mail:      data.mail,
+          telephone: data.telephone,
+          metadata:  _buildMetadata(data),
+        });
+      } else {
+        await createInscription(data);
+      }
+      await renderInscription(container);
+    } catch (err) {
+      const errEl2 = g('insc-form-err');
+      if (errEl2) errEl2.textContent = 'Erreur lors de la sauvegarde : ' + (err.message || err);
     }
-    renderInscription(container);
   });
 }
 
@@ -534,5 +552,5 @@ function _renderPassBlock(insc) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { renderInscription, getInscriptions, saveInscriptions };
+  module.exports = { renderInscription };
 }
