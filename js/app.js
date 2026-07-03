@@ -163,7 +163,7 @@ const App = (() => {
 
     const mapHandler = _selectionMode
       ? spotId => _doAssignSpot(spotId, reservations, freeSpots).catch(console.error)
-      : spotId => { _onSpotClick(spotId, reservations, freeSpots); };
+      : spotId => { _onSpotClick(spotId, reservations, freeSpots).catch(console.error); };
     renderMapSpots(mapEl, reservations, mapHandler, !!_selectionMode);
 
     // Bandeau de sélection
