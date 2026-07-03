@@ -684,23 +684,38 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
         .slice(0, 8);
       if (!matches.length) return;
-      suggestEl.innerHTML = matches.map(function(i) {
-        return '<div class="pf-suggest-item" data-nom="' + i.nom.toUpperCase() + '" data-prenom="' + i.prenom + '"'
-          + ' style="padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee">'
-          + '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom
-          + '</div>';
-      }).join('');
       suggestEl.style.display = 'block';
-      suggestEl.querySelectorAll('.pf-suggest-item').forEach(function(item) {
-        item.addEventListener('mousedown', function(e) {
-          e.preventDefault();
-          nomEl.value    = item.dataset.nom;
-          prenomEl.value = item.dataset.prenom;
-          _close();
-          prenomEl.focus();
-        });
-        item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
-        item.addEventListener('mouseout',  function() { item.style.background = ''; });
+      matches.forEach(function(i) {
+        var remaining = (typeof getPassRemaining === 'function' && i.pass)
+          ? getPassRemaining(i.id) : null;
+        var exhausted = remaining === 0;
+        var item = document.createElement('div');
+        item.className = 'pf-suggest-item';
+        item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
+          + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
+        var nameSpan = document.createElement('span');
+        nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+        item.appendChild(nameSpan);
+        if (i.pass) {
+          var remSpan = document.createElement('span');
+          remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
+          remSpan.textContent = exhausted
+            ? '🎫 Pass 2026 · épuisé'
+            : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
+          item.appendChild(remSpan);
+        }
+        if (!exhausted) {
+          item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            nomEl.value    = i.nom.toUpperCase();
+            prenomEl.value = i.prenom;
+            _close();
+            prenomEl.focus();
+          });
+          item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
+          item.addEventListener('mouseout',  function() { item.style.background = ''; });
+        }
+        suggestEl.appendChild(item);
       });
     });
 
