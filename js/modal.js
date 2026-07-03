@@ -607,8 +607,12 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     const pendingHtml = pending.map(r => {
       const acc = r.accompagnants === 0 ? 'seul·e'
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+      const insc = (typeof getCachedInscriptions === 'function' && r.inscriptionId)
+        ? getCachedInscriptions().find(i => i.id === r.inscriptionId) : null;
+      const passTag = (insc && insc.pass && insc.pass.actif)
+        ? ' <span style="font-size:11px;color:#1565c0;font-weight:600">🎫 Pass 2026</span>' : '';
       return '<div class="planning-list-item">'
-        + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + '</span>'
+        + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + passTag + '</span>'
         + '<button class="btn-remove" data-id="' + r.id + '">✕</button>'
         + '</div>';
     }).join('');
