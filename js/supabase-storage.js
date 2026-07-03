@@ -115,7 +115,7 @@ async function updateSpotField(date, slotId, spotId, field, value) {
 
 async function clearSlot(date, slotId) {
   var result = await supabaseClient.from('reservations').delete()
-    .eq('date', date).eq('creneau_id', slotId);
+    .eq('date', date).eq('creneau_id', slotId).not('spot_id', 'is', null);
   if (result.error) throw result.error;
 }
 
@@ -184,11 +184,15 @@ async function getWeekReservationCounts(weekStartISO, weekEndISO) {
 async function getPassRemainingCount(inscriptionId, monthISO) {
   // monthISO : 'YYYY-MM'
   var start = monthISO + '-01';
-  var end   = monthISO + '-31'; // Supabase gère les dates inexistantes
+  var nextMonth = new Date(monthISO + '-01');
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  var end = nextMonth.getFullYear() + '-'
+    + String(nextMonth.getMonth() + 1).padStart(2, '0') + '-01';
   var result = await supabaseClient.from('reservations')
     .select('id', { count: 'exact', head: true })
     .eq('inscription_id', inscriptionId)
-    .gte('date', start).lte('date', end)
+    .gte('date', start)
+    .lt('date', end)
     .neq('statut', 'annule');
   if (result.error) throw result.error;
   return result.count || 0;
