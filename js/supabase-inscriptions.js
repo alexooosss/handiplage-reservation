@@ -66,7 +66,6 @@ function _inscriptionToRow(data) {
     statut:            data.statut    !== undefined ? data.statut    : 'en_attente',
     pass_actif:        data.pass ? Boolean(data.pass.actif) : false,
     pass_activated_at: data.pass ? (data.pass.activatedAt || null) : null,
-    updated_at:        new Date().toISOString(),
     metadata:          metadata,
   };
 
@@ -115,8 +114,6 @@ async function getInscriptionById(id) {
  */
 async function createInscription(data) {
   var row = _inscriptionToRow(data);
-  // updated_at est géré par Supabase (trigger), ne pas l'envoyer à la création
-  delete row.updated_at;
 
   var result = await supabaseClient
     .from('inscriptions')
@@ -142,19 +139,16 @@ async function createInscription(data) {
  * Met à jour le cache, retourne l'objet mis à jour.
  */
 async function updateInscription(id, partial) {
-  // Fusionne avec les données existantes si disponibles dans le cache
-  var existing = null;
-  if (_inscriptionsCache !== null) {
-    for (var i = 0; i < _inscriptionsCache.length; i++) {
-      if (_inscriptionsCache[i].id === id) {
-        existing = _inscriptionsCache[i];
-        break;
-      }
-    }
-  }
-
-  var merged = existing ? Object.assign({}, existing, partial) : partial;
-  var row = _inscriptionToRow(merged);
+  var row = {};
+  if (partial.statut            !== undefined) row.statut            = partial.statut;
+  if (partial.pass_actif        !== undefined) row.pass_actif        = partial.pass_actif;
+  if (partial.pass_activated_at !== undefined) row.pass_activated_at = partial.pass_activated_at;
+  if (partial.nom               !== undefined) row.nom               = partial.nom;
+  if (partial.prenom            !== undefined) row.prenom            = partial.prenom;
+  if (partial.mail              !== undefined) row.mail              = partial.mail;
+  if (partial.telephone         !== undefined) row.telephone         = partial.telephone;
+  if (partial.metadata          !== undefined) row.metadata          = partial.metadata;
+  row.updated_at = new Date().toISOString();
 
   var result = await supabaseClient
     .from('inscriptions')
@@ -166,18 +160,8 @@ async function updateInscription(id, partial) {
   var updated = _rowToInscription(result.data);
 
   if (_inscriptionsCache !== null) {
-    var found = false;
-    for (var j = 0; j < _inscriptionsCache.length; j++) {
-      if (_inscriptionsCache[j].id === id) {
-        _inscriptionsCache[j] = updated;
-        found = true;
-        break;
-      }
-    }
-    if (!found) _inscriptionsCache.push(updated);
-    _inscriptionsCache.sort(function(a, b) {
-      return (a.nom || '').localeCompare(b.nom || '', 'fr');
-    });
+    var idx = _inscriptionsCache.findIndex(function(i) { return i.id === id; });
+    if (idx !== -1) _inscriptionsCache[idx] = updated;
   }
 
   return updated;
