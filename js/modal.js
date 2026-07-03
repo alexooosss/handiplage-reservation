@@ -499,13 +499,14 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <!-- Formulaire d'ajout inline -->
       <div class="plan-inline-form">
         <div class="plan-form-row">
+          <div class="plan-form-group" style="position:relative">
+            <label>Nom</label>
+            <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+            <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:160px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
+          </div>
           <div class="plan-form-group">
             <label>Prénom</label>
             <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
-          </div>
-          <div class="plan-form-group">
-            <label>Nom</label>
-            <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
           </div>
           <div class="plan-form-group">
             <label>Acc.</label>
@@ -660,6 +661,46 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
   });
 
+  // Autocomplete NOM depuis les inscriptions
+  (function() {
+    var nomEl     = document.getElementById('pf-nom');
+    var prenomEl  = document.getElementById('pf-prenom');
+    var suggestEl = document.getElementById('pf-nom-suggest');
+
+    function _close() { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; }
+
+    nomEl.addEventListener('input', function() {
+      var val = nomEl.value.trim().toUpperCase();
+      _close();
+      if (!val || typeof getCachedInscriptions !== 'function') return;
+      var matches = getCachedInscriptions()
+        .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+        .slice(0, 8);
+      if (!matches.length) return;
+      suggestEl.innerHTML = matches.map(function(i) {
+        return '<div class="pf-suggest-item" data-nom="' + i.nom.toUpperCase() + '" data-prenom="' + i.prenom + '"'
+          + ' style="padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee">'
+          + '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom
+          + '</div>';
+      }).join('');
+      suggestEl.style.display = 'block';
+      suggestEl.querySelectorAll('.pf-suggest-item').forEach(function(item) {
+        item.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          nomEl.value    = item.dataset.nom;
+          prenomEl.value = item.dataset.prenom;
+          _close();
+          prenomEl.focus();
+        });
+        item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
+        item.addEventListener('mouseout',  function() { item.style.background = ''; });
+      });
+    });
+
+    nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
+    nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
+  })();
+
   document.getElementById('pf-add').addEventListener('click', async () => {
     const prenom = document.getElementById('pf-prenom').value.trim();
     const nom    = document.getElementById('pf-nom').value.trim().toUpperCase();
@@ -691,7 +732,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       await callbacks.onAdd({ nom, prenom, accompagnants, resaType });
       document.getElementById('pf-prenom').value = '';
       document.getElementById('pf-nom').value    = '';
-      document.getElementById('pf-prenom').focus();
+      document.getElementById('pf-nom').focus();
       await _refreshAll();
     } catch (e) {
       console.error(e);
