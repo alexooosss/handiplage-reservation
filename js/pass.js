@@ -35,6 +35,7 @@ function getPassRemaining(inscriptionId) {
 }
 
 async function preloadPassCounts(inscriptionIds) {
+  if (typeof getPassRemainingCount !== 'function') throw new Error('getPassRemainingCount not loaded');
   const monthISO = getPassMonthKey();
   const counts = await Promise.all(
     inscriptionIds.map(id => getPassRemainingCount(id, monthISO))

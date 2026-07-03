@@ -11,10 +11,16 @@ global.getCachedInscriptions = () => [
   { id: 'ghi', statut: 'en_attente', nom: 'SIMON', prenom: 'Paul', pass: null },
 ];
 
+// Mock getPassRemainingCount (défini globalement dans supabase-storage.js en prod)
+global.getPassRemainingCount = async (inscriptionId, monthISO) => {
+  const mockCounts = { 'abc': 3, 'def': 0 };
+  return mockCounts[inscriptionId] || 0;
+};
+
 const {
   isPassSeason, getPassMonthKey, getPassMonthLabel, getPassResetDate,
   getPassRemaining, getInscriptionsWithActivePass, PASS_QUOTA,
-  setPassCountCache,
+  setPassCountCache, preloadPassCounts,
 } = require('../js/pass.js');
 
 // ── isPassSeason ──
@@ -56,8 +62,7 @@ const {
 }
 
 // ── getPassRemaining — hors saison toujours 0 ──
-// (On ne peut pas tester cela de manière déterministe car isPassSeason() dépend de la date
-// système — ce comportement est déjà couvert par l'intégration prod)
+// isPassSeason() lit la date système — branche hors-saison non testable sans injection de date
 
 // ── setPassCountCache + getPassRemaining — cache vide ──
 {
@@ -92,4 +97,26 @@ if ([6,7,8,9].includes(new Date().getMonth() + 1)) {
   assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA, 'cache null → quota plein');
 }
 
-console.log('✓ test-pass.js OK');
+// ── preloadPassCounts ──
+(async () => {
+  // Cas normal : cache rempli depuis getPassRemainingCount
+  setPassCountCache({});
+  await preloadPassCounts(['abc', 'def']);
+  assert.strictEqual(getPassRemaining('abc'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA - 3 : 0, 'preload abc: 3 utilisées');
+  assert.strictEqual(getPassRemaining('def'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA : 0, 'preload def: 0 utilisées');
+
+  // Tableau vide → cache vide {}
+  await preloadPassCounts([]);
+  assert.deepStrictEqual(getPassRemaining('abc'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA : 0, 'tableau vide → cache réinitialisé vide');
+
+  // Guard : getPassRemainingCount non chargé → throw
+  const orig = global.getPassRemainingCount;
+  delete global.getPassRemainingCount;
+  await assert.rejects(preloadPassCounts(['abc']), /not loaded/, 'guard: getPassRemainingCount absent → throw');
+  global.getPassRemainingCount = orig;
+})().then(() => {
+  console.log('✓ test-pass.js OK');
+}).catch(err => {
+  console.error(err);
+  process.exit(1);
+});
