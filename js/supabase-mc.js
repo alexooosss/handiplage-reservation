@@ -20,7 +20,7 @@ function _rowsToMcData(rows) {
   // Prendre staff et notes depuis la première ligne (ou slot 1)
   var refRow = rows.find(function(r) { return r.creneau_id === 1; }) || rows[0];
   var mc = {
-    staff: refRow.staff || def.staff,
+    staff: Object.assign({}, def.staff, refRow.staff || {}),
     notes: refRow.notes || [],
     slots: Object.assign({}, def.slots),
     _isNew: false,
@@ -34,7 +34,7 @@ function _rowsToMcData(rows) {
 }
 
 async function getMcData(date) {
-  var result = await supabaseClient.from('main_courante').select('*').eq('date', date);
+  var result = await supabaseClient.from('main_courante').select('*').eq('date', date).order('creneau_id', { ascending: true });
   if (result.error) throw result.error;
   return _rowsToMcData(result.data);
 }
