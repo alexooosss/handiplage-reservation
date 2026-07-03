@@ -61,6 +61,10 @@ const App = (() => {
   }
 
   function showView(view) {
+    if (_currentView === 'mc' && view !== 'mc' && typeof unsubscribeMc === 'function') {
+      unsubscribeMc();
+    }
+
     _currentView = view;
     const beachPanel   = document.getElementById('beach-panel');
     const sidePanel    = document.getElementById('side-panel');
@@ -89,6 +93,9 @@ const App = (() => {
       if (mcView) mcView.style.display = 'flex';
       if (btnMc)  btnMc.classList.add('active');
       _renderMc().catch(console.error);
+      if (typeof subscribeMc === 'function') {
+        subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      }
     } else if (view === 'inscription') {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
@@ -115,10 +122,29 @@ const App = (() => {
     const container = document.getElementById('mc-view');
     if (!container) return;
     if (!_mcDate) _mcDate = _date;
-    container._onMcPrev  = () => { _mcDate = _mcDateOffset(_mcDate, -1); _renderMc(); };
-    container._onMcNext  = () => { const next = _mcDateOffset(_mcDate, +1); if (next <= _date) { _mcDate = next; _renderMc(); } };
-    container._onMcToday = () => { _mcDate = _date; _renderMc(); };
-    container._onMcGoto  = d  => { _mcDate = d; _renderMc(); };
+    container._onMcPrev  = () => {
+      _mcDate = _mcDateOffset(_mcDate, -1);
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
+    container._onMcNext  = () => {
+      const next = _mcDateOffset(_mcDate, +1);
+      if (next <= _date) {
+        _mcDate = next;
+        if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+        _renderMc().catch(console.error);
+      }
+    };
+    container._onMcToday = () => {
+      _mcDate = _date;
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
+    container._onMcGoto  = d  => {
+      _mcDate = d;
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
     await renderMc(container, _mcDate);
   }
 
