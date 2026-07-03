@@ -84,15 +84,15 @@ const App = (() => {
     if (view === 'planning') {
       if (planningView) planningView.style.display = 'flex';
       if (btnPlanning)  btnPlanning.classList.add('active');
-      _renderPlanning();
+      _renderPlanning().catch(console.error);
     } else if (view === 'mc') {
       if (mcView) mcView.style.display = 'flex';
       if (btnMc)  btnMc.classList.add('active');
-      _renderMc();
+      _renderMc().catch(console.error);
     } else if (view === 'inscription') {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
-      _renderInscription();
+      _renderInscription().catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
@@ -143,9 +143,9 @@ const App = (() => {
       el.classList.toggle('selected-slot', parseInt(el.dataset.slotId) === slotId);
     });
     if (typeof subscribeSlot === 'function') {
-      subscribeSlot(_date, slotId, function() { refresh(); });
+      subscribeSlot(_date, slotId, function() { refresh().catch(console.error); });
     }
-    refresh();
+    refresh().catch(console.error);
   }
 
   async function refresh() {
@@ -162,8 +162,8 @@ const App = (() => {
       .map(s => s.id);
 
     const mapHandler = _selectionMode
-      ? spotId => _doAssignSpot(spotId, reservations, freeSpots)
-      : spotId => _onSpotClick(spotId, reservations, freeSpots);
+      ? spotId => _doAssignSpot(spotId, reservations, freeSpots).catch(console.error)
+      : spotId => { _onSpotClick(spotId, reservations, freeSpots); };
     renderMapSpots(mapEl, reservations, mapHandler, !!_selectionMode);
 
     // Bandeau de sélection
@@ -202,7 +202,7 @@ const App = (() => {
           },
         });
       },
-      onPasVenu: async resaId => { await updateReservationStatus(resaId, 'absent'); await refresh(); },
+      onPasVenu: async resaId => { await updateReservationStatus(resaId, 'pas_venu'); await refresh(); },
       onAnnule:  async resaId => { await updateReservationStatus(resaId, 'annule'); await refresh(); },
     });
   }

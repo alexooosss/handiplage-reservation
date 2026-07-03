@@ -4,7 +4,7 @@
 // slot        : { id, label, start, end } or null
 // reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
 // waitingList : [{ nom, prenom, accompagnants, status }, ...] — from getReservationList()
-// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(index), onAnnule(index), onItemClick(spotId) }
+// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(resaId), onAnnule(resaId), onItemClick(spotId) }
 function renderPanel(container, slot, reservations, waitingList, callbacks) {
   const { present, walkin, absent, departed } = _categorizeSpots(reservations);
   const { waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
