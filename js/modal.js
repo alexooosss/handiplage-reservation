@@ -565,17 +565,17 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     return String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
   }
 
-  function _refreshSection(resaType, listId, capId, capacity) {
-    const all     = getReservationList(dateISO, slot.id);
-    const pending = all.map((r, i) => ({ ...r, _idx: i }))
-                       .filter(r => resaType === 'normal'
-                         ? (!r.resaType || r.resaType === 'normal')
-                         : r.resaType === 'groupe');
+  async function _refreshSection(resaType, listId, capId, capacity) {
+    const [all, spotsMap] = await Promise.all([
+      getReservationList(dateISO, slot.id),
+      getReservations(dateISO, slot.id),
+    ]);
+    const pending = all.filter(r => resaType === 'normal'
+      ? (!r.resaType || r.resaType === 'normal')
+      : r.resaType === 'groupe');
 
-    // Les usagers ayant une réservation et déjà arrivés (assignés à un spot)
-    // s'affichent aussi dans la section Utilisateurs (type 'reserved' dans spots)
     const arrived = resaType === 'normal'
-      ? Object.entries(getReservations(dateISO, slot.id))
+      ? Object.entries(spotsMap)
               .filter(([, r]) => r.type === 'reserved')
               .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
       : [];
@@ -599,7 +599,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       return '<div class="planning-list-item">'
         + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + '</span>'
-        + '<button class="btn-remove" data-index="' + r._idx + '">✕</button>'
+        + '<button class="btn-remove" data-id="' + r.id + '">✕</button>'
         + '</div>';
     }).join('');
 
@@ -614,15 +614,15 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
     listEl.innerHTML = arrivedHtml + pendingHtml;
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        callbacks.onRemove(parseInt(btn.dataset.index));
-        _refreshAll();
+      btn.addEventListener('click', async () => {
+        await callbacks.onRemove(btn.dataset.id);
+        await _refreshAll();
       });
     });
   }
 
-  function _refreshWalkins() {
-    const spots = getReservations(dateISO, slot.id);
+  async function _refreshWalkins() {
+    const spots = await getReservations(dateISO, slot.id);
     const items = Object.entries(spots).filter(([, r]) => r.type === 'walkin');
     const section = document.getElementById('plan-walkins-section');
     if (!section) return;
@@ -641,10 +641,12 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     }).join('');
   }
 
-  function _refreshAll() {
-    _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL);
-    _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE);
-    _refreshWalkins();
+  async function _refreshAll() {
+    await Promise.all([
+      _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL),
+      _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE),
+      _refreshWalkins(),
+    ]);
   }
 
   _bindRadioGroup('pf-accomp');
@@ -654,7 +656,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
   });
 
-  document.getElementById('pf-add').addEventListener('click', () => {
+  document.getElementById('pf-add').addEventListener('click', async () => {
     const prenom = document.getElementById('pf-prenom').value.trim();
     const nom    = document.getElementById('pf-nom').value.trim().toUpperCase();
     const accompagnants = parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
@@ -666,28 +668,26 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       return;
     }
 
-    // Vérifier la capacité (liste en attente + déjà arrivés)
-    const all = getReservationList(dateISO, slot.id);
+    const [all, spotsMap] = await Promise.all([
+      getReservationList(dateISO, slot.id),
+      getReservations(dateISO, slot.id),
+    ]);
     const count = all.filter(r => resaType === 'normal'
       ? (!r.resaType || r.resaType === 'normal') : r.resaType === 'groupe').length;
     const arrivedCount = resaType === 'normal'
-      ? Object.values(getReservations(dateISO, slot.id)).filter(r => r.type === 'reserved').length
-      : 0;
+      ? Object.values(spotsMap).filter(r => r.type === 'reserved').length : 0;
     const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
     if (count + arrivedCount >= limit) {
-      errEl.textContent = `Capacité maximale atteinte (${limit} ${resaType === 'normal' ? 'réservations' : 'groupes'}).`;
+      errEl.textContent = 'Capacité maximale atteinte (' + limit + ').';
       return;
     }
 
     errEl.textContent = '';
-    callbacks.onAdd({ nom, prenom, accompagnants, resaType });
-
-    // Réinitialiser les champs nom/prénom, garder le reste
+    await callbacks.onAdd({ nom, prenom, accompagnants, resaType });
     document.getElementById('pf-prenom').value = '';
     document.getElementById('pf-nom').value    = '';
     document.getElementById('pf-prenom').focus();
-
-    _refreshAll();
+    await _refreshAll();
   });
 
   // Ajouter au "Enter" sur les champs texte
@@ -699,16 +699,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
-  document.getElementById('btn-export-pdf').addEventListener('click', () => exportSlotPDF(dateISO, slot));
+  document.getElementById('btn-export-pdf').addEventListener('click', () => exportSlotPDF(dateISO, slot).catch(console.error));
 
   if (callbacks.onGoLive) {
     document.getElementById('btn-go-live').addEventListener('click', () => { closeModal(); callbacks.onGoLive(); });
   }
 
-  _refreshAll();
   _dialog().classList.add('plan-dialog');
   _dialog().showModal();
   document.getElementById('pf-prenom').focus();
+  _refreshAll(); // fire-and-forget async — modal is already open
 }
 
 if (typeof module !== 'undefined') {
