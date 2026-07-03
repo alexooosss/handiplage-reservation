@@ -379,9 +379,3 @@ const App = (() => {
 
   return { init, selectSlot, refresh, showView };
 })();
-
-document.addEventListener('DOMContentLoaded', () => {
-  const mapEl = document.getElementById('beach-map');
-  renderMapStatic(mapEl);
-  App.init();
-});

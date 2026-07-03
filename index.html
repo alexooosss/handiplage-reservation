@@ -75,6 +75,21 @@
   <script src="js/env.js"></script>
   <script src="js/supabase-client.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/slots.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/supabase-storage.js"></script>
+  <script src="js/supabase-inscriptions.js"></script>
+  <script src="js/supabase-mc.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/planning.js"></script>
+  <script src="js/mc.js"></script>
+  <script src="js/inscription.js"></script>
+  <script src="js/pass.js"></script>
+  <script src="js/app.js"></script>
   <script>
     (async function () {
       try {
@@ -84,24 +99,14 @@
           return;
         }
         document.getElementById('btn-logout').addEventListener('click', signOut);
+        var mapEl = document.getElementById('beach-map');
+        renderMapStatic(mapEl);
+        App.init();
       } catch (err) {
         console.error('Auth check failed:', err);
         window.location.href = '/login.html';
       }
     })();
   </script>
-  <script src="js/data.js"></script>
-  <script src="js/slots.js"></script>
-  <script src="js/timer.js"></script>
-  <script src="js/logo.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/panel.js"></script>
-  <script src="js/modal.js"></script>
-  <script src="js/planning.js"></script>
-  <script src="js/mc.js"></script>
-  <script src="js/inscription.js"></script>
-  <script src="js/pass.js"></script>
-  <script src="js/app.js"></script>
 </body>
 </html>
