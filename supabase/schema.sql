@@ -22,8 +22,7 @@ CREATE TABLE inscriptions (
                      CHECK (statut IN ('en_attente', 'valide', 'refuse')),
   pass_actif       boolean NOT NULL DEFAULT false,
   pass_activated_at date,
-  handicap         text,
-  notes            text,
+  metadata         jsonb NOT NULL DEFAULT '{}',
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
