@@ -11,45 +11,9 @@ const MC_COLS = [
   { key: 'transferts',  label: 'Trans-\nferts',        auto: false },
 ];
 
-function _mcKey(date) { return 'handiplage_mc_' + date; }
-
-function getMcData(date) {
-  const raw = localStorage.getItem(_mcKey(date));
-  if (!raw) return _mcDefault();
-  try { return JSON.parse(raw); } catch { return _mcDefault(); }
-}
-
-function saveMcData(date, data) {
-  localStorage.setItem(_mcKey(date), JSON.stringify(data));
-}
-
-function getMcDates() {
-  const dates = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('handiplage_mc_')) {
-      const d = key.replace('handiplage_mc_', '');
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.push(d);
-    }
-  }
-  return dates.sort((a, b) => b.localeCompare(a));
-}
-
 function _fmtDateFr(iso) {
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function _mcDefault() {
-  const slots = {};
-  SLOTS.forEach(s => {
-    slots[s.id] = { resa:0, walkin:0, gpe_pers:0, gpe_acc:0, tiralos:0, hippocampes:0, audioplage:0, transferts:0 };
-  });
-  return {
-    staff: { entretien_matin:'', entretien_aprem:'', accueil_matin:'', accueil_aprem:'', police: false, plage_nettoyee: false },
-    slots,
-    notes: []
-  };
 }
 
 function _fmt(ts) {
@@ -59,26 +23,25 @@ function _fmt(ts) {
 function _esc(s)     { return (s||'').replace(/"/g,'&quot;'); }
 function _escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
 
-function renderMc(container, date) {
-  const todayISO  = new Date().toISOString().slice(0, 10);
-  const isToday   = date === todayISO;
-  const existsRaw = localStorage.getItem(_mcKey(date));
-  const data      = getMcData(date);
+async function renderMc(container, date) {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const isToday  = date === todayISO;
+  const data     = await getMcData(date);
 
   // Auto-remplissage resa/walkin (depuis les données réelles du jour)
-  SLOTS.forEach(s => {
+  await Promise.all(SLOTS.map(async s => {
     if (!data.slots[s.id]) data.slots[s.id] = _mcDefault().slots[s.id];
-    const vals = Object.values(getReservations(date, s.id));
+    const vals = Object.values(await getReservations(date, s.id));
     data.slots[s.id].resa   = vals.filter(r => r.type === 'reserved').length;
     data.slots[s.id].walkin = vals.filter(r => r.type === 'walkin').length;
-  });
+  }));
   // Ne sauvegarder que si une MC existe déjà (évite de créer des entrées vides à la navigation)
-  if (existsRaw) saveMcData(date, data);
+  if (!data._isNew) await saveMcData(date, data);
 
   const st        = data.staff;
   const policeCls = st.police         ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
   const plageCls  = st.plage_nettoyee ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
-  const allDates  = getMcDates();
+  const allDates  = await getMcDates();
 
   // ── Barre de navigation date ──
   let html = '<div class="mc-nav">'
@@ -165,10 +128,10 @@ function renderMc(container, date) {
   Object.keys(staffMap).forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('blur', () => {
-      const d = getMcData(date);
+    el.addEventListener('blur', async () => {
+      const d = await getMcData(date);
       d.staff[staffMap[id]] = el.value.trim();
-      saveMcData(date, d);
+      await saveMcData(date, d);
     });
   });
 
@@ -176,11 +139,11 @@ function renderMc(container, date) {
   [['mc-toggle-police', 'police'], ['mc-toggle-plage', 'plage_nettoyee']].forEach(([id, key]) => {
     const btn = document.getElementById(id);
     if (!btn) return;
-    btn.addEventListener('click', () => {
-      const d = getMcData(date);
+    btn.addEventListener('click', async () => {
+      const d = await getMcData(date);
       if (d.staff[key] === undefined) d.staff[key] = false;
       d.staff[key] = !d.staff[key];
-      saveMcData(date, d);
+      await saveMcData(date, d);
       btn.textContent = d.staff[key] ? 'OUI' : 'NON';
       btn.className   = d.staff[key] ? 'mc-toggle mc-toggle-oui' : 'mc-toggle mc-toggle-non';
     });
@@ -188,13 +151,13 @@ function renderMc(container, date) {
 
   // ── Wiring compteurs ──
   container.querySelectorAll('input.mc-count').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const d = getMcData(date);
+    inp.addEventListener('input', async () => {
+      const d = await getMcData(date);
       const slotId = parseInt(inp.dataset.slot);
       const key    = inp.dataset.key;
       if (!d.slots[slotId]) d.slots[slotId] = _mcDefault().slots[slotId];
       d.slots[slotId][key] = Math.max(0, parseInt(inp.value) || 0);
-      saveMcData(date, d);
+      await saveMcData(date, d);
       // Mise à jour de la cellule total de cette colonne
       const totEl = document.getElementById('mc-tot-' + key);
       if (totEl) {
@@ -210,14 +173,14 @@ function renderMc(container, date) {
   // ── Wiring notes ──
   const noteAddBtn = document.getElementById('mc-note-add');
   const noteInp    = document.getElementById('mc-note-inp');
-  function _addNote() {
+  async function _addNote() {
     const text     = noteInp.value.trim();
     const reporter = (document.getElementById('mc-note-reporter') || {}).value || '';
     if (!text) return;
-    const d = getMcData(date);
+    const d = await getMcData(date);
     if (!d.notes) d.notes = [];
     d.notes.unshift({ ts: Date.now(), text, reporter: reporter.trim() });
-    saveMcData(date, d);
+    await saveMcData(date, d);
     noteInp.value = '';
     document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
     _bindNoteDelete(date, container);
@@ -239,13 +202,13 @@ function renderMc(container, date) {
 
   const listBtn = document.getElementById('mc-nav-list');
   if (listBtn) {
-    listBtn.addEventListener('click', () => {
+    listBtn.addEventListener('click', async () => {
       const existing = document.getElementById('mc-hist-dropdown');
       if (existing) { existing.remove(); return; }
       const dd = document.createElement('div');
       dd.id = 'mc-hist-dropdown';
       dd.className = 'mc-hist-dropdown';
-      const dates = getMcDates();
+      const dates = await getMcDates();
       if (dates.length === 0) {
         dd.innerHTML = '<div class="mc-hist-empty">Aucune main courante sauvegardée.</div>';
       } else {
@@ -281,10 +244,10 @@ function _renderNotes(notes) {
 
 function _bindNoteDelete(date, container) {
   container.querySelectorAll('.mc-note-del').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const d = getMcData(date);
+    btn.addEventListener('click', async () => {
+      const d = await getMcData(date);
       d.notes.splice(parseInt(btn.dataset.idx), 1);
-      saveMcData(date, d);
+      await saveMcData(date, d);
       document.getElementById('mc-notes-list').innerHTML = _renderNotes(d.notes);
       _bindNoteDelete(date, container);
     });
@@ -292,5 +255,5 @@ function _bindNoteDelete(date, container) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { renderMc, getMcData, saveMcData };
+  module.exports = { renderMc };
 }
