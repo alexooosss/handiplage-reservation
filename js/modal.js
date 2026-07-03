@@ -481,7 +481,7 @@ function _bindRadioGroup(groupId) {
 }
 
 // ── Modale Planning : liste des réservations d'un créneau pour une date ──
-// callbacks : { onAdd, onRemove(index), onGoLive } (onGoLive=null si pas aujourd'hui)
+// callbacks : { onAdd, onRemove(id), onGoLive } (onGoLive=null si pas aujourd'hui)
 function openSlotPlanningModal(dateISO, slot, callbacks) {
   const d = new Date(dateISO + 'T00:00:00');
   const dateLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -615,8 +615,12 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     listEl.innerHTML = arrivedHtml + pendingHtml;
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
       btn.addEventListener('click', async () => {
-        await callbacks.onRemove(btn.dataset.id);
-        await _refreshAll();
+        try {
+          await callbacks.onRemove(btn.dataset.id);
+          await _refreshAll();
+        } catch (e) {
+          console.error(e);
+        }
       });
     });
   }
@@ -683,11 +687,15 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     }
 
     errEl.textContent = '';
-    await callbacks.onAdd({ nom, prenom, accompagnants, resaType });
-    document.getElementById('pf-prenom').value = '';
-    document.getElementById('pf-nom').value    = '';
-    document.getElementById('pf-prenom').focus();
-    await _refreshAll();
+    try {
+      await callbacks.onAdd({ nom, prenom, accompagnants, resaType });
+      document.getElementById('pf-prenom').value = '';
+      document.getElementById('pf-nom').value    = '';
+      document.getElementById('pf-prenom').focus();
+      await _refreshAll();
+    } catch (e) {
+      console.error(e);
+    }
   });
 
   // Ajouter au "Enter" sur les champs texte
