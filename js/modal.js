@@ -675,6 +675,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   });
 
   // Autocomplete NOM depuis les inscriptions
+  var _linkedPfInscriptionId = null;
   (function() {
     var nomEl     = document.getElementById('pf-nom');
     var prenomEl  = document.getElementById('pf-prenom');
@@ -683,6 +684,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     function _close() { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; }
 
     nomEl.addEventListener('input', function() {
+      _linkedPfInscriptionId = null; // frappe manuelle → efface le lien
       var val = nomEl.value.trim().toUpperCase();
       _close();
       if (!val || typeof getCachedInscriptions !== 'function') return;
@@ -713,8 +715,9 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         if (!exhausted) {
           item.addEventListener('mousedown', function(e) {
             e.preventDefault();
-            nomEl.value    = i.nom.toUpperCase();
-            prenomEl.value = i.prenom;
+            nomEl.value             = i.nom.toUpperCase();
+            prenomEl.value          = i.prenom;
+            _linkedPfInscriptionId  = i.id;
             _close();
             prenomEl.focus();
           });
@@ -757,7 +760,8 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
     errEl.textContent = '';
     try {
-      await callbacks.onAdd({ nom, prenom, accompagnants, resaType });
+      await callbacks.onAdd({ nom, prenom, accompagnants, resaType, inscriptionId: _linkedPfInscriptionId });
+      _linkedPfInscriptionId = null;
       document.getElementById('pf-prenom').value = '';
       document.getElementById('pf-nom').value    = '';
       document.getElementById('pf-nom').focus();
