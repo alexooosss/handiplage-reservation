@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handiplage — Demande d'inscription</title>
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+
+<header class="pub-header">
+  <div>
+    <div class="pub-header-title">🏖 Handiplage Antibes</div>
+    <div class="pub-header-sub">Demande d'inscription 2026</div>
+  </div>
+</header>
+
+<div class="pub-container">
+
+  <div id="pub-errors" class="pub-errors"></div>
+
+  <!-- Message de succès (masqué au départ) -->
+  <div id="pub-success" class="pub-success" style="display:none">
+    <div class="pub-success-icon">✅</div>
+    <h2>Demande envoyée !</h2>
+    <p>Votre demande d'inscription a bien été enregistrée.<br>
+       Vous recevrez un email lorsqu'elle sera traitée par notre équipe (délai habituel : quelques jours).</p>
+  </div>
+
+  <form id="pub-form">
+
+    <!-- IDENTITÉ -->
+    <div class="pub-card">
+      <div class="pub-card-title">Identité</div>
+      <div class="pub-row">
+        <div class="pub-field">
+          <label>Nom <span class="req">*</span></label>
+          <input type="text" id="f-nom" placeholder="NOM" style="text-transform:uppercase">
+        </div>
+        <div class="pub-field">
+          <label>Prénom <span class="req">*</span></label>
+          <input type="text" id="f-prenom" placeholder="Prénom">
+        </div>
+      </div>
+      <div class="pub-row">
+        <div class="pub-field">
+          <label>Date de naissance <span class="req">*</span></label>
+          <div class="pub-dob">
+            <select id="f-dob-j">
+              <option value="">Jour</option>
+            </select>
+            <span>/</span>
+            <select id="f-dob-m">
+              <option value="">Mois</option>
+            </select>
+            <span>/</span>
+            <select id="f-dob-y">
+              <option value="">Année</option>
+            </select>
+          </div>
+        </div>
+        <div class="pub-field">
+          <label>Téléphone <span class="req">*</span></label>
+          <input type="tel" id="f-tel" placeholder="Ex : 06 00 00 00 00">
+        </div>
+      </div>
+      <div class="pub-row">
+        <div class="pub-field">
+          <label>Adresse mail <span class="req">*</span></label>
+          <input type="email" id="f-mail" placeholder="adresse@mail.fr">
+        </div>
+        <div class="pub-field">
+          <label>Confirmation du mail <span class="req">*</span></label>
+          <input type="email" id="f-mail2" placeholder="adresse@mail.fr">
+        </div>
+      </div>
+      <div class="pub-field">
+        <label>Modalité de contact préférée <span class="req">*</span></label>
+        <div class="pub-checks">
+          <label class="pub-check"><input type="checkbox" name="contact" value="telephone"> Téléphone</label>
+          <label class="pub-check"><input type="checkbox" name="contact" value="mail"> Mail</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADRESSE -->
+    <div class="pub-card">
+      <div class="pub-card-title">Adresse</div>
+      <div class="pub-field">
+        <label>Adresse <span class="req">*</span></label>
+        <input type="text" id="f-adresse" placeholder="N° et nom de la voie">
+      </div>
+      <div class="pub-row">
+        <div class="pub-field">
+          <label>Code postal <span class="req">*</span></label>
+          <input type="text" id="f-cp" placeholder="06600">
+        </div>
+        <div class="pub-field">
+          <label>Ville <span class="req">*</span></label>
+          <input type="text" id="f-ville" placeholder="Antibes">
+        </div>
+      </div>
+      <div class="pub-field">
+        <label>Pays <span class="req">*</span></label>
+        <input type="text" id="f-pays" value="France">
+      </div>
+    </div>
+
+    <!-- CONTACT D'URGENCE -->
+    <div class="pub-card">
+      <div class="pub-card-title">Contact d'urgence</div>
+      <div class="pub-row">
+        <div class="pub-field">
+          <label>Nom et prénom <span class="req">*</span></label>
+          <input type="text" id="f-urg-nom" placeholder="Prénom NOM">
+        </div>
+        <div class="pub-field">
+          <label>Téléphone <span class="req">*</span></label>
+          <input type="tel" id="f-urg-tel" placeholder="Ex : 06 00 00 00 00">
+        </div>
+      </div>
+    </div>
+
+    <!-- BESOINS -->
+    <div class="pub-card">
+      <div class="pub-card-title">Besoins d'accompagnement par notre équipe d'handiplagistes <span class="req">*</span></div>
+      <div class="pub-checks">
+        <label class="pub-check"><input type="checkbox" name="accomp" value="aucun" id="accomp-aucun"> Aucun besoin</label>
+        <label class="pub-check"><input type="checkbox" name="accomp" value="transfert"> Aide au transfert</label>
+        <label class="pub-check"><input type="checkbox" name="accomp" value="entree_sortie"> Aide à l'entrée et à la sortie de l'eau</label>
+        <label class="pub-check"><input type="checkbox" name="accomp" value="baignade"> Aide à la baignade, maximum 30 minutes</label>
+      </div>
+
+      <div class="pub-card-title" style="margin-top:20px">Besoins d'aides techniques <span class="req">*</span></div>
+      <div class="pub-checks">
+        <label class="pub-check"><input type="checkbox" name="at" value="aucun" id="at-aucun"> Aucun besoin</label>
+        <label class="pub-check"><input type="checkbox" name="at" value="tiralo" id="at-tiralo"> Tiralo <span class="pub-hint">(fauteuil amphibie équipé de flotteurs)</span></label>
+        <label class="pub-check"><input type="checkbox" name="at" value="hippocampe" id="at-hippocampe"> Hippocampe <span class="pub-hint">(fauteuil tout terrain pour aller au bord de l'eau)</span></label>
+        <label class="pub-check"><input type="checkbox" name="at" value="audioplage" id="at-audioplage"> Audioplage <span class="pub-hint">(balisage sonore en mer pour personnes déficientes visuelles)</span></label>
+      </div>
+    </div>
+
+    <!-- ENGAGEMENTS -->
+    <div class="pub-card">
+      <div class="pub-card-title">Engagements</div>
+
+      <div class="pub-field">
+        <label>Port du gilet de sauvetage <span class="req">*</span></label>
+        <div class="pub-checks">
+          <label class="pub-radio"><input type="radio" name="gilet" value="oui"> J'accepte le port du gilet de sauvetage, obligatoire dans le cadre de ma baignade</label>
+          <label class="pub-radio"><input type="radio" name="gilet" value="non"> Je n'accepte pas, et j'atteste dégager le CCAS d'Antibes Juan-les-Pins de toutes responsabilités</label>
+        </div>
+      </div>
+
+      <div class="pub-field">
+        <label>Traitement des données personnelles <span class="req">*</span></label>
+        <label class="pub-check"><input type="checkbox" id="f-rgpd"> J'atteste avoir pris connaissance de l'information relative au traitement des données personnelles</label>
+      </div>
+
+      <div class="pub-field">
+        <label>Communications du CCAS <span class="req">*</span></label>
+        <div class="pub-checks">
+          <label class="pub-radio"><input type="radio" name="ccas" value="accepte"> J'accepte de recevoir par mail des informations de la part du CCAS</label>
+          <label class="pub-radio"><input type="radio" name="ccas" value="refuse"> Je refuse de recevoir par mail des informations de la part du CCAS</label>
+        </div>
+      </div>
+
+      <div class="pub-field">
+        <label>Règlement de fonctionnement <span class="req">*</span></label>
+        <label class="pub-check"><input type="checkbox" id="f-reglement"> J'ai lu et j'accepte le règlement de fonctionnement Handiplage 2026 sans restriction</label>
+      </div>
+    </div>
+
+    <!-- DOCUMENTS -->
+    <div class="pub-card">
+      <div class="pub-card-title">Documents justificatifs</div>
+      <p style="font-size:.9rem;color:#555;margin-bottom:12px;line-height:1.5">
+        Joindre le justificatif du handicap <strong>RECTO-VERSO</strong>, avec identité et date de validité lisible <span class="req">*</span><br>
+        <em>Carte Mobilité Inclusion (CMI) — les documents de l'assurance maladie ne sont pas valables.</em>
+      </p>
+      <div class="pub-field">
+        <label>Document principal (recto-verso) <span class="req">*</span></label>
+        <input type="file" id="f-doc1" accept="image/*,.pdf">
+      </div>
+      <div class="pub-field">
+        <label>Deuxième document <span style="font-size:.8rem;color:#777">(verso si le premier n'est pas recto-verso)</span></label>
+        <input type="file" id="f-doc2" accept="image/*,.pdf">
+      </div>
+      <div class="pub-field">
+        <label>Signature <span class="req">*</span> — <span style="font-size:.8rem;color:#777">La saisie de vos nom et prénom vaut signature</span></label>
+        <input type="text" id="f-signature" placeholder="Prénom NOM">
+      </div>
+    </div>
+
+    <!-- RGPD NOTICE -->
+    <div class="pub-rgpd">
+      <p>Les informations recueillies dans ce formulaire ne sont utilisées que par le service Autonomie et Adaptation du Cadre de Vie du CCAS d'Antibes. Les données sont conservées pendant 2 ans à compter de la fermeture saisonnière de la Handiplage.</p>
+      <ul>
+        <li>Remplir les obligations notamment statistiques du CCAS ;</li>
+        <li>Améliorer, si nécessaire, les actions proposées en vous demandant par mail de remplir le questionnaire de satisfaction.</li>
+      </ul>
+      <p style="margin-top:8px">Vous disposez d'un droit d'accès, de rectification, d'opposition, de limitation et de suppression de vos données en contactant le DPO du CCAS : <a href="mailto:rgpd@ccas-antibes.fr">rgpd@ccas-antibes.fr</a> — CCAS, 2 avenue de la Libération, BP 83, 06602 Antibes CEDEX.</p>
+    </div>
+
+    <button type="submit" class="pub-btn" id="pub-submit">VALIDER MA DEMANDE D'INSCRIPTION</button>
+
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/env.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/inscription-publique.js"></script>
+<script>
+  // Peupler les sélecteurs de date
+  (function() {
+    var dobJ = document.getElementById('f-dob-j');
+    var dobM = document.getElementById('f-dob-m');
+    var dobY = document.getElementById('f-dob-y');
+    for (var d = 1; d <= 31; d++) {
+      var o = document.createElement('option');
+      o.value = d; o.textContent = String(d).padStart(2, '0');
+      dobJ.appendChild(o);
+    }
+    for (var m = 1; m <= 12; m++) {
+      var o = document.createElement('option');
+      o.value = m; o.textContent = String(m).padStart(2, '0');
+      dobM.appendChild(o);
+    }
+    var currentYear = new Date().getFullYear();
+    for (var y = currentYear - 5; y >= 1920; y--) {
+      var o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      dobY.appendChild(o);
+    }
+    initInscriptionPublique();
+  })();
+</script>
+</body>
+</html>
