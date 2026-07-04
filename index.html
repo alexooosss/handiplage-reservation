@@ -20,6 +20,9 @@
     <button id="btn-planning-tab" class="planning-tab-btn">&#128197; Planning</button>
     <button id="btn-mc-tab" class="planning-tab-btn">&#128221; Main courante</button>
     <button id="btn-insc-tab" class="planning-tab-btn">&#128203; Inscription</button>
+    <button id="btn-messages-tab" class="planning-tab-btn">
+      ✉ Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
+    </button>
     <div class="datetime" id="datetime">
       <span class="time" id="clock">--:--</span>
       <span id="date-label"></span>
@@ -63,6 +66,9 @@
     <!-- Vue Inscription -->
     <div id="insc-view" style="display:none" class="insc-view"></div>
 
+    <!-- Vue Messages -->
+    <div id="messages-view" style="display:none" class="messages-view"></div>
+
   </div>
 
   <!-- MODALE -->
@@ -89,6 +95,8 @@
   <script src="js/mc.js"></script>
   <script src="js/inscription.js"></script>
   <script src="js/pass.js"></script>
+  <script src="js/supabase-messages.js"></script>
+  <script src="js/messages.js"></script>
   <script src="js/app.js"></script>
   <script>
     (async function () {

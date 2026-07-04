@@ -58,6 +58,25 @@ const App = (() => {
         showView(_currentView === 'inscription' ? 'carte' : 'inscription');
       });
     }
+
+    // Messages tab button
+    const btnMessages = document.getElementById('btn-messages-tab');
+    if (btnMessages) {
+      btnMessages.addEventListener('click', () => {
+        showView(_currentView === 'messages' ? 'carte' : 'messages');
+      });
+    }
+
+    // Badge non-lus
+    if (typeof getUnreadCount === 'function') {
+      getUnreadCount().then(function(count) {
+        const badge = document.getElementById('messages-badge');
+        if (badge) {
+          if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+          else badge.style.display = 'none';
+        }
+      }).catch(function() {});
+    }
   }
 
   function showView(view, inscriptionId) {
@@ -68,12 +87,14 @@ const App = (() => {
     _currentView = view;
     const beachPanel   = document.getElementById('beach-panel');
     const sidePanel    = document.getElementById('side-panel');
-    const planningView = document.getElementById('planning-view');
-    const mcView       = document.getElementById('mc-view');
-    const inscView     = document.getElementById('insc-view');
-    const btnPlanning  = document.getElementById('btn-planning-tab');
-    const btnMc        = document.getElementById('btn-mc-tab');
-    const btnInsc      = document.getElementById('btn-insc-tab');
+    const planningView   = document.getElementById('planning-view');
+    const mcView         = document.getElementById('mc-view');
+    const inscView       = document.getElementById('insc-view');
+    const messagesView   = document.getElementById('messages-view');
+    const btnPlanning    = document.getElementById('btn-planning-tab');
+    const btnMc          = document.getElementById('btn-mc-tab');
+    const btnInsc        = document.getElementById('btn-insc-tab');
+    const btnMessages    = document.getElementById('btn-messages-tab');
 
     // Masquer tout
     if (beachPanel)   beachPanel.style.display   = 'none';
@@ -81,9 +102,11 @@ const App = (() => {
     if (planningView) planningView.style.display  = 'none';
     if (mcView)       mcView.style.display        = 'none';
     if (inscView)     inscView.style.display      = 'none';
+    if (messagesView) messagesView.style.display  = 'none';
     if (btnPlanning)  btnPlanning.classList.remove('active');
     if (btnMc)        btnMc.classList.remove('active');
     if (btnInsc)      btnInsc.classList.remove('active');
+    if (btnMessages)  btnMessages.classList.remove('active');
 
     if (view === 'planning') {
       if (planningView) planningView.style.display = 'flex';
@@ -100,6 +123,10 @@ const App = (() => {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
       _renderInscription(inscriptionId).catch(console.error);
+    } else if (view === 'messages') {
+      if (messagesView) messagesView.style.display = 'flex';
+      if (btnMessages)  btnMessages.classList.add('active');
+      renderMessages(messagesView).catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
