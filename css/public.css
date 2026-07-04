@@ -1,0 +1,176 @@
+/* css/public.css — pages publiques mobile-first */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  background: #e3f2fd;
+  min-height: 100vh;
+  color: #222;
+}
+
+/* Header */
+.pub-header {
+  background: #1565c0;
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pub-header-title { font-size: 1.1rem; font-weight: 700; }
+.pub-header-sub   { font-size: 0.875rem; opacity: .85; }
+
+/* Contenu principal */
+.pub-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Carte section */
+.pub-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.pub-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1565c0;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+/* Champs de formulaire */
+.pub-field { margin-bottom: 16px; }
+.pub-field label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 6px;
+}
+.pub-field input[type="text"],
+.pub-field input[type="email"],
+.pub-field input[type="tel"],
+.pub-field select,
+.pub-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color .15s;
+  background: white;
+}
+.pub-field input:focus,
+.pub-field select:focus,
+.pub-field textarea:focus {
+  outline: none;
+  border-color: #1565c0;
+}
+.pub-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) { .pub-row { grid-template-columns: 1fr; } }
+
+/* DOB sélecteurs */
+.pub-dob {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pub-dob select { flex: 1; }
+.pub-dob span { color: #aaa; font-size: 1.1rem; }
+
+/* Cases à cocher et radios */
+.pub-checks { display: flex; flex-direction: column; gap: 10px; }
+.pub-check, .pub-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: .9375rem;
+  line-height: 1.4;
+}
+.pub-check input, .pub-radio input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #1565c0;
+}
+.pub-hint { font-size: .8125rem; color: #777; }
+
+/* Fichiers */
+.pub-field input[type="file"] {
+  padding: 8px;
+  background: #f5f5f5;
+  border-style: dashed;
+}
+
+/* Notice RGPD */
+.pub-rgpd {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: .8125rem;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.pub-rgpd ul { margin: 8px 0 8px 18px; }
+.pub-rgpd a { color: #1565c0; }
+
+/* Requis */
+.req { color: #c62828; }
+
+/* Bouton principal */
+.pub-btn {
+  width: 100%;
+  padding: 16px;
+  background: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+  letter-spacing: .02em;
+}
+.pub-btn:hover   { background: #0d47a1; }
+.pub-btn:disabled { background: #90a4ae; cursor: not-allowed; }
+
+/* Messages d'erreur / succès */
+.pub-errors {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #b71c1c;
+  font-size: .9rem;
+  margin-bottom: 16px;
+  display: none;
+}
+.pub-errors.visible { display: block; }
+.pub-errors p { margin-bottom: 4px; }
+
+.pub-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+.pub-success-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.pub-success h2   { color: #2e7d32; font-size: 1.2rem; margin-bottom: 8px; }
+.pub-success p    { color: #555; font-size: .9375rem; line-height: 1.5; }
