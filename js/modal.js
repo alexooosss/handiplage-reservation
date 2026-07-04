@@ -575,6 +575,26 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     return String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
   }
 
+  function _esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function _openProfilePanel(inscriptionId, nom, prenom) {
+    var id = inscriptionId;
+    if (!id && typeof getCachedInscriptions === 'function') {
+      var nomUp = (nom || '').toUpperCase();
+      var match = getCachedInscriptions().find(function(i) {
+        return i.nom.toUpperCase() === nomUp
+            && i.prenom.toUpperCase() === (prenom || '').toUpperCase();
+      });
+      if (match) id = match.id;
+    }
+    if (!id) return;
+    if (typeof App !== 'undefined' && typeof App.navigateToInscription === 'function') {
+      App.navigateToInscription(id);
+    }
+  }
+
   async function _refreshSection(resaType, listId, capId, capacity) {
     const [all, spotsMap] = await Promise.all([
       getReservationList(dateISO, slot.id),
@@ -612,7 +632,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       const passTag = (insc && insc.pass && insc.pass.actif)
         ? ' <span style="font-size:11px;color:#1565c0;font-weight:600">🎫 Pass 2026</span>' : '';
       return '<div class="planning-list-item">'
-        + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + passTag + '</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >' + r.nom + ' ' + r.prenom + ' — ' + acc + passTag + '</span>'
         + '<button class="btn-remove" data-id="' + r.id + '">✕</button>'
         + '</div>';
     }).join('');
@@ -622,7 +642,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
       return '<div class="planning-list-item planning-list-present">'
-        + '<span>✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
         + '</div>';
     }).join('');
 
@@ -635,6 +655,11 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         } catch (e) {
           console.error(e);
         }
+      });
+    });
+    listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
+      span.addEventListener('click', function() {
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
       });
     });
   }
@@ -654,9 +679,14 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       const acc = r.accompagnants === 0 ? 'seul·e'
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       return '<div class="planning-list-item">'
-        + '<span>' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + spotId + ')</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + spotId + ')</span>'
         + '</div>';
     }).join('');
+    listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
+      span.addEventListener('click', function() {
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
+      });
+    });
   }
 
   async function _refreshAll() {

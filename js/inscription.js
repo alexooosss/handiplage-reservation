@@ -5,7 +5,7 @@ function _escI(s) {
 }
 
 // ── Vue principale ──
-async function renderInscription(container) {
+async function renderInscription(container, selectedId) {
   const inscriptions = await getInscriptions();
 
   container.innerHTML = '<div class="insc-layout">'
@@ -37,6 +37,11 @@ async function renderInscription(container) {
   });
 
   _bindListItems(container);
+
+  if (selectedId) {
+    var target = container.querySelector('.insc-list-item[data-id="' + selectedId + '"]');
+    if (target) { target.click(); target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  }
 }
 
 function _renderListItems(list, query) {
@@ -105,6 +110,7 @@ function _showForm(container, insc) {
     +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'
     + '</div>'
     + (!isNew && v.statut === 'valide' ? _renderPassBlock(v) : '')
+    + (!isNew ? '<div class="insc-history-section"><div class="insc-section-title">Historique des réservations</div><div id="insc-history-list" class="insc-history-list"><em class="insc-history-loading">Chargement…</em></div></div>' : '')
     + '<form id="insc-form" class="insc-form">'
 
     // IDENTITÉ
@@ -222,6 +228,8 @@ function _showForm(container, insc) {
     + '</div>'
     + '</form>'
     + '</div>';
+
+  if (!isNew && v.id) _loadHistory(v.id);
 
   // Exclusivité "aucun besoin" aides techniques
   const atAucun = document.getElementById('at-aucun');
@@ -499,6 +507,59 @@ function _readFiles(input1, input2, data, callback) {
       if (b64b) { data.justificatif2 = b64b; data.justificatif2Name = nameB; }
       callback(data);
     });
+  });
+}
+
+function _loadHistory(inscriptionId) {
+  if (typeof getReservationsForInscription !== 'function') return;
+  getReservationsForInscription(inscriptionId).then(function(rows) {
+    var histEl = document.getElementById('insc-history-list');
+    if (!histEl) return;
+
+    // Mettre à jour le solde pass depuis les vraies données Supabase
+    if (typeof getPassMonthKey === 'function' && typeof PASS_QUOTA !== 'undefined') {
+      var monthKey = getPassMonthKey();
+      var usedThisMonth = rows.filter(function(r) {
+        return r.statut !== 'annule' && r.date && r.date.startsWith(monthKey);
+      }).length;
+      var remaining = Math.max(0, PASS_QUOTA - usedThisMonth);
+      var countEl = document.querySelector('.pass-remaining-count');
+      if (countEl) {
+        countEl.textContent = remaining;
+        var fillEl = document.querySelector('.pass-bar-fill');
+        if (fillEl) {
+          fillEl.style.width = Math.round((remaining / PASS_QUOTA) * 100) + '%';
+          fillEl.className = 'pass-bar-fill' + (remaining === 0 ? ' empty' : remaining <= 10 ? ' low' : '');
+        }
+      }
+    }
+
+    if (!rows.length) {
+      histEl.innerHTML = '<em class="insc-history-empty">Aucune réservation enregistrée.</em>';
+      return;
+    }
+    var statutLabel = { attente: 'En attente', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
+    var slotLabel = {};
+    if (typeof SLOTS !== 'undefined') {
+      SLOTS.forEach(function(s) { slotLabel[s.id] = s.label; });
+    }
+    histEl.innerHTML = rows.map(function(r) {
+      var d = new Date(r.date + 'T00:00:00');
+      var dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      var statut  = statutLabel[r.statut] || r.statut;
+      var slot    = slotLabel[r.creneau_id] || ('Créneau ' + r.creneau_id);
+      var spot    = r.spot_id ? ' · Empl. ' + _escI(r.spot_id) : '';
+      var acc     = r.accompagnants > 0 ? ' (' + r.accompagnants + ' acc.)' : '';
+      return '<div class="insc-history-row">'
+        + '<span class="insc-history-date">' + dateStr + '</span>'
+        + '<span class="insc-history-slot">' + _escI(slot) + spot + acc + '</span>'
+        + '<span class="insc-history-statut insc-hs-' + r.statut + '">' + statut + '</span>'
+        + '</div>';
+    }).join('');
+  }).catch(function(e) {
+    var histEl = document.getElementById('insc-history-list');
+    if (histEl) histEl.innerHTML = '<em style="color:#c00;font-size:13px">Erreur de chargement.</em>';
+    console.error(e);
   });
 }
 

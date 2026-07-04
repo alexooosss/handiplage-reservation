@@ -60,7 +60,7 @@ const App = (() => {
     }
   }
 
-  function showView(view) {
+  function showView(view, inscriptionId) {
     if (_currentView === 'mc' && view !== 'mc' && typeof unsubscribeMc === 'function') {
       unsubscribeMc();
     }
@@ -99,7 +99,7 @@ const App = (() => {
     } else if (view === 'inscription') {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
-      _renderInscription().catch(console.error);
+      _renderInscription(inscriptionId).catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
@@ -112,10 +112,10 @@ const App = (() => {
     return d.toISOString().slice(0, 10);
   }
 
-  async function _renderInscription() {
+  async function _renderInscription(selectedId) {
     const container = document.getElementById('insc-view');
     if (!container) return;
-    await renderInscription(container);
+    await renderInscription(container, selectedId);
   }
 
   async function _renderMc() {
@@ -403,5 +403,8 @@ const App = (() => {
       `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
-  return { init, selectSlot, refresh, showView };
+  return {
+    init, selectSlot, refresh, showView,
+    navigateToInscription: function(id) { closeModal(); showView('inscription', id); },
+  };
 })();

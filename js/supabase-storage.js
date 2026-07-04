@@ -198,6 +198,15 @@ async function getPassRemainingCount(inscriptionId, monthISO) {
   return result.count || 0;
 }
 
+async function getReservationsForInscription(inscriptionId) {
+  var result = await supabaseClient.from('reservations')
+    .select('id, date, creneau_id, statut, accompagnants, spot_id, resa_type')
+    .eq('inscription_id', inscriptionId)
+    .order('date', { ascending: false });
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
 // Realtime
 var _slotChannel = null;
 
@@ -227,7 +236,7 @@ if (typeof module !== 'undefined') {
     getTodayISO, getReservations, getReservationList, saveCheckin, updateStatus,
     updateSpotField, clearSlot, addReservation, removeReservation,
     updateReservationStatus, updateReservationField,
-    getWeekReservationCounts, getPassRemainingCount,
+    getWeekReservationCounts, getPassRemainingCount, getReservationsForInscription,
     subscribeSlot, unsubscribeSlot,
   };
 }
