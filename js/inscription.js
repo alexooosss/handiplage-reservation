@@ -106,7 +106,9 @@ function _showForm(container, insc) {
   mainEl.innerHTML = '<div class="insc-form-wrap">'
     + '<div class="insc-form-header">'
     +   '<h2>' + (isNew ? 'Nouvelle inscription' : 'Inscription — ' + _escI(v.nom) + ' ' + _escI(v.prenom)) + '</h2>'
-    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + chk(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + chk(v.statut,'refuse') + '>Refusé ✗</option></select></div>' : '')
+    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + chk(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + chk(v.statut,'refuse') + '>Refusé ✗</option></select></div>'
+    + '<div id="refus-block" style="' + (v.statut === 'refuse' ? '' : 'display:none') + ';margin-top:10px"><textarea id="refus-motif" placeholder="Motif du refus (justificatif non valable, etc.)" rows="3" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;resize:vertical"></textarea><button type="button" id="btn-send-refusal" style="margin-top:6px;padding:7px 14px;background:#e53935;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✉ Ouvrir le modèle d\'email de refus</button></div>'
+    : '')
     +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'
     + '</div>'
     + (!isNew && v.statut === 'valide' ? _renderPassBlock(v) : '')
@@ -262,6 +264,9 @@ function _showForm(container, insc) {
     if (statutEl) {
       statutEl.addEventListener('change', async function() {
         const newStatut = statutEl.value;
+        // Afficher/masquer bloc refus
+        var refusBlock = document.getElementById('refus-block');
+        if (refusBlock) refusBlock.style.display = newStatut === 'refuse' ? 'block' : 'none';
         const updated = await updateInscription(v.id, { statut: newStatut });
         await _refreshSidebar(container);
         if (newStatut !== 'valide') {
@@ -362,6 +367,12 @@ function _showForm(container, insc) {
 
   if (!isNew) _bindPassButtons();
 
+  // Wirer bouton refus
+  var btnRefusal = document.getElementById('btn-send-refusal');
+  if (btnRefusal && !isNew && v.id) {
+    btnRefusal.addEventListener('click', function() { _sendRefusalEmail(v.id); });
+  }
+
   document.getElementById('insc-cancel').addEventListener('click', async function() {
     await renderInscription(container);
   });
@@ -378,6 +389,35 @@ async function _refreshSidebar(container) {
   const listEl = document.getElementById('insc-list');
   if (listEl) listEl.innerHTML = _renderListItems(insc, q);
   _bindListItems(container);
+}
+
+async function _sendRefusalEmail(inscriptionId) {
+  var motif = document.getElementById('refus-motif') && document.getElementById('refus-motif').value.trim();
+  if (!motif) {
+    alert('Veuillez saisir le motif du refus avant d\'envoyer l\'email.');
+    return;
+  }
+  var btn = document.getElementById('btn-send-refusal');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+
+  try {
+    var session = await (typeof getSession === 'function' ? getSession() : Promise.resolve(null));
+    var response = await fetch(window.SUPABASE_CONFIG.url + '/functions/v1/send-refusal-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (session ? session.access_token : ''),
+      },
+      body: JSON.stringify({ inscriptionId: inscriptionId, motif: motif }),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Erreur serveur');
+    window.location.href = data.mailtoLink;
+    if (btn) { btn.disabled = false; btn.textContent = 'Ouvrir le modèle d\'email'; }
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Ouvrir le modèle d\'email'; }
+    alert('Erreur : ' + err.message);
+  }
 }
 
 function _buildMetadata(data) {
