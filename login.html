@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Capturer le hash avant que Supabase ne le consomme -->
+  <script>window._initialHash = window.location.hash;</script>
   <title>Connexion — Handiplage</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -139,8 +141,8 @@
   <script src="js/auth.js"></script>
   <script>
     (async function () {
-      // Détecter le flux invitation AVANT tout — le hash doit être lu avant que Supabase le consomme
-      const urlHash = window.location.hash;
+      // Détecter le flux invitation — utiliser le hash capturé avant l'init Supabase
+      const urlHash = window._initialHash || '';
       const isInvite = urlHash.includes('type=invite') || urlHash.includes('type=recovery');
 
       // Redirect if already logged in — sauf si c'est un flux invitation
