@@ -283,7 +283,14 @@ function _showForm(container, insc) {
                   msgEl.style.display = 'block';
                 }
               })
-              .catch(function() {}); // silencieux si déjà invité
+              .catch(function(err) {
+                const msgEl = mainEl.querySelector('.insc-invite-msg');
+                if (msgEl) {
+                  msgEl.textContent = 'Erreur invitation : ' + (err && err.message ? err.message : JSON.stringify(err));
+                  msgEl.style.display = 'block';
+                  msgEl.style.color = 'red';
+                }
+              });
           }
         }
       });
