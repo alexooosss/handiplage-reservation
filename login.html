@@ -139,22 +139,28 @@
   <script src="js/auth.js"></script>
   <script>
     (async function () {
-      // Redirect if already logged in
-      try {
-        const session = await getSession();
-        if (session) {
-          const role = getUserRole(session);
-          if (role === 'staff') {
-            window.location.href = 'index.html';
-            return;
+      // Détecter le flux invitation AVANT tout — le hash doit être lu avant que Supabase le consomme
+      const urlHash = window.location.hash;
+      const isInvite = urlHash.includes('type=invite') || urlHash.includes('type=recovery');
+
+      // Redirect if already logged in — sauf si c'est un flux invitation
+      if (!isInvite) {
+        try {
+          const session = await getSession();
+          if (session) {
+            const role = getUserRole(session);
+            if (role === 'staff') {
+              window.location.href = 'index.html';
+              return;
+            }
+            if (role === 'user') {
+              window.location.href = 'usager.html';
+              return;
+            }
           }
-          if (role === 'user') {
-            window.location.href = 'usager.html';
-            return;
-          }
+        } catch (e) {
+          // Pas de session ou erreur réseau — afficher le formulaire normalement
         }
-      } catch (e) {
-        // Pas de session ou erreur réseau — afficher le formulaire normalement
       }
 
       const form = document.getElementById('login-form');
@@ -164,10 +170,6 @@
       const errorMsg = document.getElementById('error-msg');
       const successMsg = document.getElementById('success-msg');
       const forgotBtn = document.getElementById('forgot-btn');
-
-      // Détecter le flux invitation (lien Supabase avec type=invite dans le hash)
-      const urlHash = window.location.hash;
-      const isInvite = urlHash.includes('type=invite') || urlHash.includes('type=recovery');
 
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session && isInvite) {
