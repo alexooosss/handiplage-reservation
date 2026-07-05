@@ -44,3 +44,21 @@ CREATE POLICY "mc_staff_all" ON main_courante
   FOR ALL TO authenticated
   USING (public.auth_user_role() = 'staff')
   WITH CHECK (public.auth_user_role() = 'staff');
+
+-- ── Policies table messages ──────────────────────────────────────────────
+
+-- Staff : accès complet
+CREATE POLICY "staff_full_messages" ON messages
+  FOR ALL
+  USING (auth_user_role() = 'staff')
+  WITH CHECK (auth_user_role() = 'staff');
+
+-- ── Policy anon INSERT sur inscriptions ─────────────────────────────────
+
+-- Permet aux personnes non connectées de déposer une demande d'inscription
+CREATE POLICY "public_insert_inscription" ON inscriptions
+  FOR INSERT
+  WITH CHECK (
+    statut = 'en_attente'
+    AND user_id IS NULL
+  );

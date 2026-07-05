@@ -53,13 +53,16 @@ function _formatWeekLabel(days) {
 // Renders the weekly planning grid into container
 // weekOffset: 0=current week, -1=previous, +1=next
 // onCellClick(dateISO, slot) called when a cell is clicked
-function renderPlanning(container, weekOffset, onCellClick) {
+async function renderPlanning(container, weekOffset, onCellClick) {
   const todayISO = _isoDate(new Date());
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const ws   = _weekStart(weekOffset);
-  const days = _weekDays(ws);
+  const ws           = _weekStart(weekOffset);
+  const days         = _weekDays(ws);
+  const weekStartISO = _isoDate(ws);
+  const weekEndISO   = _isoDate(days[6]);
+  const counts       = await getWeekReservationCounts(weekStartISO, weekEndISO);
 
   // Nav bar
   const navHtml = `
@@ -97,13 +100,10 @@ function renderPlanning(container, weekOffset, onCellClick) {
         return nowMinutes >= slotEndParts[0] * 60 + slotEndParts[1];
       })());
 
-      const list      = getReservationList(iso, slot.id);
-      const spotVals  = Object.values(getReservations(iso, slot.id));
-      const presences = spotVals.filter(r => r.type === 'reserved').length;
-      const walkins   = spotVals.filter(r => r.type === 'walkin').length;
-      // Décompte usagers = en attente (liste) + déjà arrivés (assignés à un spot)
-      const cntN      = list.filter(r => !r.resaType || r.resaType === 'normal').length + presences;
-      const cntG      = list.filter(r => r.resaType === 'groupe').length;
+      const slotCounts = (counts[iso] && counts[iso][slot.id]) || { waiting_normal: 0, waiting_groupe: 0, arrived_reserved: 0, walkins: 0 };
+      const cntN       = slotCounts.waiting_normal + slotCounts.arrived_reserved;
+      const cntG       = slotCounts.waiting_groupe;
+      const walkins    = slotCounts.walkins;
 
       let classes = 'planning-cell';
       if (isToday) classes += ' today-col';
@@ -168,9 +168,11 @@ function renderPlanning(container, weekOffset, onCellClick) {
 }
 
 // ── Export PDF d'un créneau ──
-function exportSlotPDF(dateISO, slot) {
-  const list   = getReservationList(dateISO, slot.id);
-  const spots  = getReservations(dateISO, slot.id);
+async function exportSlotPDF(dateISO, slot) {
+  const [list, spots] = await Promise.all([
+    getReservationList(dateISO, slot.id),
+    getReservations(dateISO, slot.id),
+  ]);
 
   const normal  = list.filter(r => !r.resaType || r.resaType === 'normal');
   const groupes = list.filter(r => r.resaType === 'groupe');

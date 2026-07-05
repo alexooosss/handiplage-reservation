@@ -4,7 +4,7 @@
 // slot        : { id, label, start, end } or null
 // reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
 // waitingList : [{ nom, prenom, accompagnants, status }, ...] — from getReservationList()
-// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(index), onAnnule(index), onItemClick(spotId) }
+// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(resaId), onAnnule(resaId), onItemClick(spotId) }
 function renderPanel(container, slot, reservations, waitingList, callbacks) {
   const { present, walkin, absent, departed } = _categorizeSpots(reservations);
   const { waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
@@ -70,12 +70,14 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
     btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAssign(idx, waitingList[idx]); });
   });
   container.querySelectorAll('.btn-pas-venu[data-index]').forEach(btn => {
-    const idx = parseInt(btn.dataset.index);
-    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onPasVenu(idx); });
+    const idx  = parseInt(btn.dataset.index);
+    const resa = waitingList[idx];
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onPasVenu(resa && resa.id); });
   });
   container.querySelectorAll('.btn-annule[data-index]').forEach(btn => {
-    const idx = parseInt(btn.dataset.index);
-    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAnnule(idx); });
+    const idx  = parseInt(btn.dataset.index);
+    const resa = waitingList[idx];
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAnnule(resa && resa.id); });
   });
   container.querySelectorAll('.resa-item[data-spot-id]').forEach(el => {
     el.addEventListener('click', () => callbacks.onItemClick(el.dataset.spotId));
@@ -86,7 +88,9 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   container.querySelectorAll('.waiting-item[data-index]').forEach(el => {
     el.addEventListener('click', e => {
       if (e.target.closest('button')) return; // ne pas interférer avec les boutons d'action
-      callbacks.onWaitingClick && callbacks.onWaitingClick(parseInt(el.dataset.index));
+      const idx  = parseInt(el.dataset.index);
+      const resa = waitingList[idx];
+      callbacks.onWaitingClick && callbacks.onWaitingClick(resa && resa.id);
     });
   });
 }

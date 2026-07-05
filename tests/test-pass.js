@@ -2,19 +2,8 @@
 'use strict';
 const assert = require('assert');
 
-// Mock localStorage avec iteration complète
-let _store = {};
-global.localStorage = {
-  get length() { return Object.keys(_store).length; },
-  key(i)        { return Object.keys(_store)[i] ?? null; },
-  getItem(k)    { return Object.prototype.hasOwnProperty.call(_store, k) ? _store[k] : null; },
-  setItem(k, v) { _store[k] = String(v); },
-  removeItem(k) { delete _store[k]; },
-  clear()       { _store = {}; },
-};
-
-// Mock getInscriptions (défini globalement dans inscription.js en prod)
-global.getInscriptions = () => [
+// Mock getCachedInscriptions (défini globalement dans supabase-inscriptions.js en prod)
+global.getCachedInscriptions = () => [
   { id: 'abc', statut: 'valide', nom: 'MARTIN', prenom: 'André',
     pass: { actif: true, activatedAt: '2026-06-01' } },
   { id: 'def', statut: 'valide', nom: 'DUPONT', prenom: 'Claire',
@@ -22,9 +11,16 @@ global.getInscriptions = () => [
   { id: 'ghi', statut: 'en_attente', nom: 'SIMON', prenom: 'Paul', pass: null },
 ];
 
+// Mock getPassRemainingCount (défini globalement dans supabase-storage.js en prod)
+global.getPassRemainingCount = async (inscriptionId, monthISO) => {
+  const mockCounts = { 'abc': 3, 'def': 0 };
+  return mockCounts[inscriptionId] || 0;
+};
+
 const {
   isPassSeason, getPassMonthKey, getPassMonthLabel, getPassResetDate,
   getPassRemaining, getInscriptionsWithActivePass, PASS_QUOTA,
+  setPassCountCache, preloadPassCounts,
 } = require('../js/pass.js');
 
 // ── isPassSeason ──
@@ -65,103 +61,62 @@ const {
   assert.strictEqual(result[0].id, 'abc');
 }
 
-// ── getPassRemaining — aucune réservation ──
+// ── getPassRemaining — hors saison toujours 0 ──
+// isPassSeason() lit la date système — branche hors-saison non testable sans injection de date
+
+// ── setPassCountCache + getPassRemaining — cache vide ──
 {
-  localStorage.clear();
-  const rem = getPassRemaining('abc');
+  setPassCountCache({});
   const m = new Date().getMonth() + 1;
   const inSeason = [6,7,8,9].includes(m);
-  assert.strictEqual(rem, inSeason ? 40 : 0, 'quota plein sans réservation');
+  const rem = getPassRemaining('abc');
+  assert.strictEqual(rem, inSeason ? PASS_QUOTA : 0, 'cache vide → quota plein (en saison) ou 0 (hors saison)');
 }
 
-// ── getPassRemaining — décompte liste d'attente (logique de comptage testée indirectement) ──
-{
-  localStorage.clear();
-  const month = getPassMonthKey(); // ex. "2026-07"
-  const listKey = `handiplage_${month}-15_slot2_list`;
-  localStorage.setItem(listKey, JSON.stringify([
-    { inscriptionId: 'abc', status: 'waiting' },    // compte
-    { inscriptionId: 'abc', status: 'annule' },     // ne compte PAS
-    { inscriptionId: 'def', status: 'waiting' },    // autre inscrit
-  ]));
-  const raw = JSON.parse(localStorage.getItem(listKey));
-  assert.strictEqual(raw.length, 3);
-  const abc = raw.filter(r => r.inscriptionId === 'abc' && r.status !== 'annule');
-  assert.strictEqual(abc.length, 1, '1 entrée non annulée pour abc');
+// ── setPassCountCache + getPassRemaining — décompte cache ──
+if ([6,7,8,9].includes(new Date().getMonth() + 1)) {
+  // Uniquement en saison pour que getPassRemaining retourne > 0
+
+  // 2 réservations utilisées → PASS_QUOTA - 2 restantes
+  setPassCountCache({ 'abc': 2 });
+  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA - 2, '2 utilisées → PASS_QUOTA - 2 restantes');
+
+  // Autre inscrit non présent dans cache → quota plein
+  assert.strictEqual(getPassRemaining('def'), PASS_QUOTA, 'id absent du cache → quota plein');
+
+  // Quota épuisé (used >= PASS_QUOTA) → 0, jamais négatif
+  setPassCountCache({ 'abc': PASS_QUOTA + 5 });
+  assert.strictEqual(getPassRemaining('abc'), 0, 'quota dépassé → 0, jamais négatif');
+
+  // inscriptionId absent/null → 0
+  assert.strictEqual(getPassRemaining(null), 0, 'null → 0');
+  assert.strictEqual(getPassRemaining(''), 0, 'chaîne vide → 0');
+
+  // setPassCountCache avec null/undefined → traité comme {}
+  setPassCountCache(null);
+  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA, 'cache null → quota plein');
 }
 
-{
-  localStorage.clear();
-  const month   = getPassMonthKey();
-  const spotKey = `handiplage_${month}-16_slot1`;
-  localStorage.setItem(spotKey, JSON.stringify({
-    P1: { inscriptionId: 'abc', status: 'present' },
-    P3: { inscriptionId: 'def', status: 'present' },
-  }));
-  const raw = JSON.parse(localStorage.getItem(spotKey));
-  const abc = Object.values(raw).filter(r => r && r.inscriptionId === 'abc');
-  assert.strictEqual(abc.length, 1, '1 spot pour abc');
-}
+// ── preloadPassCounts ──
+(async () => {
+  // Cas normal : cache rempli depuis getPassRemainingCount
+  setPassCountCache({});
+  await preloadPassCounts(['abc', 'def']);
+  assert.strictEqual(getPassRemaining('abc'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA - 3 : 0, 'preload abc: 3 utilisées');
+  assert.strictEqual(getPassRemaining('def'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA : 0, 'preload def: 0 utilisées');
 
-// ── getPassRemaining — exercice direct de la logique de décompte ──
-// (uniquement si la date système courante tombe en saison ; sinon ces blocs
-// sont sautés sans casser le test — la production exige le gating "hors
-// saison => 0" qui est déjà vérifié ci-dessus)
-if (isPassSeason()) {
-  const month = getPassMonthKey();
+  // Tableau vide → cache vide {}
+  await preloadPassCounts([]);
+  assert.deepStrictEqual(getPassRemaining('abc'), [6,7,8,9].includes(new Date().getMonth()+1) ? PASS_QUOTA : 0, 'tableau vide → cache réinitialisé vide');
 
-  // Liste d'attente : 1 entrée 'waiting' + 1 'annule' (ignorée) pour abc, 1 pour def
-  localStorage.clear();
-  localStorage.setItem(`handiplage_${month}-15_slot2_list`, JSON.stringify([
-    { inscriptionId: 'abc', status: 'waiting' },
-    { inscriptionId: 'abc', status: 'annule' },
-    { inscriptionId: 'def', status: 'waiting' },
-  ]));
-  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA - 1, 'liste : 1 réservation active décomptée pour abc');
-  assert.strictEqual(getPassRemaining('def'), PASS_QUOTA - 1, 'liste : 1 réservation active décomptée pour def');
-
-  // Emplacements assignés : 1 spot pour abc, 1 pour def
-  localStorage.clear();
-  localStorage.setItem(`handiplage_${month}-16_slot1`, JSON.stringify({
-    P1: { inscriptionId: 'abc', status: 'present' },
-    P3: { inscriptionId: 'def', status: 'present' },
-  }));
-  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA - 1, 'spot : 1 emplacement décompté pour abc');
-
-  // Cumul sur plusieurs jours/créneaux du même mois pour le même inscrit
-  localStorage.clear();
-  localStorage.setItem(`handiplage_${month}-10_slot1`, JSON.stringify({
-    P1: { inscriptionId: 'abc', status: 'present' },
-  }));
-  localStorage.setItem(`handiplage_${month}-11_slot2`, JSON.stringify({
-    P2: { inscriptionId: 'abc', status: 'present' },
-  }));
-  localStorage.setItem(`handiplage_${month}-12_slot1_list`, JSON.stringify([
-    { inscriptionId: 'abc', status: 'waiting' },
-  ]));
-  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA - 3, 'cumul sur 3 entrées distinctes pour abc');
-
-  // Une clé d'un autre mois ne doit pas être comptée
-  localStorage.clear();
-  localStorage.setItem('handiplage_2099-01-10_slot1', JSON.stringify({
-    P1: { inscriptionId: 'abc', status: 'present' },
-  }));
-  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA, 'clé hors mois courant ignorée');
-
-  // Quota épuisé ne descend pas sous 0
-  localStorage.clear();
-  const spots = {};
-  for (let i = 0; i < PASS_QUOTA + 5; i++) spots['P' + i] = { inscriptionId: 'abc', status: 'present' };
-  localStorage.setItem(`handiplage_${month}-20_slot1`, JSON.stringify(spots));
-  assert.strictEqual(getPassRemaining('abc'), 0, 'quota dépassé => 0, jamais négatif');
-
-  // Préfixe ancré : une clé dont le mois ressemble au préfixe sans être le même mois
-  // (ex. "...-071_slot1" pour le mois "07") ne doit jamais être comptée
-  localStorage.clear();
-  localStorage.setItem(`handiplage_${month}1_slot1`, JSON.stringify({
-    P1: { inscriptionId: 'abc', status: 'present' },
-  }));
-  assert.strictEqual(getPassRemaining('abc'), PASS_QUOTA, 'préfixe non ancré au mois => clé ignorée');
-}
-
-console.log('✓ test-pass.js OK');
+  // Guard : getPassRemainingCount non chargé → throw
+  const orig = global.getPassRemainingCount;
+  delete global.getPassRemainingCount;
+  await assert.rejects(preloadPassCounts(['abc']), /not loaded/, 'guard: getPassRemainingCount absent → throw');
+  global.getPassRemainingCount = orig;
+})().then(() => {
+  console.log('✓ test-pass.js OK');
+}).catch(err => {
+  console.error(err);
+  process.exit(1);
+});

@@ -3,7 +3,7 @@
 const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
-  let _selectionMode = null; // { index, resa } | null
+  let _selectionMode = null; // { id, resa } | null
   let _currentView = 'carte'; // 'carte' | 'planning' | 'mc' | 'inscription'
   let _planningWeekOffset = 0;
   let _mcDate = null;
@@ -14,6 +14,19 @@ const App = (() => {
     _renderHeader();
     _renderClock();
     setInterval(_renderClock, 1000);
+
+    // Préchargement inscriptions (pour autocomplete pass)
+    if (typeof getInscriptions === 'function') {
+      getInscriptions().catch(function(err) { console.warn('Preload inscriptions:', err); });
+    }
+
+    // Realtime : s'abonner aux inscriptions
+    if (typeof subscribeInscriptions === 'function') {
+      subscribeInscriptions(function() {
+        getInscriptions().catch(function() {});
+        if (_currentView === 'inscription') _renderInscription();
+      });
+    }
 
     const active   = getActiveSlot(new Date());
     const upcoming = SLOTS.find(s => getSlotStatus(s, new Date()) === 'upcoming');
@@ -45,18 +58,43 @@ const App = (() => {
         showView(_currentView === 'inscription' ? 'carte' : 'inscription');
       });
     }
+
+    // Messages tab button
+    const btnMessages = document.getElementById('btn-messages-tab');
+    if (btnMessages) {
+      btnMessages.addEventListener('click', () => {
+        showView(_currentView === 'messages' ? 'carte' : 'messages');
+      });
+    }
+
+    // Badge non-lus
+    if (typeof getUnreadCount === 'function') {
+      getUnreadCount().then(function(count) {
+        const badge = document.getElementById('messages-badge');
+        if (badge) {
+          if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+          else badge.style.display = 'none';
+        }
+      }).catch(function() {});
+    }
   }
 
-  function showView(view) {
+  function showView(view, inscriptionId) {
+    if (_currentView === 'mc' && view !== 'mc' && typeof unsubscribeMc === 'function') {
+      unsubscribeMc();
+    }
+
     _currentView = view;
     const beachPanel   = document.getElementById('beach-panel');
     const sidePanel    = document.getElementById('side-panel');
-    const planningView = document.getElementById('planning-view');
-    const mcView       = document.getElementById('mc-view');
-    const inscView     = document.getElementById('insc-view');
-    const btnPlanning  = document.getElementById('btn-planning-tab');
-    const btnMc        = document.getElementById('btn-mc-tab');
-    const btnInsc      = document.getElementById('btn-insc-tab');
+    const planningView   = document.getElementById('planning-view');
+    const mcView         = document.getElementById('mc-view');
+    const inscView       = document.getElementById('insc-view');
+    const messagesView   = document.getElementById('messages-view');
+    const btnPlanning    = document.getElementById('btn-planning-tab');
+    const btnMc          = document.getElementById('btn-mc-tab');
+    const btnInsc        = document.getElementById('btn-insc-tab');
+    const btnMessages    = document.getElementById('btn-messages-tab');
 
     // Masquer tout
     if (beachPanel)   beachPanel.style.display   = 'none';
@@ -64,22 +102,31 @@ const App = (() => {
     if (planningView) planningView.style.display  = 'none';
     if (mcView)       mcView.style.display        = 'none';
     if (inscView)     inscView.style.display      = 'none';
+    if (messagesView) messagesView.style.display  = 'none';
     if (btnPlanning)  btnPlanning.classList.remove('active');
     if (btnMc)        btnMc.classList.remove('active');
     if (btnInsc)      btnInsc.classList.remove('active');
+    if (btnMessages)  btnMessages.classList.remove('active');
 
     if (view === 'planning') {
       if (planningView) planningView.style.display = 'flex';
       if (btnPlanning)  btnPlanning.classList.add('active');
-      _renderPlanning();
+      _renderPlanning().catch(console.error);
     } else if (view === 'mc') {
       if (mcView) mcView.style.display = 'flex';
       if (btnMc)  btnMc.classList.add('active');
-      _renderMc();
+      _renderMc().catch(console.error);
+      if (typeof subscribeMc === 'function') {
+        subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      }
     } else if (view === 'inscription') {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
-      _renderInscription();
+      _renderInscription(inscriptionId).catch(console.error);
+    } else if (view === 'messages') {
+      if (messagesView) messagesView.style.display = 'flex';
+      if (btnMessages)  btnMessages.classList.add('active');
+      renderMessages(messagesView).catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
@@ -92,36 +139,52 @@ const App = (() => {
     return d.toISOString().slice(0, 10);
   }
 
-  function _renderInscription() {
+  async function _renderInscription(selectedId) {
     const container = document.getElementById('insc-view');
     if (!container) return;
-    renderInscription(container);
+    await renderInscription(container, selectedId);
   }
 
-  function _renderMc() {
+  async function _renderMc() {
     const container = document.getElementById('mc-view');
     if (!container) return;
     if (!_mcDate) _mcDate = _date;
-    container._onMcPrev  = () => { _mcDate = _mcDateOffset(_mcDate, -1); _renderMc(); };
-    container._onMcNext  = () => { const next = _mcDateOffset(_mcDate, +1); if (next <= _date) { _mcDate = next; _renderMc(); } };
-    container._onMcToday = () => { _mcDate = _date; _renderMc(); };
-    container._onMcGoto  = d  => { _mcDate = d; _renderMc(); };
-    renderMc(container, _mcDate);
+    container._onMcPrev  = () => {
+      _mcDate = _mcDateOffset(_mcDate, -1);
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
+    container._onMcNext  = () => {
+      const next = _mcDateOffset(_mcDate, +1);
+      if (next <= _date) {
+        _mcDate = next;
+        if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+        _renderMc().catch(console.error);
+      }
+    };
+    container._onMcToday = () => {
+      _mcDate = _date;
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
+    container._onMcGoto  = d  => {
+      _mcDate = d;
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      _renderMc().catch(console.error);
+    };
+    await renderMc(container, _mcDate);
   }
 
-  function _renderPlanning() {
+  async function _renderPlanning() {
     const container = document.getElementById('planning-view');
     if (!container) return;
-
-    // Wire prev/next callbacks on the container before rendering
     container._onPrev = () => { _planningWeekOffset--; _renderPlanning(); };
     container._onNext = () => { _planningWeekOffset++; _renderPlanning(); };
-
-    renderPlanning(container, _planningWeekOffset, (dateISO, slot) => {
+    await renderPlanning(container, _planningWeekOffset, async (dateISO, slot) => {
       const isToday = dateISO === _date;
       openSlotPlanningModal(dateISO, slot, {
-        onAdd:    data => { addReservation(dateISO, slot.id, data); _renderPlanning(); },
-        onRemove: idx  => { removeReservation(dateISO, slot.id, idx); _renderPlanning(); },
+        onAdd:    async data => { await addReservation(dateISO, slot.id, data); await _renderPlanning(); },
+        onRemove: async id   => { await removeReservation(id); await _renderPlanning(); },
         onGoLive: isToday ? () => { showView('carte'); selectSlot(slot.id); } : null,
       });
     });
@@ -132,23 +195,28 @@ const App = (() => {
     document.querySelectorAll('.slot-pill').forEach(el => {
       el.classList.toggle('selected-slot', parseInt(el.dataset.slotId) === slotId);
     });
-    refresh();
+    if (typeof subscribeSlot === 'function') {
+      subscribeSlot(_date, slotId, function() { refresh().catch(console.error); });
+    }
+    refresh().catch(console.error);
   }
 
-  function refresh() {
+  async function refresh() {
     if (!_selectedSlotId) return;
-    const reservations = getReservations(_date, _selectedSlotId);
-    const waitingList  = getReservationList(_date, _selectedSlotId);
-    const slot         = getSlotById(_selectedSlotId);
-    const mapEl        = document.getElementById('beach-map');
-    const panelEl      = document.getElementById('side-panel');
-    const freeSpots    = BEACH_CONFIG.spots
+    const [reservations, waitingList] = await Promise.all([
+      getReservations(_date, _selectedSlotId),
+      getReservationList(_date, _selectedSlotId),
+    ]);
+    const slot      = getSlotById(_selectedSlotId);
+    const mapEl     = document.getElementById('beach-map');
+    const panelEl   = document.getElementById('side-panel');
+    const freeSpots = BEACH_CONFIG.spots
       .filter(s => !reservations[s.id] || reservations[s.id].status === 'free')
       .map(s => s.id);
 
     const mapHandler = _selectionMode
-      ? spotId => _doAssignSpot(spotId, reservations, freeSpots)
-      : spotId => _onSpotClick(spotId, reservations, freeSpots);
+      ? spotId => _doAssignSpot(spotId, reservations, freeSpots).catch(console.error)
+      : spotId => { _onSpotClick(spotId, reservations, freeSpots).catch(console.error); };
     renderMapSpots(mapEl, reservations, mapHandler, !!_selectionMode);
 
     // Bandeau de sélection
@@ -171,99 +239,108 @@ const App = (() => {
       onAddReservation: () => _openAddReservation(),
       onWalkin:         () => _openWalkin(freeSpots),
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
-      onItemClick:      spotId => _onSpotClick(spotId, reservations, freeSpots),
-      onDepartedClick:  spotId => openDepartedModal(spotId, reservations[spotId], _buildProfileHistory(reservations[spotId])),
-      onWaitingClick:   index  => openWaitingDetailModal(waitingList[index], _buildProfileHistory(waitingList[index]), {
-        onUpdateAccompagnants: n => {
-          updateReservationField(_date, _selectedSlotId, index, 'accompagnants', n);
-          refresh();
-        },
-      }),
-      onPasVenu:        index => { updateReservationStatus(_date, _selectedSlotId, index, 'pas_venu'); refresh(); },
-      onAnnule:         index => { updateReservationStatus(_date, _selectedSlotId, index, 'annule');   refresh(); },
+      onItemClick:      spotId => { _onSpotClick(spotId, reservations, freeSpots); },
+      onDepartedClick:  async spotId => {
+        const history = await _buildProfileHistory(reservations[spotId]);
+        openDepartedModal(spotId, reservations[spotId], history);
+      },
+      onWaitingClick: async resaId => {
+        const resa = waitingList.find(r => r.id === resaId);
+        if (!resa) return;
+        const history = await _buildProfileHistory(resa);
+        openWaitingDetailModal(resa, history, {
+          onUpdateAccompagnants: async n => {
+            await updateReservationField(resaId, 'accompagnants', n);
+            await refresh();
+          },
+        });
+      },
+      onPasVenu: async resaId => { await updateReservationStatus(resaId, 'pas_venu'); await refresh(); },
+      onAnnule:  async resaId => { await updateReservationStatus(resaId, 'annule'); await refresh(); },
     });
   }
 
   // ── Spot click (carte ou liste) ──
-  function _onSpotClick(spotId, reservations, freeSpots) {
+  async function _onSpotClick(spotId, reservations, freeSpots) {
     const resa = reservations[spotId];
     if (!resa || resa.status === 'free') {
-      // Place libre — walk-in direct
       _openWalkin(freeSpots, spotId);
-    } else {
-      openSpotDetailModal(spotId, resa, {
-        onCheckin: id => {
-          const resas = getReservations(_date, _selectedSlotId);
-          resas[id].checkinTime = Date.now();
-          resas[id].status = 'present';
-          saveCheckin(_date, _selectedSlotId, id, resas[id]);
-          refresh();
-        },
-        onDepart: id => {
-          updateStatus(_date, _selectedSlotId, id, 'departed', { departTime: Date.now() });
-          refresh();
-        },
-        onAbsent: id => {
-          updateStatus(_date, _selectedSlotId, id, 'absent');
-          refresh();
-        },
-        onUpdateAccompagnants: n => {
-          updateSpotField(_date, _selectedSlotId, spotId, 'accompagnants', n);
-          refresh();
-        },
-      }, _buildProfileHistory(resa));
+      return;
     }
+    const history = await _buildProfileHistory(resa);
+    openSpotDetailModal(spotId, resa, {
+      onCheckin: async id => {
+        await updateStatus(_date, _selectedSlotId, id, 'present', { checkinTime: Date.now() });
+        await refresh();
+      },
+      onDepart: async id => {
+        await updateStatus(_date, _selectedSlotId, id, 'departed', { departTime: Date.now() });
+        await refresh();
+      },
+      onAbsent: async id => {
+        await updateStatus(_date, _selectedSlotId, id, 'absent');
+        await refresh();
+      },
+      onUpdateAccompagnants: async n => {
+        await updateSpotField(_date, _selectedSlotId, spotId, 'accompagnants', n);
+        await refresh();
+      },
+    }, history);
   }
 
   // ── Ajouter une réservation à la liste d'attente ──
-  function _openAddReservation() {
-    openAddReservationModal(data => {
-      addReservation(_date, _selectedSlotId, data);
-      refresh();
+  async function _openAddReservation() {
+    const passInscriptions = (typeof getInscriptionsWithActivePass === 'function')
+      ? getInscriptionsWithActivePass() : [];
+    if (passInscriptions.length > 0 && typeof preloadPassCounts === 'function') {
+      await preloadPassCounts(passInscriptions.map(i => i.id));
+    }
+    openAddReservationModal(async data => {
+      await addReservation(_date, _selectedSlotId, data);
+      await refresh();
     });
   }
 
   // ── Arrivée sans réservation (walk-in) ──
   function _openWalkin(freeSpots, preselectedSpotId) {
-    openCheckinModal(freeSpots, preselectedSpotId, (spotId, data) => {
+    openCheckinModal(freeSpots, preselectedSpotId, async (spotId, data) => {
       const checkinData = { ...data, durationMs: DURATION_MS };
-      saveCheckin(_date, _selectedSlotId, spotId, checkinData);
-      _registerOverflow(spotId, checkinData);
-      refresh();
+      await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
+      await _registerOverflow(spotId, checkinData);
+      await refresh();
     });
   }
 
   // Inscrit la personne dans tous les créneaux suivants dont le début est
   // avant la fin de son temps (débordement horaire)
-  function _registerOverflow(spotId, checkinData) {
+  async function _registerOverflow(spotId, checkinData) {
     const endTime = checkinData.checkinTime + checkinData.durationMs;
-    SLOTS.forEach(slot => {
+    await Promise.all(SLOTS.map(async slot => {
       if (slot.id <= _selectedSlotId) return;
       const [h, m] = slot.start.split(':').map(Number);
       const slotStart = new Date();
       slotStart.setHours(h, m, 0, 0);
       if (slotStart.getTime() < endTime) {
-        saveCheckin(_date, slot.id, spotId, { ...checkinData });
+        await saveCheckin(_date, slot.id, spotId, { ...checkinData });
       }
-    });
+    }));
   }
 
   // ── Assigner un emplacement à une personne de la liste d'attente ──
   function _openAssign(index, resa, freeSpots) {
-    _selectionMode = { index, resa };
+    _selectionMode = { id: resa.id, resa };
     refresh();
   }
 
-  function _doAssignSpot(spotId, reservations, freeSpots) {
+  async function _doAssignSpot(spotId, reservations, freeSpots) {
     const resa = reservations[spotId];
-    // Ignorer si le spot n'est pas libre
     if (resa && resa.status !== 'free' && resa.status !== 'departed') return;
 
-    const { index, resa: waitingResa } = _selectionMode;
+    const { id: waitingResaId, resa: waitingResa } = _selectionMode;
     _selectionMode = null;
 
-    const isDouble   = _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
-    const durationMs = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
+    const isDouble    = await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
+    const durationMs  = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
     const checkinTime = Date.now();
     const checkinData = {
       nom: waitingResa.nom,
@@ -276,44 +353,43 @@ const App = (() => {
       inscriptionId: waitingResa.inscriptionId || null,
     };
 
-    saveCheckin(_date, _selectedSlotId, spotId, checkinData);
-    removeReservation(_date, _selectedSlotId, index);
+    await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
+    await removeReservation(waitingResaId);
 
-    // Si double réservation, retirer de la liste d'attente du créneau suivant
     if (isDouble) {
       const nextSlotId = _selectedSlotId + 1;
-      const nextList = getReservationList(_date, nextSlotId);
-      const nextIdx = nextList.findIndex(r =>
+      const nextList   = await getReservationList(_date, nextSlotId);
+      const nextEntry  = nextList.find(r =>
         r.nom.toUpperCase()    === waitingResa.nom.toUpperCase() &&
         r.prenom.toUpperCase() === waitingResa.prenom.toUpperCase()
       );
-      if (nextIdx !== -1) removeReservation(_date, nextSlotId, nextIdx);
+      if (nextEntry) await removeReservation(nextEntry.id);
     }
 
-    // Propager sur les créneaux suivants si le temps déborde
-    _registerOverflow(spotId, checkinData);
-
-    refresh();
+    await _registerOverflow(spotId, checkinData);
+    await refresh();
   }
 
   // Retourne l'historique du jour d'une personne : spots assignés + présences en liste d'attente
-  function _buildProfileHistory(resa) {
+  async function _buildProfileHistory(resa) {
     if (!resa) return [];
     const nom    = resa.nom.toUpperCase();
     const prenom = resa.prenom.toUpperCase();
+    const [allResas, allLists] = await Promise.all([
+      Promise.all(SLOTS.map(s => getReservations(_date, s.id))),
+      Promise.all(SLOTS.map(s => getReservationList(_date, s.id))),
+    ]);
     const result = [];
-    SLOTS.forEach(slot => {
-      // Spots assignés
-      const resas = getReservations(_date, slot.id);
+    SLOTS.forEach((slot, i) => {
+      const resas = allResas[i];
+      const list  = allLists[i];
       Object.entries(resas).forEach(([sid, r]) => {
         if (r.nom?.toUpperCase() === nom && r.prenom?.toUpperCase() === prenom) {
           result.push({ slot, spotId: sid, resa: r });
         }
       });
-      // Liste d'attente (si pas déjà trouvé dans les spots de ce créneau)
       const alreadyInSlot = result.some(e => e.slot.id === slot.id);
       if (!alreadyInSlot) {
-        const list = getReservationList(_date, slot.id);
         const found = list.find(r => r.nom?.toUpperCase() === nom && r.prenom?.toUpperCase() === prenom);
         if (found) result.push({ slot, spotId: null, resa: { ...found, status: found.status || 'reserved_waiting' } });
       }
@@ -322,9 +398,9 @@ const App = (() => {
   }
 
   // Retourne true si la même personne (NOM+Prénom) est dans la liste du créneau suivant
-  function _detectDoubleSlot(nom, prenom) {
+  async function _detectDoubleSlot(nom, prenom) {
     if (_selectedSlotId >= 5) return false;
-    const nextList = getReservationList(_date, _selectedSlotId + 1);
+    const nextList = await getReservationList(_date, _selectedSlotId + 1);
     return nextList.some(r =>
       r.nom.toUpperCase()    === nom.toUpperCase() &&
       r.prenom.toUpperCase() === prenom.toUpperCase()
@@ -354,11 +430,8 @@ const App = (() => {
       `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
-  return { init, selectSlot, refresh, showView };
+  return {
+    init, selectSlot, refresh, showView,
+    navigateToInscription: function(id) { closeModal(); showView('inscription', id); },
+  };
 })();
-
-document.addEventListener('DOMContentLoaded', () => {
-  const mapEl = document.getElementById('beach-map');
-  renderMapStatic(mapEl);
-  App.init();
-});

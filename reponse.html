@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handiplage — Réponse à votre dossier</title>
+  <link rel="stylesheet" href="css/public.css">
+</head>
+<body>
+
+<header class="pub-header">
+  <div>
+    <div class="pub-header-title">🏖 Handiplage Antibes</div>
+    <div class="pub-header-sub">Réponse à votre dossier</div>
+  </div>
+</header>
+
+<div class="pub-container">
+  <div id="reponse-content">
+
+    <div class="pub-card">
+      <div class="pub-card-title">Adressez votre réponse à l'équipe Handiplage</div>
+      <p style="font-size:.9375rem;color:#555;margin-bottom:16px;line-height:1.6">
+        Ce formulaire vous permet de répondre à la décision concernant votre demande d'inscription.
+        Joignez tout élément complémentaire en décrivant votre situation dans le champ ci-dessous.
+      </p>
+
+      <div id="reponse-errors" class="pub-errors"></div>
+
+      <div id="reponse-success" class="pub-success" style="display:none">
+        <div class="pub-success-icon">✅</div>
+        <h2>Réponse envoyée !</h2>
+        <p>Votre réponse a bien été transmise à l'équipe Handiplage.<br>
+           Elle sera examinée dans les meilleurs délais.</p>
+      </div>
+
+      <form id="reponse-form">
+        <div class="pub-field">
+          <label for="f-contenu">Votre message <span class="req">*</span></label>
+          <textarea id="f-contenu" rows="8" placeholder="Décrivez votre situation, joignez les informations complémentaires…" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem;font-family:inherit;resize:vertical"></textarea>
+        </div>
+        <button type="submit" class="pub-btn" id="reponse-submit">Envoyer ma réponse</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/env.js"></script>
+<script src="js/reponse.js"></script>
+<script>
+  initReponsePage();
+</script>
+</body>
+</html>

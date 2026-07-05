@@ -20,13 +20,13 @@ function openAddReservationModal(onConfirm) {
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group pass-suggest-wrap" id="prenom-wrap">
-          <label>Prénom</label>
-          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
-        </div>
-        <div class="form-group">
+        <div class="form-group pass-suggest-wrap" id="nom-wrap">
           <label>Nom</label>
           <input type="text" id="f-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
         </div>
       </div>
       <div id="pass-link-info" class="pass-link-info" style="display:none">
@@ -73,44 +73,51 @@ function openAddReservationModal(onConfirm) {
       _linkedInscriptionId = null;
       document.getElementById('pass-link-info').style.display = 'none';
     }
-    if (typeof getInscriptionsWithActivePass === 'undefined') return;
-    const q = (prenomInp.value + ' ' + nomInp.value).trim().toLowerCase();
+    const q = (nomInp.value + ' ' + prenomInp.value).trim().toLowerCase();
     if (q.length < 2) return;
-    const matches = getInscriptionsWithActivePass().filter(function(i) {
+    const all = (typeof getCachedInscriptions === 'function') ? getCachedInscriptions() : [];
+    const matches = all.filter(function(i) {
       return (i.nom + ' ' + i.prenom).toLowerCase().includes(q)
           || (i.prenom + ' ' + i.nom).toLowerCase().includes(q);
-    });
+    }).slice(0, 8);
     if (matches.length === 0) return;
     const dd = document.createElement('div');
     dd.className = 'pass-suggest-dropdown';
     dd.id = 'pass-suggest-dd';
     matches.forEach(function(insc) {
-      const remaining = (typeof getPassRemaining === 'function') ? getPassRemaining(insc.id) : null;
-      if (remaining === null) return;
+      const remaining = (typeof getPassRemaining === 'function' && insc.pass)
+        ? getPassRemaining(insc.id) : null;
       const exhausted = remaining === 0;
       const item = document.createElement('div');
       item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
       const nameSpan = document.createElement('span');
-      nameSpan.textContent = insc.nom + ' ' + insc.prenom;
-      const remSpan = document.createElement('span');
-      remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
-      remSpan.textContent = exhausted ? 'Pass épuisé ce mois' : remaining + ' rés. restantes';
+      nameSpan.textContent = insc.nom.toUpperCase() + ' ' + insc.prenom;
       item.appendChild(nameSpan);
-      item.appendChild(remSpan);
+      if (insc.pass) {
+        const remSpan = document.createElement('span');
+        remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
+        remSpan.textContent = exhausted
+          ? '🎫 Pass 2026 · épuisé'
+          : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
+        item.appendChild(remSpan);
+      }
       if (!exhausted) {
         item.addEventListener('mousedown', function(e) {
           e.preventDefault();
-          prenomInp.value      = insc.prenom;
-          nomInp.value         = insc.nom;
-          _linkedInscriptionId = insc.id;
-          document.getElementById('pass-link-name').textContent = insc.prenom + ' ' + insc.nom;
-          document.getElementById('pass-link-info').style.display = 'flex';
+          nomInp.value        = insc.nom.toUpperCase();
+          prenomInp.value     = insc.prenom;
+          _linkedInscriptionId = insc.pass ? insc.id : null;
+          if (_linkedInscriptionId) {
+            document.getElementById('pass-link-name').textContent = insc.prenom + ' ' + insc.nom;
+            document.getElementById('pass-link-info').style.display = 'flex';
+          }
           _removeSuggestions();
+          prenomInp.focus();
         });
       }
       dd.appendChild(item);
     });
-    document.getElementById('prenom-wrap').appendChild(dd);
+    document.getElementById('nom-wrap').appendChild(dd);
   }
 
   function _removeSuggestions() {
@@ -143,7 +150,7 @@ function openAddReservationModal(onConfirm) {
   });
 
   _dialog().showModal();
-  prenomInp.focus();
+  nomInp.focus();
 }
 
 // ── Modale 2 : Assigner un emplacement à une personne arrivée ──
@@ -481,7 +488,7 @@ function _bindRadioGroup(groupId) {
 }
 
 // ── Modale Planning : liste des réservations d'un créneau pour une date ──
-// callbacks : { onAdd, onRemove(index), onGoLive } (onGoLive=null si pas aujourd'hui)
+// callbacks : { onAdd, onRemove(id), onGoLive } (onGoLive=null si pas aujourd'hui)
 function openSlotPlanningModal(dateISO, slot, callbacks) {
   const d = new Date(dateISO + 'T00:00:00');
   const dateLabel = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -499,13 +506,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <!-- Formulaire d'ajout inline -->
       <div class="plan-inline-form">
         <div class="plan-form-row">
-          <div class="plan-form-group">
-            <label>Prénom</label>
-            <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
-          </div>
-          <div class="plan-form-group">
-            <label>Nom</label>
-            <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+          <div style="position:relative;display:flex;gap:8px">
+            <div class="plan-form-group">
+              <label>Nom</label>
+              <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+            </div>
+            <div class="plan-form-group">
+              <label>Prénom</label>
+              <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
+            </div>
+            <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
           </div>
           <div class="plan-form-group">
             <label>Acc.</label>
@@ -565,17 +575,37 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     return String(d.getHours()).padStart(2,'0') + 'h' + String(d.getMinutes()).padStart(2,'0');
   }
 
-  function _refreshSection(resaType, listId, capId, capacity) {
-    const all     = getReservationList(dateISO, slot.id);
-    const pending = all.map((r, i) => ({ ...r, _idx: i }))
-                       .filter(r => resaType === 'normal'
-                         ? (!r.resaType || r.resaType === 'normal')
-                         : r.resaType === 'groupe');
+  function _esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
-    // Les usagers ayant une réservation et déjà arrivés (assignés à un spot)
-    // s'affichent aussi dans la section Utilisateurs (type 'reserved' dans spots)
+  function _openProfilePanel(inscriptionId, nom, prenom) {
+    var id = inscriptionId;
+    if (!id && typeof getCachedInscriptions === 'function') {
+      var nomUp = (nom || '').toUpperCase();
+      var match = getCachedInscriptions().find(function(i) {
+        return i.nom.toUpperCase() === nomUp
+            && i.prenom.toUpperCase() === (prenom || '').toUpperCase();
+      });
+      if (match) id = match.id;
+    }
+    if (!id) return;
+    if (typeof App !== 'undefined' && typeof App.navigateToInscription === 'function') {
+      App.navigateToInscription(id);
+    }
+  }
+
+  async function _refreshSection(resaType, listId, capId, capacity) {
+    const [all, spotsMap] = await Promise.all([
+      getReservationList(dateISO, slot.id),
+      getReservations(dateISO, slot.id),
+    ]);
+    const pending = all.filter(r => resaType === 'normal'
+      ? (!r.resaType || r.resaType === 'normal')
+      : r.resaType === 'groupe');
+
     const arrived = resaType === 'normal'
-      ? Object.entries(getReservations(dateISO, slot.id))
+      ? Object.entries(spotsMap)
               .filter(([, r]) => r.type === 'reserved')
               .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
       : [];
@@ -597,9 +627,13 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     const pendingHtml = pending.map(r => {
       const acc = r.accompagnants === 0 ? 'seul·e'
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+      const insc = (typeof getCachedInscriptions === 'function' && r.inscriptionId)
+        ? getCachedInscriptions().find(i => i.id === r.inscriptionId) : null;
+      const passTag = (insc && insc.pass && insc.pass.actif)
+        ? ' <span style="font-size:11px;color:#1565c0;font-weight:600">🎫 Pass 2026</span>' : '';
       return '<div class="planning-list-item">'
-        + '<span>' + r.nom + ' ' + r.prenom + ' — ' + acc + '</span>'
-        + '<button class="btn-remove" data-index="' + r._idx + '">✕</button>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >' + r.nom + ' ' + r.prenom + ' — ' + acc + passTag + '</span>'
+        + '<button class="btn-remove" data-id="' + r.id + '">✕</button>'
         + '</div>';
     }).join('');
 
@@ -608,21 +642,30 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
       return '<div class="planning-list-item planning-list-present">'
-        + '<span>✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
         + '</div>';
     }).join('');
 
     listEl.innerHTML = arrivedHtml + pendingHtml;
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        callbacks.onRemove(parseInt(btn.dataset.index));
-        _refreshAll();
+      btn.addEventListener('click', async () => {
+        try {
+          await callbacks.onRemove(btn.dataset.id);
+          await _refreshAll();
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    });
+    listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
+      span.addEventListener('click', function() {
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
       });
     });
   }
 
-  function _refreshWalkins() {
-    const spots = getReservations(dateISO, slot.id);
+  async function _refreshWalkins() {
+    const spots = await getReservations(dateISO, slot.id);
     const items = Object.entries(spots).filter(([, r]) => r.type === 'walkin');
     const section = document.getElementById('plan-walkins-section');
     if (!section) return;
@@ -636,15 +679,22 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       const acc = r.accompagnants === 0 ? 'seul·e'
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       return '<div class="planning-list-item">'
-        + '<span>' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + spotId + ')</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + spotId + ')</span>'
         + '</div>';
     }).join('');
+    listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
+      span.addEventListener('click', function() {
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
+      });
+    });
   }
 
-  function _refreshAll() {
-    _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL);
-    _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE);
-    _refreshWalkins();
+  async function _refreshAll() {
+    await Promise.all([
+      _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL),
+      _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE),
+      _refreshWalkins(),
+    ]);
   }
 
   _bindRadioGroup('pf-accomp');
@@ -654,7 +704,65 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
   });
 
-  document.getElementById('pf-add').addEventListener('click', () => {
+  // Autocomplete NOM depuis les inscriptions
+  var _linkedPfInscriptionId = null;
+  (function() {
+    var nomEl     = document.getElementById('pf-nom');
+    var prenomEl  = document.getElementById('pf-prenom');
+    var suggestEl = document.getElementById('pf-nom-suggest');
+
+    function _close() { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; }
+
+    nomEl.addEventListener('input', function() {
+      _linkedPfInscriptionId = null; // frappe manuelle → efface le lien
+      var val = nomEl.value.trim().toUpperCase();
+      _close();
+      if (!val || typeof getCachedInscriptions !== 'function') return;
+      var matches = getCachedInscriptions()
+        .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+        .slice(0, 8);
+      if (!matches.length) return;
+      suggestEl.style.display = 'block';
+      matches.forEach(function(i) {
+        var remaining = (typeof getPassRemaining === 'function' && i.pass)
+          ? getPassRemaining(i.id) : null;
+        var exhausted = remaining === 0;
+        var item = document.createElement('div');
+        item.className = 'pf-suggest-item';
+        item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
+          + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
+        var nameSpan = document.createElement('span');
+        nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+        item.appendChild(nameSpan);
+        if (i.pass) {
+          var remSpan = document.createElement('span');
+          remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
+          remSpan.textContent = exhausted
+            ? '🎫 Pass 2026 · épuisé'
+            : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
+          item.appendChild(remSpan);
+        }
+        if (!exhausted) {
+          item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            nomEl.value             = i.nom.toUpperCase();
+            prenomEl.value          = i.prenom;
+            _linkedPfInscriptionId  = i.id;
+            _close();
+            prenomEl.focus();
+          });
+          item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
+          item.addEventListener('mouseout',  function() { item.style.background = ''; });
+        }
+        suggestEl.appendChild(item);
+      });
+    });
+
+    nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
+    nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
+  })();
+
+  document.getElementById('pf-add').addEventListener('click', async () => {
     const prenom = document.getElementById('pf-prenom').value.trim();
     const nom    = document.getElementById('pf-nom').value.trim().toUpperCase();
     const accompagnants = parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
@@ -666,28 +774,31 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       return;
     }
 
-    // Vérifier la capacité (liste en attente + déjà arrivés)
-    const all = getReservationList(dateISO, slot.id);
+    const [all, spotsMap] = await Promise.all([
+      getReservationList(dateISO, slot.id),
+      getReservations(dateISO, slot.id),
+    ]);
     const count = all.filter(r => resaType === 'normal'
       ? (!r.resaType || r.resaType === 'normal') : r.resaType === 'groupe').length;
     const arrivedCount = resaType === 'normal'
-      ? Object.values(getReservations(dateISO, slot.id)).filter(r => r.type === 'reserved').length
-      : 0;
+      ? Object.values(spotsMap).filter(r => r.type === 'reserved').length : 0;
     const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
     if (count + arrivedCount >= limit) {
-      errEl.textContent = `Capacité maximale atteinte (${limit} ${resaType === 'normal' ? 'réservations' : 'groupes'}).`;
+      errEl.textContent = 'Capacité maximale atteinte (' + limit + ').';
       return;
     }
 
     errEl.textContent = '';
-    callbacks.onAdd({ nom, prenom, accompagnants, resaType });
-
-    // Réinitialiser les champs nom/prénom, garder le reste
-    document.getElementById('pf-prenom').value = '';
-    document.getElementById('pf-nom').value    = '';
-    document.getElementById('pf-prenom').focus();
-
-    _refreshAll();
+    try {
+      await callbacks.onAdd({ nom, prenom, accompagnants, resaType, inscriptionId: _linkedPfInscriptionId });
+      _linkedPfInscriptionId = null;
+      document.getElementById('pf-prenom').value = '';
+      document.getElementById('pf-nom').value    = '';
+      document.getElementById('pf-nom').focus();
+      await _refreshAll();
+    } catch (e) {
+      console.error(e);
+    }
   });
 
   // Ajouter au "Enter" sur les champs texte
@@ -699,16 +810,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
-  document.getElementById('btn-export-pdf').addEventListener('click', () => exportSlotPDF(dateISO, slot));
+  document.getElementById('btn-export-pdf').addEventListener('click', () => exportSlotPDF(dateISO, slot).catch(console.error));
 
   if (callbacks.onGoLive) {
     document.getElementById('btn-go-live').addEventListener('click', () => { closeModal(); callbacks.onGoLive(); });
   }
 
-  _refreshAll();
   _dialog().classList.add('plan-dialog');
   _dialog().showModal();
   document.getElementById('pf-prenom').focus();
+  _refreshAll(); // fire-and-forget async — modal is already open
 }
 
 if (typeof module !== 'undefined') {
