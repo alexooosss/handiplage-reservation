@@ -52,8 +52,7 @@ async function renderAccueil(container, inscription, showView) {
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
       +   '<div class="usager-tile usager-tile-primary" data-view="reserver"><div class="usager-tile-icon">🗓️</div><div class="usager-tile-label">Réserver</div></div>'
-      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📄</div><div class="usager-tile-label">Mes résa.</div></div>'
-      +   '<div class="usager-tile" data-view="pass"><div class="usager-tile-icon">🎟️</div><div class="usager-tile-label">Mon pass</div></div>'
+      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📄</div><div class="usager-tile-label">Mes réservations</div></div>'
       +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon">🪪</div><div class="usager-tile-label">Mon compte</div></div>'
       +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon">💡</div><div class="usager-tile-label">Infos</div></div>'
       + '</div>';

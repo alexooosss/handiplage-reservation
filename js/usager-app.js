@@ -34,7 +34,6 @@ const UsagerApp = (() => {
     if (view === 'accueil')           renderAccueil(container, _inscription, showView);
     else if (view === 'reserver')     renderReserver(container, _inscription, showView);
     else if (view === 'reservations') renderReservations(container, _inscription, showView);
-    else if (view === 'pass')         renderPass(container, _inscription, showView);
     else if (view === 'compte')       renderCompte(container, _inscription, showView);
     else if (view === 'infos')        renderInfos(container, _inscription, showView);
   }

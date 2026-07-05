@@ -139,7 +139,7 @@ body {
   transition: border-color .15s, background .15s;
 }
 .usager-tile:hover   { background: var(--blue-light); border-color: var(--blue); }
-.usager-tile-primary { background: var(--blue); color: white; }
+.usager-tile-primary { background: var(--blue); color: white; grid-column: 1 / -1; }
 .usager-tile-primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
 .usager-tile-icon  { font-size: 1.75rem; margin-bottom: 8px; }
 .usager-tile-label { font-size: .9375rem; font-weight: 700; }
@@ -267,15 +267,15 @@ body {
 .usager-cancel-btn:hover { background: var(--red-light); }
 .usager-empty { text-align: center; color: var(--text-muted); padding: 32px 16px; font-size: .9375rem; }
 
-/* ── Mon pass ───────────────────────────────────────────────────── */
-.usager-pass-count { text-align: center; margin: 20px 0; }
-.usager-pass-num   { font-size: 3.5rem; font-weight: 700; color: var(--green); line-height: 1; }
-.usager-pass-denom { font-size: 1.1rem; color: var(--text-muted); }
-.usager-pass-bar-wrap { background: #e0e0e0; border-radius: 8px; height: 12px; margin: 12px 0; overflow: hidden; }
+/* ── Pass (bannière compacte dans Mes réservations) ─────────────── */
+.usager-pass-banner-row  { display: flex; justify-content: space-between; align-items: baseline; }
+.usager-pass-banner-label{ font-size: .8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--blue); }
+.usager-pass-banner-num  { font-size: 1.5rem; font-weight: 700; color: var(--green); }
+.usager-pass-bar-wrap { background: #e0e0e0; border-radius: 8px; height: 10px; overflow: hidden; }
 .usager-pass-bar-fill { height: 100%; border-radius: 8px; background: var(--green); transition: width .3s; }
 .usager-pass-bar-fill.low   { background: #f57f17; }
 .usager-pass-bar-fill.empty { background: var(--red); }
-.usager-pass-meta  { font-size: .875rem; color: var(--text-muted); text-align: center; }
+.usager-pass-meta  { font-size: .8125rem; color: var(--text-muted); }
 
 /* ── Mon compte ─────────────────────────────────────────────────── */
 .usager-info-row {

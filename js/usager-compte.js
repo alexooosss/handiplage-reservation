@@ -4,9 +4,6 @@
 function _escC(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function renderCompte(container, inscription, showView) {
-  var accompLabels = { aucun: 'Aucun', transfert: 'Aide au transfert', entree_sortie: 'Entrée/sortie de l\'eau', baignade: 'Aide à la baignade' };
-  var accomp = Array.isArray(inscription.accompagnement) ? inscription.accompagnement.map(function(a) { return accompLabels[a] || a; }).join(', ') : '—';
-
   container.innerHTML = '<button class="usager-back" id="back-compte">← Accueil</button>'
     + '<div class="usager-card">'
     +   '<div class="usager-card-title">Mes informations</div>'
@@ -15,7 +12,6 @@ function renderCompte(container, inscription, showView) {
     +   _infoRow('Email',     inscription.mail)
     +   _infoRow('Téléphone', inscription.telephone)
     +   _infoRow('Adresse',   inscription.adresse ? inscription.adresse + ', ' + inscription.codePostal + ' ' + inscription.ville : '—')
-    +   _infoRow('Accompagnement', accomp)
     + '</div>'
     + '<div class="usager-card">'
     +   '<div class="usager-card-title">Sécurité</div>'

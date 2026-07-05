@@ -13,12 +13,33 @@ async function renderReservations(container, inscription, showView) {
   container.innerHTML = '<div class="usager-loading">Chargement…</div>';
 
   try {
-    var resas  = await getUserReservations(inscription.id);
-    var today  = new Date().toISOString().slice(0, 10);
+    var resas    = await getUserReservations(inscription.id);
+    var today    = new Date().toISOString().slice(0, 10);
     var upcoming = resas.filter(function(r) { return r.date >= today && r.statut !== 'annule'; }).sort(function(a,b){ return a.date<b.date?-1:1; });
     var past     = resas.filter(function(r) { return r.date < today || r.statut === 'annule'; }).sort(function(a,b){ return a.date>b.date?-1:1; });
 
+    var passHtml = '';
+    if (inscription.passActif) {
+      var balance  = computePassBalance(resas, PASS_QUOTA_USAGER);
+      var pct      = balance.quota > 0 ? Math.round((balance.remaining / balance.quota) * 100) : 0;
+      var fillCls  = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
+      var nextReset = new Date();
+      nextReset.setDate(1);
+      nextReset.setMonth(nextReset.getMonth() + 1);
+      var resetLabel = nextReset.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      passHtml = '<div class="usager-card usager-pass-banner">'
+        + '<div class="usager-pass-banner-row">'
+        +   '<div class="usager-pass-banner-label">Pass ce mois</div>'
+        +   '<div class="usager-pass-banner-count"><span class="usager-pass-banner-num">' + balance.remaining + '</span> / ' + balance.quota + '</div>'
+        + '</div>'
+        + '<div class="usager-pass-bar-wrap" style="margin:8px 0 4px"><div class="usager-pass-bar-fill ' + fillCls + '" style="width:' + pct + '%"></div></div>'
+        + '<div class="usager-pass-meta">Réinitialisation le ' + resetLabel + '</div>'
+        + '</div>';
+    }
+
     container.innerHTML = '<button class="usager-back" id="back-accueil-resa">← Accueil</button>'
+      + passHtml
       + '<div class="usager-resa-section-title">À venir (' + upcoming.length + ')</div>'
       + (upcoming.length ? upcoming.map(function(r) { return _resaCard(r, true); }).join('') : '<div class="usager-empty">Aucune réservation à venir.</div>')
       + '<div class="usager-resa-section-title" style="margin-top:24px">Passées</div>'
