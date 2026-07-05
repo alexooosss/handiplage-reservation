@@ -21,11 +21,7 @@ function renderInfos(container, inscription, showView) {
     +   '<div class="usager-card-title">Heures d\'ouverture</div>'
     +   '<table class="usager-infos-table">' + horairesRows + '</table>'
     + '</div>'
-    + '<div class="usager-card">'
-    +   '<div class="usager-card-title">Contact</div>'
-    +   '<div class="usager-infos-contact"><span>📞</span> <a href="tel:+33492913906">+33 4 92 91 39 06</a></div>'
-    +   '<div class="usager-infos-contact"><span>📍</span> Boulevard James Wyllie, Antibes</div>'
-    + '</div>';
+    ;
 
   document.getElementById('infos-back').addEventListener('click', function() {
     showView('accueil');

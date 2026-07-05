@@ -36,6 +36,7 @@ const UsagerApp = (() => {
     else if (view === 'reservations') renderReservations(container, _inscription, showView);
     else if (view === 'compte')       renderCompte(container, _inscription, showView);
     else if (view === 'infos')        renderInfos(container, _inscription, showView);
+    else if (view === 'contact')      renderContact(container, _inscription, showView);
   }
 
   return { init, showView };

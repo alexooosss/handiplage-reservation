@@ -55,6 +55,7 @@ async function renderAccueil(container, inscription, showView) {
       +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📄</div><div class="usager-tile-label">Mes réservations</div></div>'
       +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon">🪪</div><div class="usager-tile-label">Mon compte</div></div>'
       +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon">💡</div><div class="usager-tile-label">Infos</div></div>'
+      +   '<div class="usager-tile" data-view="contact"><div class="usager-tile-icon">📞</div><div class="usager-tile-label">Contact</div></div>'
       + '</div>';
 
     container.querySelectorAll('.usager-tile[data-view]').forEach(function(tile) {
