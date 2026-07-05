@@ -1,0 +1,68 @@
+// js/usager-reservations.js
+'use strict';
+
+function _escRes(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+var STATUT_LABELS = { attente: 'En attente', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
+var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-parti', absent: 'resa-s-absent', annule: 'resa-s-annule' };
+var CRENEAU_LABELS = { 1: 'Matin', 2: 'Matin 2', 3: 'Après-midi', 4: 'Après-midi 2', 5: 'Soir' };
+
+async function renderReservations(container, inscription, showView) {
+  container.innerHTML = '<div class="usager-loading">Chargement…</div>';
+
+  try {
+    var resas  = await getUserReservations(inscription.id);
+    var today  = new Date().toISOString().slice(0, 10);
+    var upcoming = resas.filter(function(r) { return r.date >= today && r.statut !== 'annule'; }).sort(function(a,b){ return a.date<b.date?-1:1; });
+    var past     = resas.filter(function(r) { return r.date < today || r.statut === 'annule'; }).sort(function(a,b){ return a.date>b.date?-1:1; });
+
+    container.innerHTML = '<button class="usager-back" id="back-accueil-resa">← Accueil</button>'
+      + '<div class="usager-resa-section-title">À venir (' + upcoming.length + ')</div>'
+      + (upcoming.length ? upcoming.map(function(r) { return _resaCard(r, true); }).join('') : '<div class="usager-empty">Aucune réservation à venir.</div>')
+      + '<div class="usager-resa-section-title" style="margin-top:24px">Passées</div>'
+      + (past.length ? past.slice(0, 20).map(function(r) { return _resaCard(r, false); }).join('') : '<div class="usager-empty">Aucune réservation passée.</div>');
+
+    container.querySelector('#back-accueil-resa').addEventListener('click', function() { showView('accueil'); });
+
+    container.querySelectorAll('.usager-cancel-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = btn.dataset.resaId;
+        if (!confirm('Annuler cette réservation ?')) return;
+        btn.disabled = true;
+        btn.textContent = 'Annulation…';
+        try {
+          await cancelUserReservation(id);
+          renderReservations(container, inscription, showView);
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = 'Annuler';
+          alert('Erreur : ' + e.message);
+        }
+      });
+    });
+
+  } catch (e) {
+    container.innerHTML = '<div class="usager-error">Erreur : ' + _escRes(e.message) + '</div>';
+  }
+}
+
+function _resaCard(r, isUpcoming) {
+  var d = new Date(r.date + 'T00:00:00');
+  var dateStr  = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  var slotLbl  = CRENEAU_LABELS[r.creneauId] || ('Créneau ' + r.creneauId);
+  var statutLbl = STATUT_LABELS[r.statut] || r.statut;
+  var statutCls = STATUT_CLS[r.statut] || '';
+  var canCancel = isUpcoming && r.statut === 'attente' && canCancelReservation(r.date);
+
+  return '<div class="usager-resa-card">'
+    + '<div class="usager-resa-info">'
+    +   '<div class="usager-resa-date">' + dateStr + '</div>'
+    +   '<div class="usager-resa-slot">' + _escRes(slotLbl) + (r.accompagnants > 0 ? ' · ' + r.accompagnants + ' acc.' : '') + '</div>'
+    +   (r.spotId ? '<div class="usager-resa-spot">Emplacement ' + _escRes(r.spotId) + '</div>' : '')
+    + '</div>'
+    + '<span class="usager-resa-statut ' + statutCls + '">' + statutLbl + '</span>'
+    + (canCancel ? '<button class="usager-cancel-btn" data-resa-id="' + r.id + '">Annuler</button>' : '')
+    + '</div>';
+}
