@@ -190,10 +190,14 @@ body {
 .usager-slot-card.full         { opacity: .5; cursor: default; }
 .usager-slot-card.full:hover   { border-color: var(--border); background: white; }
 .usager-slot-card.booked       { background: var(--green-light); border-color: #a5d6a7; cursor: default; }
+.usager-slot-c1:not(.full):not(.booked) { background: #1565c018; }
+.usager-slot-c2:not(.full):not(.booked) { background: #2e7d3218; }
+.usager-slot-c3:not(.full):not(.booked) { background: #e6510018; }
+.usager-slot-c4:not(.full):not(.booked) { background: #6a1b9a18; }
+.usager-slot-c5:not(.full):not(.booked) { background: #f9a82518; }
 .usager-slot-icon              { font-size: 1.5rem; }
 .usager-slot-body              { flex: 1; }
 .usager-slot-label             { font-weight: 700; font-size: 1rem; }
-.usager-slot-hours             { font-size: .875rem; color: var(--text-muted); margin-top: 2px; }
 .usager-slot-badge             { font-size: .8125rem; font-weight: 600; color: var(--green); }
 .usager-slot-badge.full-badge  { color: var(--text-muted); }
 .usager-slot-badge.booked-badge{ color: var(--green); }

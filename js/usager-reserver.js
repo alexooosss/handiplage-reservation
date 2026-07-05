@@ -80,6 +80,8 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
   });
 }
 
+var _SLOT_COLORS = ['#1565c0', '#2e7d32', '#e65100', '#6a1b9a', '#f9a825'];
+
 function _renderSlots(slots, dateISO) {
   if (!slots || slots.length === 0) {
     return '<div class="usager-empty">Aucun créneau disponible pour cette journée.</div>';
@@ -87,16 +89,16 @@ function _renderSlots(slots, dateISO) {
   var icons = { 1: '🕘', 2: '🕙', 3: '🕑', 4: '🕒', 5: '🌅' };
   return slots.map(function(s) {
     var cls    = s.userBooked ? 'booked' : !s.available ? 'full' : '';
+    var color  = _SLOT_COLORS[(s.creneauId - 1) % _SLOT_COLORS.length];
     var badge  = s.userBooked
       ? '<div class="usager-slot-badge booked-badge">✓ Déjà réservé</div>'
       : !s.available
         ? '<div class="usager-slot-badge full-badge">Complet</div>'
         : '<div class="usager-slot-badge">' + s.remaining + ' place' + (s.remaining > 1 ? 's' : '') + '</div>';
-    return '<div class="usager-slot-card ' + cls + '" data-creneau-id="' + s.creneauId + '">'
+    return '<div class="usager-slot-card usager-slot-c' + s.creneauId + ' ' + cls + '" data-creneau-id="' + s.creneauId + '" style="border-left:4px solid ' + color + '">'
       + '<div class="usager-slot-icon">' + (icons[s.creneauId] || '🕐') + '</div>'
       + '<div class="usager-slot-body">'
       +   '<div class="usager-slot-label">' + _escR(s.label) + '</div>'
-      +   '<div class="usager-slot-hours">' + (s.heureDebut || '').slice(0, 5) + ' – ' + (s.heureFin || '').slice(0, 5) + '</div>'
       +   badge
       + '</div>'
       + '</div>';
