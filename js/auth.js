@@ -13,7 +13,7 @@ async function signIn(email, password) {
 
 async function signOut() {
   await supabaseClient.auth.signOut();
-  window.location.href = '/login.html';
+  window.location.href = 'login.html';
 }
 
 async function getSession() {
@@ -25,11 +25,11 @@ async function getSession() {
 async function requireStaffAuth() {
   const session = await getSession();
   if (!session) {
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
     return null;
   }
   if (getUserRole(session) !== 'staff') {
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
     return null;
   }
   return session;
