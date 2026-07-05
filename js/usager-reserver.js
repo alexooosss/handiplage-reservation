@@ -86,7 +86,6 @@ function _renderSlots(slots, dateISO) {
   if (!slots || slots.length === 0) {
     return '<div class="usager-empty">Aucun créneau disponible pour cette journée.</div>';
   }
-  var icons = { 1: '🕘', 2: '🕙', 3: '🕑', 4: '🕒', 5: '🌅' };
   return slots.map(function(s) {
     var cls    = s.userBooked ? 'booked' : !s.available ? 'full' : '';
     var color  = _SLOT_COLORS[(s.creneauId - 1) % _SLOT_COLORS.length];
@@ -96,7 +95,7 @@ function _renderSlots(slots, dateISO) {
         ? '<div class="usager-slot-badge full-badge">Complet</div>'
         : '<div class="usager-slot-badge">' + s.remaining + ' place' + (s.remaining > 1 ? 's' : '') + '</div>';
     return '<div class="usager-slot-card usager-slot-c' + s.creneauId + ' ' + cls + '" data-creneau-id="' + s.creneauId + '" style="border-left:4px solid ' + color + '">'
-      + '<div class="usager-slot-icon">' + (icons[s.creneauId] || '🕐') + '</div>'
+      + '<div class="usager-slot-dot" style="background:' + color + '"></div>'
       + '<div class="usager-slot-body">'
       +   '<div class="usager-slot-label">' + _escR(s.label) + '</div>'
       +   badge

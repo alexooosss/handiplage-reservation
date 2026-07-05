@@ -51,11 +51,11 @@ async function renderAccueil(container, inscription, showView) {
       + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
-      +   '<div class="usager-tile usager-tile-primary" data-view="reserver"><div class="usager-tile-icon">📅</div><div class="usager-tile-label">Réserver</div></div>'
-      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📋</div><div class="usager-tile-label">Mes résa.</div></div>'
-      +   '<div class="usager-tile" data-view="pass"><div class="usager-tile-icon">🎫</div><div class="usager-tile-label">Mon pass</div></div>'
-      +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon">👤</div><div class="usager-tile-label">Mon compte</div></div>'
-      +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon">ℹ️</div><div class="usager-tile-label">Infos</div></div>'
+      +   '<div class="usager-tile usager-tile-primary" data-view="reserver"><div class="usager-tile-icon">🗓️</div><div class="usager-tile-label">Réserver</div></div>'
+      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📄</div><div class="usager-tile-label">Mes résa.</div></div>'
+      +   '<div class="usager-tile" data-view="pass"><div class="usager-tile-icon">🎟️</div><div class="usager-tile-label">Mon pass</div></div>'
+      +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon">🪪</div><div class="usager-tile-label">Mon compte</div></div>'
+      +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon">💡</div><div class="usager-tile-label">Infos</div></div>'
       + '</div>';
 
     container.querySelectorAll('.usager-tile[data-view]').forEach(function(tile) {
