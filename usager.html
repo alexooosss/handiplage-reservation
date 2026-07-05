@@ -33,14 +33,14 @@
     try {
       var session = await getSession();
       if (!session || getUserRole(session) !== 'user') {
-        window.location.href = '/login.html';
+        window.location.href = 'login.html';
         return;
       }
       document.getElementById('btn-logout-usager').addEventListener('click', signOut);
       UsagerApp.init();
     } catch (err) {
       console.error('Auth check failed:', err);
-      window.location.href = '/login.html';
+      window.location.href = 'login.html';
     }
   })();
 </script>

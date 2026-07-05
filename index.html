@@ -103,7 +103,7 @@
       try {
         const session = await getSession();
         if (!session || getUserRole(session) !== 'staff') {
-          window.location.href = '/login.html';
+          window.location.href = 'login.html';
           return;
         }
         document.getElementById('btn-logout').addEventListener('click', signOut);
@@ -112,7 +112,7 @@
         App.init();
       } catch (err) {
         console.error('Auth check failed:', err);
-        window.location.href = '/login.html';
+        window.location.href = 'login.html';
       }
     })();
   </script>
