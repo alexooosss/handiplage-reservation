@@ -1582,12 +1582,14 @@ dialog.plan-dialog {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: white;
 }
 
 .msg-layout {
   display: flex;
   height: 100%;
   overflow: hidden;
+  background: white;
 }
 
 .msg-list-panel {
@@ -1597,6 +1599,7 @@ dialog.plan-dialog {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: white;
 }
 
 .msg-list-hd {
