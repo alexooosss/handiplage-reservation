@@ -65,6 +65,19 @@ Deno.serve(async (req) => {
   )
 
   if (inviteError) {
+    const alreadyExists = inviteError.message.toLowerCase().includes('already') ||
+                          inviteError.message.toLowerCase().includes('already been registered')
+    if (alreadyExists && inscriptionId) {
+      // Utilisateur déjà inscrit — retrouver son ID et lier l'inscription
+      const { data: usersData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      const existing = usersData?.users?.find((u: { email?: string }) => u.email === email)
+      if (existing) {
+        await adminClient.from('inscriptions').update({ user_id: existing.id }).eq('id', inscriptionId)
+        return new Response(JSON.stringify({ success: true, linked: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    }
     return new Response(JSON.stringify({ error: inviteError.message }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
