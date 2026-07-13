@@ -7,7 +7,7 @@ function _escRes(s) {
 
 var STATUT_LABELS = { attente: 'En attente', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
 var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-parti', absent: 'resa-s-absent', annule: 'resa-s-annule' };
-var CRENEAU_LABELS = { 1: 'Matin', 2: 'Matin 2', 3: 'Après-midi', 4: 'Après-midi 2', 5: 'Soir' };
+var CRENEAU_LABELS = { 1: '8h30–10h15', 2: '10h30–12h15', 3: '12h30–14h15', 4: '14h30–16h15', 5: '16h30–18h15' };
 
 async function renderReservations(container, inscription, showView) {
   container.innerHTML = '<div class="usager-loading">Chargement…</div>';
