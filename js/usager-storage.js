@@ -43,10 +43,9 @@ function computePassBalance(reservations, quota) {
 
 function canCancelReservation(dateISO) {
   var resaDate = new Date(dateISO + 'T00:00:00');
-  var tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-  return resaDate >= tomorrow;
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return resaDate >= today;
 }
 
 async function getAbsentsThisMonth(inscriptionId) {
