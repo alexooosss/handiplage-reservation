@@ -312,3 +312,9 @@ body {
 .usager-contact-link { color: var(--blue); text-decoration: none; font-weight: 600; }
 .usager-map-wrap     { border-radius: 12px; overflow: hidden; height: 220px; }
 .usager-map-iframe   { width: 100%; height: 100%; border: none; display: block; }
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.site-footer { background: #1a2340; color: rgba(255,255,255,.6); font-size: .8125rem; padding: 16px 20px; margin-top: 32px; }
+.site-footer-inner { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.site-footer-inner a { color: rgba(255,255,255,.8); text-decoration: none; }
+.site-footer-inner a:hover { color: white; text-decoration: underline; }

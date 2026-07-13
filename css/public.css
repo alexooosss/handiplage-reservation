@@ -174,3 +174,20 @@ body {
 .pub-success-icon { font-size: 2.5rem; margin-bottom: 12px; }
 .pub-success h2   { color: #2e7d32; font-size: 1.2rem; margin-bottom: 8px; }
 .pub-success p    { color: #555; font-size: .9375rem; line-height: 1.5; }
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.site-footer { background: #1a2340; color: rgba(255,255,255,.65); font-size: .8125rem; padding: 18px 20px; margin-top: 32px; }
+.site-footer-inner { max-width: 680px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.site-footer-inner a { color: rgba(255,255,255,.8); text-decoration: none; }
+.site-footer-inner a:hover { color: white; text-decoration: underline; }
+
+/* ── Pages légales ───────────────────────────────────────────────── */
+.legal-p    { font-size: .9375rem; line-height: 1.6; color: #333; margin-bottom: 8px; }
+.legal-link { color: #1565c0; text-decoration: none; font-weight: 600; }
+.legal-link:hover { text-decoration: underline; }
+.legal-list { padding-left: 20px; margin: 8px 0; }
+.legal-list li { font-size: .9375rem; line-height: 1.6; color: #333; margin-bottom: 4px; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: .875rem; margin-top: 8px; }
+.legal-table th { background: #e3f2fd; color: #1565c0; font-weight: 700; padding: 8px 12px; text-align: left; }
+.legal-table td { padding: 8px 12px; border-bottom: 1px solid #e3f2fd; color: #333; vertical-align: top; }
+.legal-table tr:last-child td { border-bottom: none; }

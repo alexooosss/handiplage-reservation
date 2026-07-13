@@ -190,6 +190,10 @@ function _showForm(container, insc) {
     +     '<label class="insc-check"><input type="checkbox" id="f-rgpd"' + chkB(v.rgpd) + '> J\'atteste avoir pris connaissance de l\'information relative au traitement des données personnelles</label>'
     +   '</div>'
     +   '<div class="insc-engage-block">'
+    +     '<div class="insc-engage-label">Données de santé <span class="req">*</span></div>'
+    +     '<label class="insc-check"><input type="checkbox" id="f-sante"' + chkB(v.rgpd) + '> Je consens expressément au traitement des données de santé (besoins d\'accompagnement et aides techniques — Art. 9 RGPD)</label>'
+    +   '</div>'
+    +   '<div class="insc-engage-block">'
     +     '<div class="insc-engage-label">Communications du CCAS <span class="req">*</span></div>'
     +     '<div class="insc-radio-group insc-radio-col">'
     +       '<label class="insc-radio"><input type="radio" name="ccas" value="accepte"' + ((!v.ccasCommunications || v.ccasCommunications === 'accepte') ? ' checked' : '') + '> J\'accepte de recevoir par mail des informations de la part du CCAS</label>'
@@ -461,6 +465,7 @@ function _handleSubmit(container, existingId, existingData) {
   const gilet   = gr('gilet');
   const ccas    = gr('ccas');
   const rgpd    = g('f-rgpd') && g('f-rgpd').checked;
+  const sante   = g('f-sante') && g('f-sante').checked;
   const regl    = g('f-reglement') && g('f-reglement').checked;
   const sig     = gv('f-signature');
   const errEl   = g('insc-form-err');
@@ -482,6 +487,7 @@ function _handleSubmit(container, existingId, existingData) {
   if (accomp.length === 0)  errors.push('Besoin d\'accompagnement requis');
   if (!gilet)             errors.push('Réponse sur le gilet de sauvetage requise');
   if (!rgpd)              errors.push('Veuillez attester avoir pris connaissance du traitement des données');
+  if (!sante)             errors.push('Consentement aux données de santé requis (Art. 9 RGPD)');
   if (!ccas)              errors.push('Réponse communications CCAS requise');
   if (!regl)              errors.push('Veuillez accepter le règlement de fonctionnement');
   if (!sig)               errors.push('Signature requise');

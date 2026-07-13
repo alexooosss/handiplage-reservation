@@ -24,6 +24,7 @@ function validatePublicForm(data) {
   if (!data.accomp || data.accomp.length === 0) errors.push('Besoin d\'accompagnement requis');
   if (!data.gilet)              errors.push('Réponse sur le gilet de sauvetage requise');
   if (!data.rgpd)               errors.push('Attestation RGPD requise');
+  if (!data.sante)              errors.push('Consentement aux données de santé requis');
   if (!data.ccas)               errors.push('Réponse communications CCAS requise');
   if (!data.reglement)          errors.push('Règlement de fonctionnement requis');
   if (!data.signature)          errors.push('Signature requise');
@@ -55,6 +56,7 @@ function _collectFormData() {
     at:         ga('at'),
     gilet:      gr('gilet'),
     rgpd:       !!(g('f-rgpd') && g('f-rgpd').checked),
+    sante:      !!(g('f-sante') && g('f-sante').checked),
     ccas:       gr('ccas'),
     reglement:  !!(g('f-reglement') && g('f-reglement').checked),
     signature:  gv('f-signature'),
