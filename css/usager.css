@@ -35,7 +35,8 @@ body {
   top: 0;
   z-index: 10;
 }
-.usager-logo { font-size: 1.1rem; font-weight: 700; }
+.usager-logo { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.usager-logo-img { height: 34px; width: auto; display: block; }
 #btn-logout-usager {
   background: rgba(255,255,255,.15);
   color: white;
@@ -293,6 +294,58 @@ body {
 .usager-loading { text-align: center; color: var(--text-muted); padding: 40px; }
 .usager-error   { background: var(--red-light); border-radius: 10px; padding: 14px; color: var(--red); font-size: .9rem; margin-bottom: 12px; }
 .usager-success { background: var(--green-light); border: 1px solid #a5d6a7; border-radius: 10px; padding: 14px; color: var(--green); text-align: center; }
+
+/* ── Bannière règle absences (Mes réservations) ─────────────────── */
+.usager-absence-info {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: .875rem;
+}
+.usager-absence-info-rule { color: #555; line-height: 1.5; margin-bottom: 6px; }
+.usager-absence-info-count { font-size: .9375rem; margin-bottom: 10px; }
+.usager-absence-contact-btn {
+  background: none;
+  border: 1px solid #1565c0;
+  color: #1565c0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: .8125rem;
+  cursor: pointer;
+  transition: background .15s;
+}
+.usager-absence-contact-btn:hover { background: var(--blue-light); }
+.usager-absence-contact-btn:disabled { opacity: .6; cursor: default; }
+.usager-contact-form { margin-top: 12px; }
+.usager-contact-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .9375rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+.usager-contact-actions { display: flex; gap: 8px; }
+#usager-contact-status { font-size: .8125rem; margin-top: 6px; }
+
+/* ── Bloc suspension absences ───────────────────────────────────── */
+.usager-absence-block {
+  background: #fff3e0;
+  border: 2px solid #e65100;
+  border-radius: 12px;
+  padding: 24px 20px;
+  margin-top: 16px;
+  text-align: center;
+}
+.usager-absence-icon  { font-size: 2.5rem; margin-bottom: 10px; }
+.usager-absence-title { font-size: 1.15rem; font-weight: 700; color: #bf360c; margin-bottom: 14px; }
+.usager-absence-body  { font-size: .9375rem; color: #444; line-height: 1.6; text-align: left; }
+.usager-absence-body p { margin-bottom: 10px; }
+.usager-absence-body p:last-child { margin-bottom: 0; }
 
 /* ── Vue Infos ──────────────────────────────────────────────────── */
 .usager-infos-back { margin-bottom: 12px; }

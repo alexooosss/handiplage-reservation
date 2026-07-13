@@ -1718,3 +1718,147 @@ dialog.plan-dialog {
 .site-footer-inner { display: flex; gap: 16px; align-items: center; }
 .site-footer-inner a { color: rgba(255,255,255,.7); text-decoration: none; }
 .site-footer-inner a:hover { color: white; }
+
+/* ── Stats view ──────────────────────────────────────────────────────── */
+.stats-view {
+  grid-column: 1 / -1;
+  overflow-y: auto;
+  background: #f0f2f8;
+  padding: 24px 28px 56px;
+}
+
+.stats-wrap { max-width: 1180px; }
+
+.stats-filters {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.stats-filter-btn {
+  padding: 5px 15px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: #fff;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; transition: all .15s;
+}
+.stats-filter-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.stats-filter-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
+.stats-range-label {
+  font-size: 11px; color: var(--text-muted); margin-left: 8px;
+}
+
+.stats-kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px;
+}
+.stats-kpi {
+  background: #fff; border-radius: 12px; padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  border-left: 4px solid var(--border);
+}
+.stats-kpi-good { border-left-color: #2e7d32; }
+.stats-kpi-warn  { border-left-color: #e65100; }
+.stats-kpi-bad   { border-left-color: #c62828; }
+.stats-kpi-icon  { font-size: 1.1rem; margin-bottom: 8px; }
+.stats-kpi-value { font-size: 1.9rem; font-weight: 800; color: var(--navy); line-height: 1; font-variant-numeric: tabular-nums; }
+.stats-kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+
+.stats-charts-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
+}
+.stats-card {
+  background: #fff; border-radius: 12px; padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.stats-card-title {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px;
+}
+.stats-canvas-wrap { position: relative; height: 200px; }
+.stats-canvas-donut { height: 230px; }
+
+.stats-table-wrap { overflow-x: auto; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stats-table th {
+  text-align: left; font-size: 10px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em;
+  padding: 7px 14px; border-bottom: 2px solid var(--border);
+}
+.stats-th-rank { width: 40px; }
+.stats-th-num  { width: 120px; text-align: center; }
+.stats-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+.stats-table tr:last-child td { border-bottom: none; }
+.stats-table tbody tr:hover td { background: #f8f9fc; }
+.stats-rank { font-weight: 700; color: var(--text-muted); }
+.stats-num { font-variant-numeric: tabular-nums; font-weight: 600; text-align: center; }
+.stats-col-present { color: #2e7d32; }
+.stats-col-absent  { color: #c62828; }
+
+.stats-loading { padding: 60px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.stats-error   { padding: 40px; text-align: center; color: #c62828; font-size: 14px; }
+.stats-empty   { padding: 20px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+@media (max-width: 1100px) {
+  .stats-kpis { grid-template-columns: repeat(2, 1fr); }
+  .stats-charts-row { grid-template-columns: 1fr; }
+}
+
+/* Section usagers dans la liste messages */
+.msg-section-usager { color: #e65100; font-weight: 700; }
+.msg-usager-block { background: #fff8f0; border-left: 3px solid #e65100; border-radius: 4px; padding: 12px 14px; }
+
+/* ── Responsive tablette ───────────────────────────────────────────── */
+
+/* ≤ 1280px : tablettes larges (ex. Lenovo Tab P12, IdeaPad Duet)
+   Le header déborde à cause du nombre d'éléments — on bascule les
+   slot-pills sur une deuxième ligne pour libérer la première. */
+@media (max-width: 1280px) {
+  header {
+    flex-wrap: wrap;
+    padding: 8px 14px 0;
+    gap: 6px 8px;
+  }
+  .slots-nav {
+    order: 99;
+    width: 100%;
+    padding: 6px 0 8px;
+    border-top: 1px solid rgba(255,255,255,.12);
+    margin-top: 2px;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .logo-img { height: 40px; }
+  .planning-tab-btn { padding: 5px 11px; font-size: 11px; margin-left: 6px; }
+  .datetime .time { font-size: 17px; }
+  .main { grid-template-columns: 1fr 280px; }
+}
+
+/* ≤ 1100px : tablettes 10-11" typiques (Lenovo Tab P11, M10) */
+@media (max-width: 1100px) {
+  .logo-img { height: 36px; }
+  .planning-tab-btn { padding: 4px 9px; font-size: 10px; margin-left: 4px; }
+  .datetime .time { font-size: 15px; }
+  .datetime { font-size: 10px; }
+  .main { grid-template-columns: 1fr 250px; }
+  .insc-sidebar { width: 230px; }
+  .insc-main { padding: 16px 18px; }
+  .slot-pill { padding: 4px 9px; font-size: 10px; }
+}
+
+/* ≤ 900px : tablettes compactes ou portrait */
+@media (max-width: 900px) {
+  .logo-img { height: 32px; }
+  .planning-tab-btn { padding: 4px 7px; font-size: 9px; margin-left: 2px; }
+  .datetime .time { font-size: 13px; }
+  .main { grid-template-columns: 1fr 210px; }
+  .insc-sidebar { width: 200px; }
+  .insc-main { padding: 12px 14px; }
+  .insc-row { flex-direction: column; gap: 8px; }
+  .slot-pill { padding: 3px 7px; font-size: 9px; }
+  .mc-staff {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .mc-staff-checks {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+}

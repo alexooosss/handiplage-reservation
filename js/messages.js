@@ -27,14 +27,15 @@ async function renderMessages(container) {
     return;
   }
 
-  // Séparer messages avec réponse (non lus d'abord) des messages sans réponse
-  var withReply   = messages.filter(function(m) { return m.contenu; });
-  var withoutReply = messages.filter(function(m) { return !m.contenu; });
+  var isUsagerMsg  = function(m) { return m.motifRefus && m.motifRefus.startsWith('[USAGER]'); };
+  var usagerMsgs   = messages.filter(isUsagerMsg);
+  var withReply    = messages.filter(function(m) { return !isUsagerMsg(m) && m.contenu; });
+  var withoutReply = messages.filter(function(m) { return !isUsagerMsg(m) && !m.contenu; });
 
   container.innerHTML = '<div class="msg-layout">'
     + '<div class="msg-list-panel" id="msg-list-panel">'
     +   '<div class="msg-list-hd">Messages</div>'
-    +   _renderMessageList(withReply, withoutReply)
+    +   _renderMessageList(withReply, withoutReply, usagerMsgs)
     + '</div>'
     + '<div class="msg-detail-panel" id="msg-detail-panel">'
     +   '<div class="msg-detail-empty"><div class="msg-empty-icon">👈</div><p>Sélectionnez un message</p></div>'
@@ -58,8 +59,21 @@ async function renderMessages(container) {
   });
 }
 
-function _renderMessageList(withReply, withoutReply) {
+function _renderMessageList(withReply, withoutReply, usagerMsgs) {
   var html = '';
+
+  if (usagerMsgs && usagerMsgs.length) {
+    html += '<div class="msg-list-section msg-section-usager">📩 Demandes usagers</div>';
+    html += usagerMsgs.map(function(m) {
+      var unread = !m.lu ? ' msg-unread' : '';
+      var preview = m.contenu ? m.contenu.slice(0, 60) + (m.contenu.length > 60 ? '…' : '') : '';
+      return '<div class="msg-list-item' + unread + '" data-id="' + _escM(m.id) + '">'
+        + '<div class="msg-list-name">' + _escM(m.nom) + ' ' + _escM(m.prenom) + '</div>'
+        + '<div class="msg-list-preview">' + _escM(preview) + '</div>'
+        + '<div class="msg-list-date">' + _formatDate(m.createdAt) + '</div>'
+        + '</div>';
+    }).join('');
+  }
 
   if (withReply.length) {
     html += '<div class="msg-list-section">Réponses reçues</div>';
@@ -89,8 +103,26 @@ function _renderMessageList(withReply, withoutReply) {
 }
 
 function _renderDetail(panel, msg) {
-  var canValidate = msg.statut === 'refuse';
+  var isUsager    = !!(msg.motifRefus && msg.motifRefus.startsWith('[USAGER]'));
+  var canValidate = !isUsager && msg.statut === 'refuse';
   var hasReply    = !!msg.contenu;
+
+  var bodyHtml = isUsager
+    ? '<div class="msg-detail-section msg-usager-block">'
+      +   '<div class="msg-detail-label">📩 Message de l\'usager — ' + _formatDate(msg.createdAt) + '</div>'
+      +   '<div class="msg-detail-body msg-reply-content">' + _escM(msg.contenu) + '</div>'
+      + '</div>'
+    : '<div class="msg-detail-section">'
+      +   '<div class="msg-detail-label">Motif du refus</div>'
+      +   '<div class="msg-detail-body">' + _escM(msg.motifRefus) + '</div>'
+      + '</div>'
+      + (hasReply
+        ? '<div class="msg-detail-section msg-reply-block">'
+          +   '<div class="msg-detail-label">Réponse reçue le ' + _formatDate(msg.createdAt) + '</div>'
+          +   '<div class="msg-detail-body msg-reply-content">' + _escM(msg.contenu) + '</div>'
+          + '</div>'
+        : '<div class="msg-detail-section"><em style="color:#aaa;font-size:13px">Aucune réponse reçue pour le moment.</em></div>'
+      );
 
   panel.innerHTML = '<div class="msg-detail">'
     + '<div class="msg-detail-hd">'
@@ -98,23 +130,12 @@ function _renderDetail(panel, msg) {
     +   '<div class="msg-detail-mail">' + _escM(msg.mail) + '</div>'
     + '</div>'
 
-    + '<div class="msg-detail-section">'
-    +   '<div class="msg-detail-label">Motif du refus</div>'
-    +   '<div class="msg-detail-body">' + _escM(msg.motifRefus) + '</div>'
-    + '</div>'
-
-    + (hasReply
-      ? '<div class="msg-detail-section msg-reply-block">'
-      +   '<div class="msg-detail-label">Réponse reçue le ' + _formatDate(msg.createdAt) + '</div>'
-      +   '<div class="msg-detail-body msg-reply-content">' + _escM(msg.contenu) + '</div>'
-      + '</div>'
-      : '<div class="msg-detail-section"><em style="color:#aaa;font-size:13px">Aucune réponse reçue pour le moment.</em></div>'
-    )
+    + bodyHtml
 
     + '<div class="msg-detail-actions">'
     + (canValidate
       ? '<button type="button" class="btn-primary" id="msg-btn-validate">✓ Valider l\'inscription</button>'
-      : '<div style="font-size:13px;color:#2e7d32;padding:8px 0">✓ Inscription déjà validée</div>'
+      : (!isUsager ? '<div style="font-size:13px;color:#2e7d32;padding:8px 0">✓ Inscription déjà validée</div>' : '')
     )
     + '<button type="button" class="btn-ghost" id="msg-btn-reply">✉ Répondre par email</button>'
     + '</div>'

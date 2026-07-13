@@ -67,6 +67,14 @@ const App = (() => {
       });
     }
 
+    // Stats tab button
+    const btnStats = document.getElementById('btn-stats-tab');
+    if (btnStats) {
+      btnStats.addEventListener('click', () => {
+        showView(_currentView === 'stats' ? 'carte' : 'stats');
+      });
+    }
+
     // Badge non-lus
     if (typeof getUnreadCount === 'function') {
       getUnreadCount().then(function(count) {
@@ -91,10 +99,12 @@ const App = (() => {
     const mcView         = document.getElementById('mc-view');
     const inscView       = document.getElementById('insc-view');
     const messagesView   = document.getElementById('messages-view');
+    const statsView      = document.getElementById('stats-view');
     const btnPlanning    = document.getElementById('btn-planning-tab');
     const btnMc          = document.getElementById('btn-mc-tab');
     const btnInsc        = document.getElementById('btn-insc-tab');
     const btnMessages    = document.getElementById('btn-messages-tab');
+    const btnStats       = document.getElementById('btn-stats-tab');
 
     // Masquer tout
     if (beachPanel)   beachPanel.style.display   = 'none';
@@ -103,10 +113,12 @@ const App = (() => {
     if (mcView)       mcView.style.display        = 'none';
     if (inscView)     inscView.style.display      = 'none';
     if (messagesView) messagesView.style.display  = 'none';
+    if (statsView)    statsView.style.display     = 'none';
     if (btnPlanning)  btnPlanning.classList.remove('active');
     if (btnMc)        btnMc.classList.remove('active');
     if (btnInsc)      btnInsc.classList.remove('active');
     if (btnMessages)  btnMessages.classList.remove('active');
+    if (btnStats)     btnStats.classList.remove('active');
 
     if (view === 'planning') {
       if (planningView) planningView.style.display = 'flex';
@@ -127,6 +139,10 @@ const App = (() => {
       if (messagesView) messagesView.style.display = 'flex';
       if (btnMessages)  btnMessages.classList.add('active');
       renderMessages(messagesView).catch(console.error);
+    } else if (view === 'stats') {
+      if (statsView) statsView.style.display = 'block';
+      if (btnStats)  btnStats.classList.add('active');
+      StatsView.render(statsView).catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
@@ -296,8 +312,13 @@ const App = (() => {
       await preloadPassCounts(passInscriptions.map(i => i.id));
     }
     openAddReservationModal(async data => {
-      await addReservation(_date, _selectedSlotId, data);
-      await refresh();
+      try {
+        await addReservation(_date, _selectedSlotId, data);
+        await refresh();
+      } catch (e) {
+        alert(e.message || 'Impossible d\'ajouter la réservation.');
+        await refresh();
+      }
     });
   }
 

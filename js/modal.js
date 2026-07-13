@@ -797,7 +797,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       document.getElementById('pf-nom').focus();
       await _refreshAll();
     } catch (e) {
-      console.error(e);
+      errEl.textContent = e.message || 'Erreur lors de l\'ajout.';
     }
   });
 

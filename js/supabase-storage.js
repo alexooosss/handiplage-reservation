@@ -120,6 +120,28 @@ async function clearSlot(date, slotId) {
 }
 
 async function addReservation(date, slotId, data) {
+  if (data.inscriptionId) {
+    // Limite journalière : 2 réservations par jour
+    var dayRes = await supabaseClient.from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('inscription_id', data.inscriptionId)
+      .eq('date', date)
+      .neq('statut', 'annule');
+    if (dayRes.error) throw dayRes.error;
+    if ((dayRes.count || 0) >= 2) throw new Error('Limite de 2 réservations par jour atteinte pour cet usager.');
+
+    // Quota mensuel : 40 réservations par mois
+    var monthKey = date.slice(0, 7);
+    var monthRes = await supabaseClient.from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('inscription_id', data.inscriptionId)
+      .gte('date', monthKey + '-01')
+      .lte('date', monthKey + '-31')
+      .neq('statut', 'annule');
+    if (monthRes.error) throw monthRes.error;
+    if ((monthRes.count || 0) >= 40) throw new Error('Quota mensuel de 40 réservations atteint pour cet usager.');
+  }
+
   var row = {
     date:          date,
     creneau_id:    slotId,
@@ -180,6 +202,20 @@ async function getWeekReservationCounts(weekStartISO, weekEndISO) {
   return counts;
 }
 
+// Compte les absences (pas_venu) ce mois pour un inscriptionId
+async function getAbsentsThisMonthCount(inscriptionId) {
+  var today = new Date();
+  var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  var result = await supabaseClient.from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('inscription_id', inscriptionId)
+    .gte('date', monthKey + '-01')
+    .lte('date', monthKey + '-31')
+    .eq('statut', 'absent');
+  if (result.error) throw result.error;
+  return result.count || 0;
+}
+
 // Compte les réservations liées à un inscriptionId dans un mois (pour pass quota)
 async function getPassRemainingCount(inscriptionId, monthISO) {
   // monthISO : 'YYYY-MM'
@@ -236,7 +272,7 @@ if (typeof module !== 'undefined') {
     getTodayISO, getReservations, getReservationList, saveCheckin, updateStatus,
     updateSpotField, clearSlot, addReservation, removeReservation,
     updateReservationStatus, updateReservationField,
-    getWeekReservationCounts, getPassRemainingCount, getReservationsForInscription,
+    getWeekReservationCounts, getAbsentsThisMonthCount, getPassRemainingCount, getReservationsForInscription,
     subscribeSlot, unsubscribeSlot,
   };
 }

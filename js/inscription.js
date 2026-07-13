@@ -112,6 +112,7 @@ function _showForm(container, insc) {
     +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'
     + '</div>'
     + (!isNew && v.statut === 'valide' ? _renderPassBlock(v) : '')
+    + (!isNew && v.statut === 'valide' ? '<div id="absence-block-wrap"></div>' : '')
     + (!isNew ? '<div class="insc-history-section"><div class="insc-section-title">Historique des réservations</div><div id="insc-history-list" class="insc-history-list"><em class="insc-history-loading">Chargement…</em></div></div>' : '')
     + '<form id="insc-form" class="insc-form">'
 
@@ -376,7 +377,10 @@ function _showForm(container, insc) {
     }
   }
 
-  if (!isNew) _bindPassButtons();
+  if (!isNew) {
+    _bindPassButtons();
+    if (v.statut === 'valide') _loadAbsenceBlock(container, v);
+  }
 
   // Wirer bouton refus
   var btnRefusal = document.getElementById('btn-send-refusal');
@@ -614,6 +618,55 @@ function _loadHistory(inscriptionId) {
     if (histEl) histEl.innerHTML = '<em style="color:#c00;font-size:13px">Erreur de chargement.</em>';
     console.error(e);
   });
+}
+
+function _renderAbsenceBlock(insc, absentsCount) {
+  var today    = new Date();
+  var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  var monthLbl = today.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  var blocked  = absentsCount >= 3 && insc.absenceOverrideMonth !== monthKey;
+
+  var inner = blocked
+    ? '<div class="absence-block-hd">⚠️ Absences — <span style="color:#c00">' + absentsCount + '/3 ce mois · Réservations suspendues</span></div>'
+      + '<p class="pass-meta">L\'usager ne peut plus réserver ce mois (' + monthLbl + '). Il peut venir sans réservation.</p>'
+      + '<div class="pass-actions"><button type="button" class="btn-primary" id="absence-reactivate">✓ Réactiver les réservations</button></div>'
+    : '<div class="absence-block-hd">📋 Absences — <span style="color:' + (absentsCount >= 2 ? '#e65100' : '#2e7d32') + '">' + absentsCount + '/3 ce mois</span></div>'
+      + '<p class="pass-meta">' + (absentsCount === 0 ? 'Aucune absence ce mois.' : absentsCount === 1 ? '1 absence ce mois — 2 restantes avant suspension.' : '2 absences ce mois — 1 restante avant suspension.') + '</p>'
+      + (insc.absenceOverrideMonth === monthKey ? '<p class="pass-meta" style="color:#1565c0">Réactivation staff en vigueur ce mois.</p>' : '');
+
+  return '<div class="pass-block absence-block">' + inner + '</div>';
+}
+
+function _bindAbsenceButtons(container, insc) {
+  var btn = document.getElementById('absence-reactivate');
+  if (!btn) return;
+  btn.addEventListener('click', async function() {
+    btn.disabled = true;
+    btn.textContent = 'Réactivation…';
+    var today    = new Date();
+    var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    var newMeta  = Object.assign({}, insc);
+    ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
+    newMeta.absenceOverrideMonth = monthKey;
+    var updated = await updateInscription(insc.id, { metadata: newMeta });
+    // re-render le bloc
+    var wrap = document.getElementById('absence-block-wrap');
+    if (wrap) {
+      var absentsCount = parseInt(btn.closest('.absence-block').querySelector('.absence-block-hd span').textContent) || 3;
+      wrap.innerHTML = _renderAbsenceBlock(updated, absentsCount);
+      _bindAbsenceButtons(container, updated);
+    }
+  });
+}
+
+async function _loadAbsenceBlock(container, insc) {
+  var wrap = document.getElementById('absence-block-wrap');
+  if (!wrap || typeof getAbsentsThisMonthCount !== 'function') return;
+  try {
+    var count = await getAbsentsThisMonthCount(insc.id);
+    wrap.innerHTML = _renderAbsenceBlock(insc, count);
+    _bindAbsenceButtons(container, insc);
+  } catch (e) { /* silencieux */ }
 }
 
 function _renderPassBlock(insc) {

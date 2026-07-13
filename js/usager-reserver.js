@@ -9,6 +9,27 @@ async function renderReserver(container, inscription, showView) {
   container.innerHTML = '<div class="usager-loading">Chargement des disponibilités…</div>';
 
   try {
+    // Vérification blocage absences avant tout chargement
+    var absents = await getAbsentsThisMonth(inscription.id);
+    if (isAbsenceBlocked(inscription, absents)) {
+      var nextMonthDate = new Date();
+      nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+      nextMonthDate.setDate(1);
+      var nextMonthStr = nextMonthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
+        + '<div class="usager-absence-block">'
+        +   '<div class="usager-absence-icon">⚠️</div>'
+        +   '<div class="usager-absence-title">Réservations suspendues</div>'
+        +   '<div class="usager-absence-body">'
+        +     '<p>Vous avez <strong>' + absents + ' absences non justifiées</strong> ce mois. Conformément au règlement, les nouvelles réservations sont suspendues après 3 absences.</p>'
+        +     '<p>Vous pouvez continuer à vous rendre à la Handiplage <strong>sans réservation</strong>.</p>'
+        +     '<p>Les réservations seront réactivées automatiquement en <strong>' + nextMonthStr + '</strong>, ou plus tôt sur demande auprès du staff.</p>'
+        +   '</div>'
+        + '</div>';
+      container.querySelector('#back-accueil').addEventListener('click', function() { showView('accueil'); });
+      return;
+    }
+
     var today   = new Date();
     var fromISO = today.toISOString().slice(0, 10);
     var toDate  = new Date(today);
@@ -87,13 +108,15 @@ function _renderSlots(slots, dateISO) {
     return '<div class="usager-empty">Aucun créneau disponible pour cette journée.</div>';
   }
   return slots.map(function(s) {
-    var cls    = s.userBooked ? 'booked' : !s.available ? 'full' : '';
+    var cls    = s.userBooked ? 'booked' : (s.dayLimit || !s.available) ? 'full' : '';
     var color  = _SLOT_COLORS[(s.creneauId - 1) % _SLOT_COLORS.length];
     var badge  = s.userBooked
       ? '<div class="usager-slot-badge booked-badge">✓ Déjà réservé</div>'
-      : !s.available
-        ? '<div class="usager-slot-badge full-badge">Complet</div>'
-        : '<div class="usager-slot-badge">' + s.remaining + ' place' + (s.remaining > 1 ? 's' : '') + '</div>';
+      : s.dayLimit
+        ? '<div class="usager-slot-badge full-badge">Limite journalière atteinte</div>'
+        : !s.available
+          ? '<div class="usager-slot-badge full-badge">Complet</div>'
+          : '<div class="usager-slot-badge">' + s.remaining + ' place' + (s.remaining > 1 ? 's' : '') + '</div>';
     return '<div class="usager-slot-card usager-slot-c' + s.creneauId + ' ' + cls + '" data-creneau-id="' + s.creneauId + '" style="border-left:4px solid ' + color + '">'
       + '<div class="usager-slot-dot" style="background:' + color + '"></div>'
       + '<div class="usager-slot-body">'

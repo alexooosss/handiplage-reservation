@@ -49,6 +49,26 @@ function canCancelReservation(dateISO) {
   return resaDate >= tomorrow;
 }
 
+async function getAbsentsThisMonth(inscriptionId) {
+  var today    = new Date();
+  var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  var result = await supabaseClient.from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('inscription_id', inscriptionId)
+    .gte('date', monthKey + '-01')
+    .lte('date', monthKey + '-31')
+    .eq('statut', 'absent');
+  if (result.error) throw result.error;
+  return result.count || 0;
+}
+
+function isAbsenceBlocked(inscription, absentsCount) {
+  if (absentsCount < 3) return false;
+  var today    = new Date();
+  var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  return inscription.absenceOverrideMonth !== monthKey;
+}
+
 async function getUserInscription() {
   var sessionResult = await supabaseClient.auth.getSession();
   var session = sessionResult.data.session;
@@ -74,12 +94,16 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var creneaux = crRes.data || [];
   var resas    = resaRes.data || [];
 
-  var counts     = {};
-  var userBooked = {};
+  var counts        = {};
+  var userBooked    = {};
+  var userDayCounts = {};
   resas.forEach(function(r) {
     var key = r.date + '_' + r.creneau_id;
     counts[key] = (counts[key] || 0) + 1;
-    if (inscriptionId && r.inscription_id === inscriptionId) userBooked[key] = true;
+    if (inscriptionId && r.inscription_id === inscriptionId) {
+      userBooked[key] = true;
+      userDayCounts[r.date] = (userDayCounts[r.date] || 0) + 1;
+    }
   });
 
   var days = {};
@@ -88,9 +112,10 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   for (var d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
     var dateISO = d.toISOString().slice(0, 10);
     days[dateISO] = creneaux.map(function(c) {
-      var key   = dateISO + '_' + c.id;
-      var count = counts[key] || 0;
-      var booked = !!userBooked[key];
+      var key            = dateISO + '_' + c.id;
+      var count          = counts[key] || 0;
+      var booked         = !!userBooked[key];
+      var dayLimitReached = !booked && (userDayCounts[dateISO] || 0) >= 2;
       return {
         creneauId:  c.id,
         label:      c.label,
@@ -99,8 +124,9 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
         capacity:   c.capacite_resa,
         count:      count,
         remaining:  Math.max(0, c.capacite_resa - count),
-        available:  !booked && count < c.capacite_resa,
+        available:  !booked && !dayLimitReached && count < c.capacite_resa,
         userBooked: booked,
+        dayLimit:   dayLimitReached,
       };
     });
   }
@@ -118,6 +144,32 @@ async function getUserReservations(inscriptionId) {
 }
 
 async function createUserReservation(inscription, dateISO, creneauId) {
+  // Vérification blocage absences (3 absences non justifiées ce mois)
+  var absents = await getAbsentsThisMonth(inscription.id);
+  if (isAbsenceBlocked(inscription, absents)) {
+    throw new Error('Réservations suspendues ce mois suite à ' + absents + ' absences non justifiées. Contactez le staff Handiplage.');
+  }
+
+  // Vérification limite journalière (2 par jour)
+  var dayRes = await supabaseClient.from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('inscription_id', inscription.id)
+    .eq('date', dateISO)
+    .neq('statut', 'annule');
+  if (dayRes.error) throw dayRes.error;
+  if ((dayRes.count || 0) >= 2) throw new Error('Limite de 2 réservations par jour atteinte.');
+
+  // Vérification quota mensuel (40 par mois)
+  var monthKey = dateISO.slice(0, 7);
+  var monthRes = await supabaseClient.from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('inscription_id', inscription.id)
+    .gte('date', monthKey + '-01')
+    .lte('date', monthKey + '-31')
+    .neq('statut', 'annule');
+  if (monthRes.error) throw monthRes.error;
+  if ((monthRes.count || 0) >= PASS_QUOTA_USAGER) throw new Error('Quota mensuel de ' + PASS_QUOTA_USAGER + ' réservations atteint.');
+
   var result = await supabaseClient.from('reservations').insert({
     date:           dateISO,
     creneau_id:     creneauId,
@@ -141,6 +193,16 @@ async function cancelUserReservation(reservationId) {
   if (result.error) throw result.error;
 }
 
+async function sendUsagerMessage(inscriptionId, text) {
+  var result = await supabaseClient.from('messages').insert({
+    inscription_id: inscriptionId,
+    motif_refus:    '[USAGER] Demande de réactivation des réservations',
+    contenu:        text,
+    lu:             false,
+  });
+  if (result.error) throw result.error;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { _rowToUsagerInscription, _rowToUsagerReservation, computePassBalance, canCancelReservation };
+  module.exports = { _rowToUsagerInscription, _rowToUsagerReservation, computePassBalance, canCancelReservation, getAbsentsThisMonth, isAbsenceBlocked, sendUsagerMessage };
 }

@@ -14,9 +14,12 @@ async function renderReservations(container, inscription, showView) {
 
   try {
     var resas    = await getUserReservations(inscription.id);
-    var today    = new Date().toISOString().slice(0, 10);
+    var todayISO = new Date().toISOString().slice(0, 10);
+    var monthKey = todayISO.slice(0, 7);
+    var today    = todayISO;
     var upcoming = resas.filter(function(r) { return r.date >= today && r.statut !== 'annule'; }).sort(function(a,b){ return a.date<b.date?-1:1; });
     var past     = resas.filter(function(r) { return r.date < today || r.statut === 'annule'; }).sort(function(a,b){ return a.date>b.date?-1:1; });
+    var absentsThisMonth = resas.filter(function(r) { return r.statut === 'absent' && r.date && r.date.startsWith(monthKey); }).length;
 
     var passHtml = '';
     if (inscription.passActif) {
@@ -38,14 +41,67 @@ async function renderReservations(container, inscription, showView) {
         + '</div>';
     }
 
+    var absenceColor   = absentsThisMonth >= 3 ? 'var(--red)' : absentsThisMonth >= 2 ? '#e65100' : '#2e7d32';
+    var contactHtml    = absentsThisMonth >= 3
+      ? '<button class="usager-absence-contact-btn" id="btn-open-contact">📩 Écrire au staff</button>'
+        + '<div id="usager-contact-form" class="usager-contact-form" style="display:none">'
+        +   '<textarea id="usager-contact-msg" class="usager-contact-textarea" rows="4" placeholder="Décrivez votre situation ou posez votre question…"></textarea>'
+        +   '<div class="usager-contact-actions">'
+        +     '<button class="usager-btn usager-btn-primary" id="btn-send-contact">Envoyer</button>'
+        +     '<button class="usager-btn usager-btn-ghost" id="btn-cancel-contact">Annuler</button>'
+        +   '</div>'
+        +   '<div id="usager-contact-status"></div>'
+        + '</div>'
+      : '';
+    var absenceInfoHtml = '<div class="usager-absence-info">'
+      + '<div class="usager-absence-info-rule">'
+      +   '⚠️ Règle absences : après <strong>3 absences non justifiées</strong> dans le mois, les réservations sont suspendues jusqu\'au mois suivant.'
+      + '</div>'
+      + '<div class="usager-absence-info-count">Vos absences ce mois : <strong style="color:' + absenceColor + '">' + absentsThisMonth + ' / 3</strong></div>'
+      + contactHtml
+      + '</div>';
+
     container.innerHTML = '<button class="usager-back" id="back-accueil-resa">← Accueil</button>'
       + passHtml
+      + absenceInfoHtml
       + '<div class="usager-resa-section-title">À venir (' + upcoming.length + ')</div>'
       + (upcoming.length ? upcoming.map(function(r) { return _resaCard(r, true); }).join('') : '<div class="usager-empty">Aucune réservation à venir.</div>')
       + '<div class="usager-resa-section-title" style="margin-top:24px">Passées</div>'
       + (past.length ? past.slice(0, 20).map(function(r) { return _resaCard(r, false); }).join('') : '<div class="usager-empty">Aucune réservation passée.</div>');
 
     container.querySelector('#back-accueil-resa').addEventListener('click', function() { showView('accueil'); });
+
+    // Formulaire de contact staff (uniquement si 3 absences)
+    var btnOpenContact = container.querySelector('#btn-open-contact');
+    if (btnOpenContact) {
+      btnOpenContact.addEventListener('click', function() {
+        var form = container.querySelector('#usager-contact-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      });
+      container.querySelector('#btn-cancel-contact').addEventListener('click', function() {
+        container.querySelector('#usager-contact-form').style.display = 'none';
+      });
+      container.querySelector('#btn-send-contact').addEventListener('click', async function() {
+        var btn    = container.querySelector('#btn-send-contact');
+        var status = container.querySelector('#usager-contact-status');
+        var text   = container.querySelector('#usager-contact-msg').value.trim();
+        if (!text) { status.textContent = 'Veuillez écrire un message.'; status.style.color = 'var(--red)'; return; }
+        btn.disabled = true;
+        btn.textContent = 'Envoi…';
+        status.textContent = '';
+        try {
+          await sendUsagerMessage(inscription.id, text);
+          container.querySelector('#usager-contact-form').style.display = 'none';
+          btnOpenContact.textContent = '✓ Message envoyé';
+          btnOpenContact.disabled = true;
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = 'Envoyer';
+          status.textContent = 'Erreur : ' + (e.message || 'Impossible d\'envoyer le message.');
+          status.style.color = 'var(--red)';
+        }
+      });
+    }
 
     container.querySelectorAll('.usager-cancel-btn').forEach(function(btn) {
       btn.addEventListener('click', async function() {
