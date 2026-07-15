@@ -10,6 +10,18 @@ async function fetchStatsResas(startDate, endDate) {
   return result.data || [];
 }
 
+async function fetchInscriptionsPhones(inscriptionIds) {
+  if (!inscriptionIds.length) return {};
+  var result = await supabaseClient
+    .from('inscriptions')
+    .select('id, telephone')
+    .in('id', inscriptionIds);
+  if (result.error) throw result.error;
+  var map = {};
+  (result.data || []).forEach(function(row) { map[row.id] = row.telephone || '—'; });
+  return map;
+}
+
 async function fetchActiveInscriptionsCount() {
   var result = await supabaseClient
     .from('inscriptions')

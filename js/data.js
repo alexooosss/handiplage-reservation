@@ -64,25 +64,85 @@ const BEACH_SPOTS = [
 
 // Tapis PMR horizontaux (pleine largeur)
 const TAPIS_H = [
-  { y: 56,  label: 'Allée fond' },   // entre ligne du fond et carrés
-  { y: 232, label: 'Allée avant' },  // sous les carrés
+  { y: 56,  x: 30, width: 750, label: 'Allée fond' },
+  { y: 232, x: 130, width: 650, label: 'Allée avant' },
 ];
 
-// Tapis PMR verticaux (entre les carrés uniquement, pas sur la ligne du fond)
+// Tapis PMR verticaux (croisent les tapis horizontaux aux deux extrémités)
 const TAPIS_V = [
-  { x: 175, top: 74, height: 158, label: 'Allée 1-2' },
-  { x: 345, top: 74, height: 158, label: 'Allée 2-3' },
-  { x: 515, top: 74, height: 158, label: 'Allée 3-4' },
+  { x: 169, top: 19, height: 257, label: 'Allée 1-2' },
+  { x: 339, top: 19, height: 277, label: 'Allée 2-3' },
+  { x: 509, top: 19, height: 277, label: 'Allée 3-4' },
 ];
+
+// Barrières blanches : type 'h' = horizontale (x, y, width) | type 'v' = verticale (x, y, height)
+const BARRIERS = [
+  { type: 'h', x: 0, y: -20, width: 780, label: 'Barrière haut' },
+  { type: 'v', x: 0, y: -20, height: 290, label: 'Barrière gauche' },
+  { type: 'v', x: 780, y: -20, height: 30, label: 'Barrière droite' },
+
+];
+
+const BEACH_SHOWERS = [
+  { x: 196, y: 260, label: 'Douche 1' },
+  { x: 366, y: 260, label: 'Douche 2' },
+  { x: 536, y: 260, label: 'Douche 3' },
+];
+
+// Zone rocheuse — 5 points définissent le contour du clipPath SVG
+const ROCKS = {
+  points: [
+    {id:'A', x:650, y:357},
+    {id:'B', x:765, y:357},
+    {id:'C', x:785, y:449},
+    {id:'D', x:660, y:449},
+    {id:'E', x:620, y:400},
+  ],
+};
+
+// Bâtiment — 9 points configurables (polygone SVG)
+const BATIMENT = {
+  points: [
+    {id:'A', x:820, y:200},
+    {id:'A', x:827, y:140},
+    {id:'B', x:850, y:70},
+    {id:'C', x:860, y:60},
+    {id:'J', x:940, y:60},
+    {id:'D', x:960, y:140},
+    {id:'E', x:880, y:140},
+    {id:'F', x:862, y:202},
+    {id:'G', x:920, y:202},
+    {id:'H', x:865, y:405},
+    {id:'I', x:825, y:422},
+
+  ],
+};
+
+// Tapis PMR diagonal (4 coins du parallelogramme)
+const TAPIS_PMR = {
+  points: [[740,246],[765,246],[650,350],[640,335]],
+  label: 'Tapis diagonal PMR',
+};
+
+// Rampe métallique vers la mer (continue là où le tapis s'arrête)
+const RAMPE_METAL = {
+  points: [[640,335],[650,350],[585,415],[564,410]],
+  label: 'Rampe métal',
+};
 
 const BEACH_CONFIG = {
-  mapWidth:  780,
-  mapHeight: 260,
-  spotSize:  34,
-  spots:     BEACH_SPOTS,
-  tapisV:    TAPIS_V,
-  tapisH:    TAPIS_H,
-  showers:   [],
+  mapWidth:   780,
+  mapHeight:  340,
+  spotSize:   34,
+  spots:      BEACH_SPOTS,
+  tapisV:     TAPIS_V,
+  tapisH:     TAPIS_H,
+  showers:    BEACH_SHOWERS,
+  barriers:   BARRIERS,
+  rocks:      ROCKS,
+  batiment:   BATIMENT,
+  tapisPMR:   TAPIS_PMR,
+  rampeMetal: RAMPE_METAL,
 };
 
 // Capacités maximales par créneau dans le planning

@@ -595,7 +595,7 @@ function _loadHistory(inscriptionId) {
       histEl.innerHTML = '<em class="insc-history-empty">Aucune réservation enregistrée.</em>';
       return;
     }
-    var statutLabel = { attente: 'En attente', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
+    var statutLabel = { attente: 'Réservation', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
     var slotLabel = {};
     if (typeof SLOTS !== 'undefined') {
       SLOTS.forEach(function(s) { slotLabel[s.id] = s.label; });

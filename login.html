@@ -191,6 +191,25 @@
     }
     .forgot-link:hover { color: rgba(255,255,255,.7); }
 
+    .login-signup-sep {
+      display: flex; align-items: center; gap: 12px;
+      margin: 28px 0 16px;
+    }
+    .login-signup-sep::before, .login-signup-sep::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1);
+    }
+    .login-signup-sep span {
+      font-size: .6875rem; color: rgba(255,255,255,.25);
+      letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+    }
+    .login-signup-link {
+      display: block; text-align: center;
+      font-size: .875rem; font-weight: 600;
+      color: rgba(255,255,255,.5); text-decoration: none;
+      transition: color .15s;
+    }
+    .login-signup-link:hover { color: #c9bc24; }
+
     .login-footer {
       margin-top: auto;
       padding-top: 40px;
@@ -253,6 +272,9 @@
       <p id="success-msg" aria-live="polite"></p>
 
       <button class="forgot-link" id="forgot-btn" type="button">Mot de passe oublié ?</button>
+
+      <div class="login-signup-sep"><span>Pas encore inscrit ?</span></div>
+      <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
 
       <!-- Formulaire création mot de passe (visible après invitation) -->
       <form id="set-password-form" style="display:none" novalidate>

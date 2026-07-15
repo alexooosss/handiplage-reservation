@@ -52,6 +52,40 @@ var StatsView = (function () {
       + '</div>';
   }
 
+  function _absentsTable(resas, phonesMap) {
+    var map = {};
+    resas.forEach(function(r) {
+      if (r.statut !== 'absent' && r.statut !== 'pas_venu') return;
+      var key = r.inscription_id || ((r.nom || '') + '|' + (r.prenom || ''));
+      if (!map[key]) map[key] = { nom: r.nom, prenom: r.prenom, inscriptionId: r.inscription_id, total: 0 };
+      map[key].total++;
+    });
+
+    var rows = Object.values(map).sort(function(a, b) { return b.total - a.total; });
+
+    if (!rows.length) return '<div class="stats-empty">Aucune absence sur cette période.</div>';
+
+    return '<div class="stats-table-wrap"><table class="stats-table">'
+      + '<thead><tr>'
+      + '<th>Usager</th>'
+      + '<th class="stats-th-num">Non présentés</th>'
+      + '<th>Téléphone</th>'
+      + '</tr></thead>'
+      + '<tbody>'
+      + rows.map(function(u) {
+          var phone = (u.inscriptionId && phonesMap[u.inscriptionId]) || '—';
+          var phoneHtml = phone !== '—'
+            ? '<a href="tel:' + phone.replace(/\s/g, '') + '" style="color:var(--navy);text-decoration:none">' + phone + '</a>'
+            : '—';
+          return '<tr>'
+            + '<td>' + _esc(u.prenom) + ' ' + _esc(u.nom) + '</td>'
+            + '<td class="stats-num stats-col-absent">' + u.total + '</td>'
+            + '<td style="font-size:.875rem">' + phoneHtml + '</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+
   function _topTable(resas) {
     var map = {};
     resas.forEach(function (r) {
@@ -277,7 +311,7 @@ var StatsView = (function () {
     });
   }
 
-  function _render(container, periodResas, seasonResas, activeCount, range) {
+  function _render(container, periodResas, seasonResas, activeCount, range, phonesMap) {
     var total    = periodResas.length;
     var presents = periodResas.filter(function (r) { return r.statut === 'present' || r.statut === 'parti'; }).length;
     var absents  = periodResas.filter(function (r) { return r.statut === 'absent'; }).length;
@@ -335,6 +369,11 @@ var StatsView = (function () {
           _topTable(periodResas),
         '</div>',
 
+        '<div class="stats-card" style="margin-top:14px">',
+          '<div class="stats-card-title">Réservations non honorées</div>',
+          _absentsTable(periodResas, phonesMap || {}),
+        '</div>',
+
       '</div>'
     ].join('');
 
@@ -381,7 +420,15 @@ var StatsView = (function () {
         activeCount = all[2];
       }
 
-      _render(container, periodResas, seasonResas, activeCount, periodRange);
+      var absentIds = [];
+      periodResas.forEach(function(r) {
+        if ((r.statut === 'absent' || r.statut === 'pas_venu') && r.inscription_id && absentIds.indexOf(r.inscription_id) === -1) {
+          absentIds.push(r.inscription_id);
+        }
+      });
+      var phonesMap = await fetchInscriptionsPhones(absentIds);
+
+      _render(container, periodResas, seasonResas, activeCount, periodRange, phonesMap);
     } catch (e) {
       container.innerHTML = '<div class="stats-error">Erreur : ' + _esc(e.message) + '</div>';
     }

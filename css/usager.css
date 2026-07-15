@@ -245,10 +245,11 @@ body {
   align-items: center;
   gap: 14px;
 }
-.usager-resa-info   { flex: 1; }
+.usager-resa-info   { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .usager-resa-date   { font-weight: 700; font-size: .9375rem; color: var(--text); }
-.usager-resa-slot   { font-size: .875rem; color: var(--text-muted); margin-top: 3px; }
-.usager-resa-spot   { font-size: .8125rem; color: var(--blue); margin-top: 2px; }
+.usager-resa-sep    { color: var(--text-muted); font-weight: 300; font-size: 1rem; }
+.usager-resa-slot   { font-size: .875rem; color: var(--text-muted); }
+.usager-resa-spot   { font-size: .8125rem; color: var(--blue); width: 100%; }
 .usager-resa-statut { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 10px; }
 .resa-s-attente  { background: #fff9c4; color: #f57f17; }
 .resa-s-present  { background: var(--green-light); color: var(--green); }

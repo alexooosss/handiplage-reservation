@@ -5,7 +5,7 @@ function _escRes(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-var STATUT_LABELS = { attente: 'En attente', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
+var STATUT_LABELS = { attente: 'Réservation', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
 var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-parti', absent: 'resa-s-absent', annule: 'resa-s-annule' };
 var CRENEAU_LABELS = { 1: '8h30–10h15', 2: '10h30–12h15', 3: '12h30–14h15', 4: '14h30–16h15', 5: '16h30–18h15' };
 
@@ -135,9 +135,10 @@ function _resaCard(r, isUpcoming) {
 
   return '<div class="usager-resa-card">'
     + '<div class="usager-resa-info">'
-    +   '<div class="usager-resa-date">' + dateStr + '</div>'
-    +   '<div class="usager-resa-slot">' + _escRes(slotLbl) + (r.accompagnants > 0 ? ' · ' + r.accompagnants + ' acc.' : '') + '</div>'
-    +   (r.spotId ? '<div class="usager-resa-spot">Emplacement ' + _escRes(r.spotId) + '</div>' : '')
+    +   '<span class="usager-resa-date">' + dateStr + '</span>'
+    +   '<span class="usager-resa-sep">|</span>'
+    +   '<span class="usager-resa-slot">' + _escRes(slotLbl) + (r.accompagnants > 0 ? ' · ' + r.accompagnants + ' acc.' : '') + '</span>'
+    +   (r.spotId ? '<span class="usager-resa-spot">Emplacement ' + _escRes(r.spotId) + '</span>' : '')
     + '</div>'
     + '<span class="usager-resa-statut ' + statutCls + '">' + statutLbl + '</span>'
     + (canCancel ? '<button class="usager-cancel-btn" data-resa-id="' + r.id + '">Annuler</button>' : '')

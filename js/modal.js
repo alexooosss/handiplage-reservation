@@ -600,13 +600,13 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       getReservationList(dateISO, slot.id),
       getReservations(dateISO, slot.id),
     ]);
-    const pending = all.filter(r => resaType === 'normal'
+    const pending = all.filter(r => r.status !== 'annule' && (resaType === 'normal'
       ? (!r.resaType || r.resaType === 'normal')
-      : r.resaType === 'groupe');
+      : r.resaType === 'groupe'));
 
     const arrived = resaType === 'normal'
       ? Object.entries(spotsMap)
-              .filter(([, r]) => r.type === 'reserved')
+              .filter(([, r]) => r.type === 'reserved' && r.status !== 'annule')
               .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
       : [];
 
@@ -819,7 +819,20 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   _dialog().classList.add('plan-dialog');
   _dialog().showModal();
   document.getElementById('pf-prenom').focus();
-  _refreshAll(); // fire-and-forget async — modal is already open
+  _refreshAll();
+
+  // Souscription Realtime : rafraîchit la liste si une réservation change (ex: annulation depuis l'interface usager)
+  var _modalChannel = supabaseClient
+    .channel('planning-modal-' + dateISO + '-' + slot.id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations', filter: 'date=eq.' + dateISO }, function(payload) {
+      var creneauId = (payload.new && payload.new.creneau_id) || (payload.old && payload.old.creneau_id);
+      if (creneauId == slot.id) _refreshAll().catch(console.error);
+    })
+    .subscribe();
+
+  _dialog().addEventListener('close', function() {
+    supabaseClient.removeChannel(_modalChannel);
+  }, { once: true });
 }
 
 if (typeof module !== 'undefined') {

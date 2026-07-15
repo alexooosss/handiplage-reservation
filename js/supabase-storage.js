@@ -182,7 +182,8 @@ async function updateReservationField(reservationId, field, value) {
 async function getWeekReservationCounts(weekStartISO, weekEndISO) {
   var result = await supabaseClient.from('reservations')
     .select('date, creneau_id, type, statut, resa_type, spot_id')
-    .gte('date', weekStartISO).lte('date', weekEndISO);
+    .gte('date', weekStartISO).lte('date', weekEndISO)
+    .neq('statut', 'annule');
   if (result.error) throw result.error;
   var counts = {};
   (result.data || []).forEach(function(row) {
