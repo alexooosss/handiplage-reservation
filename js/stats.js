@@ -46,7 +46,6 @@ var StatsView = (function () {
 
   function _kpi(icon, label, value, mod) {
     return '<div class="stats-kpi' + (mod ? ' stats-kpi-' + mod : '') + '">'
-      + '<div class="stats-kpi-icon">' + icon + '</div>'
       + '<div class="stats-kpi-value">' + value + '</div>'
       + '<div class="stats-kpi-label">' + label + '</div>'
       + '</div>';

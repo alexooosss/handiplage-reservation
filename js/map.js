@@ -86,7 +86,8 @@ function renderMapSpots(container, reservations, onSpotClick, selectionMode) {
     }
 
     // Mise à jour de l'état
-    el.dataset.state = state;
+    el.dataset.state  = state;
+    el.dataset.groupe = (resa && resa.resaType === 'groupe') ? 'true' : 'false';
     el.dataset.selectable = (selectionMode && state === 'free') ? 'true' : 'false';
     el.title = resa ? `${resa.prenom} ${resa.nom}` : spot.label;
 

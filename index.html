@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- Interface staff — responsive tablette (≥768px) -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Handiplage — Staff</title>
+  <title>Handiplage - Staff</title>
   <link rel="icon" type="image/png" href="logo%20handiplage%20antibes.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -18,14 +18,16 @@
     <nav class="slots-nav" id="slots-nav">
       <!-- Injecté par app.js -->
     </nav>
-    <button id="btn-planning-tab" class="planning-tab-btn">&#128197; Planning</button>
-    <button id="btn-mc-tab" class="planning-tab-btn">&#128221; Main courante</button>
-    <button id="btn-insc-tab" class="planning-tab-btn">&#128203; Inscription</button>
+    <button id="btn-planning-tab" class="planning-tab-btn">Planning</button>
+    <button id="btn-mc-tab" class="planning-tab-btn">Main courante</button>
+    <button id="btn-insc-tab" class="planning-tab-btn">Inscription</button>
+    <button id="btn-groupes-tab" class="planning-tab-btn">Groupes</button>
     <button id="btn-messages-tab" class="planning-tab-btn">
-      ✉ Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
+      Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
     </button>
-    <button id="btn-stats-tab" class="planning-tab-btn">📊 Stats</button>
-    <button id="btn-logout" class="planning-tab-btn" style="margin-left:auto">Déconnexion</button>
+    <button id="btn-stats-tab" class="planning-tab-btn">Stats</button>
+    <button id="btn-profil-tab" class="planning-tab-btn" style="margin-left:auto" title="Mon profil"><img src="icone%20mon%20compte.svg" alt="Mon profil" style="height:20px;width:20px;display:block"></button>
+    <button id="btn-logout" class="planning-tab-btn">Déconnexion</button>
     <div class="datetime" id="datetime">
       <span class="time" id="clock">--:--</span>
       <span id="date-label"></span>
@@ -65,11 +67,17 @@
     <!-- Vue Inscription -->
     <div id="insc-view" style="display:none" class="insc-view"></div>
 
+    <!-- Vue Groupes -->
+    <div id="groupes-view" style="display:none" class="groupes-view"></div>
+
     <!-- Vue Messages -->
     <div id="messages-view" style="display:none" class="messages-view"></div>
 
     <!-- Vue Statistiques -->
     <div id="stats-view" style="display:none" class="stats-view"></div>
+
+    <!-- Vue Profil -->
+    <div id="profil-view" style="display:none" class="profil-view"></div>
 
   </div>
 
@@ -98,11 +106,15 @@
   <script src="js/mc.js"></script>
   <script src="js/inscription.js"></script>
   <script src="js/pass.js"></script>
+  <script src="js/supabase-groupes.js"></script>
+  <script src="js/groupes.js"></script>
   <script src="js/supabase-messages.js"></script>
   <script src="js/messages.js"></script>
   <script src="js/supabase-stats.js"></script>
   <script src="js/stats.js"></script>
+  <script src="js/staff-profil.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/arcade.js"></script>
   <script>
     (async function () {
       try {
@@ -127,6 +139,7 @@
     <span>© 2026 CCAS d'Antibes — Handiplage</span>
     <a href="mentions-legales.html" target="_blank">Mentions légales</a>
     <a href="politique-confidentialite.html" target="_blank">Politique de confidentialité</a>
+    <span class="site-footer-credit">Conçu par A.DALMASSO</span>
   </div>
 </footer>
 </body>

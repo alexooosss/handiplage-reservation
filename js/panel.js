@@ -69,6 +69,10 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
     const idx = parseInt(btn.dataset.index);
     btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAssign(idx, waitingList[idx]); });
   });
+  container.querySelectorAll('.btn-accueil-groupe[data-index]').forEach(btn => {
+    const idx = parseInt(btn.dataset.index);
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onGroupCheckin && callbacks.onGroupCheckin(idx, waitingList[idx]); });
+  });
   container.querySelectorAll('.btn-pas-venu[data-index]').forEach(btn => {
     const idx  = parseInt(btn.dataset.index);
     const resa = waitingList[idx];
@@ -137,15 +141,21 @@ function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount)
 
 function _renderWaitingItem(resa, index, showActions) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
-  const accompLabel = resa.accompagnants === 0 ? 'seul·e'
+  const isGroupe = resa.resaType === 'groupe';
+  const accompLabel = isGroupe ? `${resa.nbUsagers || 1} empl.`
+    : resa.accompagnants === 0 ? 'seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
   const statusLabel = resa.status === 'pas_venu' ? ' · Pas venu·e'
     : resa.status === 'annule' ? ' · Annulé·e' : '';
   const avatarColor = resa.status === 'pas_venu' ? 'var(--grey)'
-    : resa.status === 'annule' ? 'var(--grey)' : 'var(--amber)';
+    : resa.status === 'annule' ? 'var(--grey)'
+    : isGroupe ? 'var(--indigo, #3949ab)' : 'var(--amber)';
   const actions = showActions ? `
     <div class="waiting-actions">
-      <button class="btn-assign"   data-index="${index}">Assigner</button>
+      ${isGroupe
+        ? `<button class="btn-accueil-groupe" data-index="${index}">Accueillir</button>`
+        : `<button class="btn-assign" data-index="${index}">Assigner</button>`
+      }
       <button class="btn-pas-venu" data-index="${index}">Pas venu</button>
       <button class="btn-annule"   data-index="${index}">Annuler</button>
     </div>

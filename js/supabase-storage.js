@@ -33,7 +33,9 @@ function _rowToSpotResa(row) {
     checkinTime:   _tsToMs(row.checkin_time),
     departTime:    _tsToMs(row.depart_time),
     inscriptionId: row.inscription_id || null,
+    groupeId:      row.groupe_id || null,
     resaType:      row.resa_type || 'normal',
+    nbUsagers:     row.nb_usagers || null,
   };
 }
 
@@ -45,7 +47,9 @@ function _rowToWaitingResa(row) {
     accompagnants: row.accompagnants,
     status:        row.statut === 'attente' ? 'waiting' : _dbStatutToLocal(row.statut),
     inscriptionId: row.inscription_id || null,
+    groupeId:      row.groupe_id || null,
     resaType:      row.resa_type || 'normal',
+    nbUsagers:     row.nb_usagers || null,
   };
 }
 
@@ -80,6 +84,8 @@ async function saveCheckin(date, slotId, spotId, data) {
     depart_time:   data.departTime  ? new Date(data.departTime).toISOString()  : null,
     inscription_id: data.inscriptionId || null,
     resa_type:     data.resaType || 'normal',
+    nb_usagers:    data.nbUsagers || null,
+    groupe_id:     data.groupeId || null,
   };
   var result = await supabaseClient.from('reservations').upsert(row,
     { onConflict: 'date,creneau_id,spot_id' });
@@ -147,12 +153,14 @@ async function addReservation(date, slotId, data) {
     creneau_id:    slotId,
     nom:           data.nom,
     prenom:        data.prenom,
-    accompagnants: data.accompagnants,
+    accompagnants: data.accompagnants || 0,
     type:          'reserved',
     statut:        'attente',
     spot_id:       null,
     inscription_id: data.inscriptionId || null,
     resa_type:     data.resaType || 'normal',
+    nb_usagers:    data.nbEmpl || null,
+    groupe_id:     data.groupeId || null,
   };
   var result = await supabaseClient.from('reservations').insert(row).select().single();
   if (result.error) throw result.error;
@@ -181,7 +189,7 @@ async function updateReservationField(reservationId, field, value) {
 // Bulk query pour la vue planning (7j × 5 créneaux en une seule requête)
 async function getWeekReservationCounts(weekStartISO, weekEndISO) {
   var result = await supabaseClient.from('reservations')
-    .select('date, creneau_id, type, statut, resa_type, spot_id')
+    .select('date, creneau_id, type, statut, resa_type, spot_id, nb_usagers')
     .gte('date', weekStartISO).lte('date', weekEndISO)
     .neq('statut', 'annule');
   if (result.error) throw result.error;
@@ -190,13 +198,14 @@ async function getWeekReservationCounts(weekStartISO, weekEndISO) {
     var d = row.date;
     if (!counts[d]) counts[d] = {};
     var s = row.creneau_id;
-    if (!counts[d][s]) counts[d][s] = { waiting_normal:0, waiting_groupe:0, arrived_reserved:0, walkins:0 };
+    if (!counts[d][s]) counts[d][s] = { waiting_normal:0, waiting_groupe:0, arrived_reserved:0, arrived_groupe:0, walkins:0 };
     var c = counts[d][s];
     if (row.spot_id === null) {
-      if (row.resa_type === 'groupe') c.waiting_groupe++;
+      if (row.resa_type === 'groupe') c.waiting_groupe += (row.nb_usagers || 1);
       else c.waiting_normal++;
     } else {
       if (row.type === 'walkin') c.walkins++;
+      else if (row.resa_type === 'groupe') c.arrived_groupe++;
       else c.arrived_reserved++;
     }
   });
@@ -233,6 +242,22 @@ async function getPassRemainingCount(inscriptionId, monthISO) {
     .neq('statut', 'annule');
   if (result.error) throw result.error;
   return result.count || 0;
+}
+
+async function getReservationsForGroupe(groupeId, groupeNom) {
+  var [byId, byNom] = await Promise.all([
+    supabaseClient.from('reservations')
+      .select('date, creneau_id, statut, spot_id, nb_usagers')
+      .eq('resa_type', 'groupe').eq('groupe_id', groupeId)
+      .order('date', { ascending: false }).limit(200),
+    supabaseClient.from('reservations')
+      .select('date, creneau_id, statut, spot_id, nb_usagers')
+      .eq('resa_type', 'groupe').is('groupe_id', null).ilike('nom', groupeNom)
+      .order('date', { ascending: false }).limit(200),
+  ]);
+  if (byId.error) throw byId.error;
+  if (byNom.error) throw byNom.error;
+  return [...(byId.data || []), ...(byNom.data || [])].sort(function(a, b) { return b.date.localeCompare(a.date); });
 }
 
 async function getReservationsForInscription(inscriptionId) {
@@ -273,7 +298,8 @@ if (typeof module !== 'undefined') {
     getTodayISO, getReservations, getReservationList, saveCheckin, updateStatus,
     updateSpotField, clearSlot, addReservation, removeReservation,
     updateReservationStatus, updateReservationField,
-    getWeekReservationCounts, getAbsentsThisMonthCount, getPassRemainingCount, getReservationsForInscription,
+    getWeekReservationCounts, getAbsentsThisMonthCount, getPassRemainingCount,
+    getReservationsForInscription, getReservationsForGroupe,
     subscribeSlot, unsubscribeSlot,
   };
 }

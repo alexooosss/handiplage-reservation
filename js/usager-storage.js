@@ -84,7 +84,7 @@ async function getUserInscription() {
 async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var crRes  = await supabaseClient.from('creneaux').select('id, label, heure_debut, heure_fin, capacite_resa').order('id');
   var resaRes = await supabaseClient.from('reservations')
-    .select('date, creneau_id, inscription_id, statut')
+    .select('id, date, creneau_id, inscription_id, statut')
     .gte('date', fromISO).lte('date', toISO).neq('statut', 'annule');
 
   if (crRes.error)   throw crRes.error;
@@ -95,12 +95,14 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
 
   var counts        = {};
   var userBooked    = {};
+  var userResaId    = {};
   var userDayCounts = {};
   resas.forEach(function(r) {
     var key = r.date + '_' + r.creneau_id;
     counts[key] = (counts[key] || 0) + 1;
     if (inscriptionId && r.inscription_id === inscriptionId) {
       userBooked[key] = true;
+      userResaId[key] = r.id;
       userDayCounts[r.date] = (userDayCounts[r.date] || 0) + 1;
     }
   });
@@ -125,6 +127,7 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
         remaining:  Math.max(0, c.capacite_resa - count),
         available:  !booked && !dayLimitReached && count < c.capacite_resa,
         userBooked: booked,
+        resaId:     userResaId[key] || null,
         dayLimit:   dayLimitReached,
       };
     });

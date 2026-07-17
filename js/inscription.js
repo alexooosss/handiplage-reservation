@@ -11,6 +11,7 @@ async function renderInscription(container, selectedId) {
   container.innerHTML = '<div class="insc-layout">'
     + '<div class="insc-sidebar">'
     +   '<div class="insc-sidebar-hd">'
+    +     '<h2 class="insc-sidebar-title">Inscriptions</h2>'
     +     '<input type="search" id="insc-search" class="insc-search-inp" placeholder="Rechercher…">'
     +     '<button class="btn-primary" id="insc-new-btn">＋ Nouvelle inscription</button>'
     +   '</div>'

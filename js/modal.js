@@ -478,6 +478,111 @@ function openWaitingDetailModal(resa, history, callbacks) {
   _dialog().showModal();
 }
 
+// Trouve N emplacements adjacents (même rangée, même zone entre tapis)
+function _findAdjacentFreeSpots(freeSpotIds, count) {
+  if (!count || freeSpotIds.length === 0) return freeSpotIds.slice(0, count || 0);
+  const freeSet  = new Set(freeSpotIds);
+  const allSpots = ((typeof BEACH_CONFIG !== 'undefined') && BEACH_CONFIG.spots) || [];
+  const freeObjs = allSpots.filter(s => freeSet.has(s.id));
+  if (freeObjs.length <= count) return freeObjs.map(s => s.id);
+
+  // Regrouper par rangée (y proche à ±25 px)
+  const rows = [];
+  freeObjs.forEach(s => {
+    let row = rows.find(r => Math.abs(r.y - s.y) <= 25);
+    if (!row) { row = { y: s.y, spots: [] }; rows.push(row); }
+    row.spots.push(s);
+  });
+
+  // Tapis verticaux séparant les zones
+  const TAPIS_X = [169, 339, 509];
+
+  for (const row of rows) {
+    row.spots.sort((a, b) => a.x - b.x);
+    // Découper la rangée aux tapis
+    const zones = [[row.spots[0]]];
+    for (let i = 1; i < row.spots.length; i++) {
+      const prev = row.spots[i - 1], curr = row.spots[i];
+      if (TAPIS_X.some(tx => prev.x < tx && curr.x > tx)) zones.push([curr]);
+      else zones[zones.length - 1].push(curr);
+    }
+    for (const zone of zones) {
+      if (zone.length >= count) return zone.slice(0, count).map(s => s.id);
+    }
+  }
+
+  // Repli : premiers spots libres disponibles
+  return freeSpotIds.slice(0, count);
+}
+
+// ── Modale Accueil Groupe ──
+// nbSpotsHint : nb d'emplacements pré-définis depuis la réservation (resa.accompagnants)
+// onConfirm({ nbUsagers, nbAcc, spots })
+function openGroupCheckinModal(resa, freeSpots, onConfirm, nbSpotsHint) {
+  // nbSpotsHint = nb_emplacements pré-définis (depuis resa.nbUsagers côté liste d'attente)
+  let nbUsagers = Math.max(1, nbSpotsHint || resa.nbUsagers || 1) * 3;
+  let nbAcc = 0;
+
+  function _needed()    { return Math.ceil((nbUsagers + nbAcc) / 3); }
+  function _suggested() { return _findAdjacentFreeSpots(freeSpots, _needed()); }
+
+  function _draw() {
+    const needed = _needed();
+    const spots  = _suggested();
+    const ok     = spots.length >= needed;
+    _dialog().innerHTML = `
+      <div class="modal-header">
+        <h3>👥 Accueil Groupe · ${resa.nom} ${resa.prenom}</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Usagers présents</label>
+            <div class="spinner-row">
+              <button class="spinner-btn" id="sp-u-dec">−</button>
+              <span class="spinner-val" id="sp-u-val">${nbUsagers}</span>
+              <button class="spinner-btn" id="sp-u-inc">＋</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Accompagnants</label>
+            <div class="spinner-row">
+              <button class="spinner-btn" id="sp-a-dec">−</button>
+              <span class="spinner-val" id="sp-a-val">${nbAcc}</span>
+              <button class="spinner-btn" id="sp-a-inc">＋</button>
+            </div>
+          </div>
+        </div>
+        <div class="groupe-spots-info${ok ? '' : ' groupe-spots-warn'}">
+          <span>Emplacements nécessaires : <strong>${needed}</strong> <span style="opacity:.7">(1 emplacement pour 3 personnes)</span></span>
+          <span>Proposés : <strong>${spots.length > 0 ? spots.join(', ') : '—'}</strong></span>
+          ${!ok ? `<span class="groupe-spots-err">⚠ Pas assez d'emplacements libres (${freeSpots.length} disponible${freeSpots.length > 1 ? 's' : ''}).</span>` : ''}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modal-cancel">Annuler</button>
+        <button class="btn-primary" id="modal-confirm"${!ok ? ' disabled' : ''}>✓ Accueillir</button>
+      </div>
+    `;
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    document.getElementById('sp-u-dec').addEventListener('click', () => { if (nbUsagers > 1) { nbUsagers--; _draw(); } });
+    document.getElementById('sp-u-inc').addEventListener('click', () => { nbUsagers++; _draw(); });
+    document.getElementById('sp-a-dec').addEventListener('click', () => { if (nbAcc > 0) { nbAcc--; _draw(); } });
+    document.getElementById('sp-a-inc').addEventListener('click', () => { nbAcc++; _draw(); });
+    if (ok) {
+      document.getElementById('modal-confirm').addEventListener('click', () => {
+        closeModal();
+        onConfirm({ nbUsagers, nbAcc, spots: _suggested() });
+      });
+    }
+  }
+
+  _draw();
+  _dialog().showModal();
+}
+
 function _bindRadioGroup(groupId) {
   document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -508,22 +613,26 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         <div class="plan-form-row">
           <div style="position:relative;display:flex;gap:8px">
             <div class="plan-form-group">
-              <label>Nom</label>
+              <label id="pf-nom-label">Nom</label>
               <input type="text" id="pf-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
             </div>
-            <div class="plan-form-group">
+            <div class="plan-form-group" id="pf-prenom-wrap">
               <label>Prénom</label>
               <input type="text" id="pf-prenom" placeholder="Prénom" autocomplete="off">
             </div>
             <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
           </div>
-          <div class="plan-form-group">
+          <div class="plan-form-group" id="pf-accomp-grp">
             <label>Acc.</label>
             <div class="radio-group radio-sm" id="pf-accomp">
               <div class="radio-btn selected" data-value="0">0</div>
               <div class="radio-btn" data-value="1">1</div>
               <div class="radio-btn" data-value="2">2</div>
             </div>
+          </div>
+          <div class="plan-form-group" id="pf-empl-grp" style="display:none">
+            <label>Empl.</label>
+            <input type="number" id="pf-empl" min="1" max="10" value="1" class="plan-empl-inp">
           </div>
           <div class="plan-form-group">
             <label>Type</label>
@@ -579,7 +688,13 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function _openProfilePanel(inscriptionId, nom, prenom) {
+  function _openProfilePanel(inscriptionId, nom, prenom, groupeId) {
+    if (groupeId) {
+      if (typeof App !== 'undefined' && typeof App.navigateToGroupe === 'function') {
+        App.navigateToGroupe(groupeId);
+      }
+      return;
+    }
     var id = inscriptionId;
     if (!id && typeof getCachedInscriptions === 'function') {
       var nomUp = (nom || '').toUpperCase();
@@ -606,11 +721,20 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
     const arrived = resaType === 'normal'
       ? Object.entries(spotsMap)
-              .filter(([, r]) => r.type === 'reserved' && r.status !== 'annule')
+              .filter(([, r]) => r.type === 'reserved' && r.status !== 'annule' && (!r.resaType || r.resaType === 'normal'))
               .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
       : [];
 
-    const total = pending.length + arrived.length;
+    // Spots groupe assignés (présents ET partis) — pour compteur et historique
+    const arrivedGroupSpots = resaType === 'groupe'
+      ? Object.entries(spotsMap)
+              .filter(([, r]) => r.resaType === 'groupe' && r.type === 'reserved')
+              .map(([spotId, r]) => ({ ...r, _spotId: spotId }))
+      : [];
+
+    const total = resaType === 'groupe'
+      ? pending.reduce(function(sum, r) { return sum + (r.nbUsagers || 1); }, 0) + arrivedGroupSpots.length
+      : pending.length + arrived.length;
     const capEl = document.getElementById(capId);
     if (capEl) {
       capEl.textContent = total + ' / ' + capacity;
@@ -619,32 +743,56 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     const listEl = document.getElementById(listId);
     if (!listEl) return;
 
-    if (total === 0) {
+    if (total === 0 && arrived.length === 0 && arrivedGroupSpots.length === 0) {
       listEl.innerHTML = '<div class="planning-empty">Aucune réservation</div>';
       return;
     }
 
     const pendingHtml = pending.map(r => {
-      const acc = r.accompagnants === 0 ? 'seul·e'
+      const displayName = r.prenom ? r.nom + ' ' + r.prenom : r.nom;
+      const acc = resaType === 'groupe'
+        ? 'x' + (r.nbUsagers || 1) + ' empl.'
+        : r.accompagnants === 0 ? 'seul·e'
         : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
       const insc = (typeof getCachedInscriptions === 'function' && r.inscriptionId)
         ? getCachedInscriptions().find(i => i.id === r.inscriptionId) : null;
       const passTag = (insc && insc.pass && insc.pass.actif)
         ? ' <span style="font-size:11px;color:#1565c0;font-weight:600">🎫 Pass 2026</span>' : '';
       return '<div class="planning-list-item">'
-        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >' + r.nom + ' ' + r.prenom + ' — ' + acc + passTag + '</span>'
+        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-groupe-id="' + _esc(r.groupeId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '">' + displayName + ' — ' + acc + passTag + '</span>'
         + '<button class="btn-remove" data-id="' + r.id + '">✕</button>'
         + '</div>';
     }).join('');
 
-    const arrivedHtml = arrived.map(r => {
-      const acc  = r.accompagnants === 0 ? 'seul·e'
-        : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
-      const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
-      return '<div class="planning-list-item planning-list-present">'
-        + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
-        + '</div>';
-    }).join('');
+    // Groupes arrivés : dédupliquer par nom (1 ligne par groupe, liste des emplacements)
+    let arrivedHtml = '';
+    if (resaType === 'groupe' && arrivedGroupSpots.length > 0) {
+      const _seen = {};
+      arrivedHtml = arrivedGroupSpots.reduce(function(html, r) {
+        const key = (r.nom || '').toUpperCase();
+        if (_seen[key]) return html;
+        _seen[key] = true;
+        const groupSpots = arrivedGroupSpots.filter(function(g) { return (g.nom || '').toUpperCase() === key; });
+        const spotList = groupSpots.map(function(g) { return g._spotId; }).join(', ');
+        const empl = groupSpots.length + ' empl.';
+        const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
+        const prefix = groupSpots.some(function(g) { return g.status === 'present'; }) ? '✓ ' : '↩ ';
+        const displayName = r.nom + (r.prenom ? ' ' + r.prenom : '');
+        return html + '<div class="planning-list-item planning-list-present">'
+          + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-groupe-id="' + _esc(r.groupeId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '">'
+          + prefix + displayName + ' — ' + empl + ' (' + spotList + ')' + time + '</span>'
+          + '</div>';
+      }, '');
+    } else {
+      arrivedHtml = arrived.map(r => {
+        const acc  = r.accompagnants === 0 ? 'seul·e'
+          : r.accompagnants === 1 ? '1 acc.' : r.accompagnants + ' acc.';
+        const time = r.checkinTime ? ' · ' + _fmtCheckinTime(r.checkinTime) : '';
+        return '<div class="planning-list-item planning-list-present">'
+          + '<span class="plan-name-link" data-insc-id="' + _esc(r.inscriptionId || '') + '" data-nom="' + _esc(r.nom) + '" data-prenom="' + _esc(r.prenom) + '" >✓ ' + r.prenom + ' ' + r.nom + ' — ' + acc + ' (' + r._spotId + ')' + time + '</span>'
+          + '</div>';
+      }).join('');
+    }
 
     listEl.innerHTML = arrivedHtml + pendingHtml;
     listEl.querySelectorAll('.btn-remove').forEach(btn => {
@@ -659,7 +807,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     });
     listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
       span.addEventListener('click', function() {
-        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom, span.dataset.groupeId);
       });
     });
   }
@@ -684,7 +832,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     }).join('');
     listEl.querySelectorAll('.plan-name-link').forEach(function(span) {
       span.addEventListener('click', function() {
-        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom);
+        _openProfilePanel(span.dataset.inscId, span.dataset.nom, span.dataset.prenom, span.dataset.groupeId);
       });
     });
   }
@@ -700,12 +848,26 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   _bindRadioGroup('pf-accomp');
   _bindRadioGroup('pf-type');
 
+  // Bascule Acc. ↔ Empl. et Nom/Prénom ↔ Nom du groupe selon le type
+  document.querySelectorAll('#pf-type .radio-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const isGroupe = btn.dataset.value === 'groupe';
+      document.getElementById('pf-accomp-grp').style.display  = isGroupe ? 'none' : '';
+      document.getElementById('pf-empl-grp').style.display    = isGroupe ? '' : 'none';
+      document.getElementById('pf-prenom-wrap').style.display = isGroupe ? 'none' : '';
+      document.getElementById('pf-nom-label').textContent     = isGroupe ? 'Nom du groupe' : 'Nom';
+      if (isGroupe) document.getElementById('pf-nom').placeholder = 'Nom du groupe';
+      else          document.getElementById('pf-nom').placeholder = 'NOM';
+    });
+  });
+
   document.getElementById('pf-prenom').addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
   });
 
-  // Autocomplete NOM depuis les inscriptions
+  // Autocomplete NOM (usagers) ou NOM DU GROUPE selon le type sélectionné
   var _linkedPfInscriptionId = null;
+  var _linkedGroupeId        = null;
   (function() {
     var nomEl     = document.getElementById('pf-nom');
     var prenomEl  = document.getElementById('pf-prenom');
@@ -714,48 +876,84 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     function _close() { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; }
 
     nomEl.addEventListener('input', function() {
-      _linkedPfInscriptionId = null; // frappe manuelle → efface le lien
+      _linkedPfInscriptionId = null;
+      _linkedGroupeId        = null;
       var val = nomEl.value.trim().toUpperCase();
       _close();
-      if (!val || typeof getCachedInscriptions !== 'function') return;
-      var matches = getCachedInscriptions()
-        .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
-        .slice(0, 8);
-      if (!matches.length) return;
-      suggestEl.style.display = 'block';
-      matches.forEach(function(i) {
-        var remaining = (typeof getPassRemaining === 'function' && i.pass)
-          ? getPassRemaining(i.id) : null;
-        var exhausted = remaining === 0;
-        var item = document.createElement('div');
-        item.className = 'pf-suggest-item';
-        item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
-          + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
-        var nameSpan = document.createElement('span');
-        nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
-        item.appendChild(nameSpan);
-        if (i.pass) {
-          var remSpan = document.createElement('span');
-          remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
-          remSpan.textContent = exhausted
-            ? '🎫 Pass 2026 · épuisé'
-            : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
-          item.appendChild(remSpan);
-        }
-        if (!exhausted) {
+      if (!val) return;
+
+      var currentType = (document.querySelector('#pf-type .radio-btn.selected') || {}).dataset
+        ? document.querySelector('#pf-type .radio-btn.selected').dataset.value : 'normal';
+
+      if (currentType === 'groupe') {
+        if (typeof getCachedGroupes !== 'function') return;
+        var gmatches = getCachedGroupes()
+          .filter(function(g) { return g.nom.toUpperCase().includes(val); })
+          .slice(0, 8);
+        if (!gmatches.length) return;
+        suggestEl.style.display = 'block';
+        gmatches.forEach(function(g) {
+          var item = document.createElement('div');
+          item.className = 'pf-suggest-item';
+          item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center';
+          var nameSpan = document.createElement('span');
+          nameSpan.innerHTML = '<strong>' + g.nom + '</strong>';
+          item.appendChild(nameSpan);
+          var metaSpan = document.createElement('span');
+          metaSpan.style.cssText = 'font-size:11px;color:#888';
+          metaSpan.textContent = g.typeStructure + (g.commune ? ' · ' + g.commune : '');
+          item.appendChild(metaSpan);
           item.addEventListener('mousedown', function(e) {
             e.preventDefault();
-            nomEl.value             = i.nom.toUpperCase();
-            prenomEl.value          = i.prenom;
-            _linkedPfInscriptionId  = i.id;
+            nomEl.value     = g.nom;
+            _linkedGroupeId = g.id;
             _close();
-            prenomEl.focus();
           });
           item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
           item.addEventListener('mouseout',  function() { item.style.background = ''; });
-        }
-        suggestEl.appendChild(item);
-      });
+          suggestEl.appendChild(item);
+        });
+      } else {
+        if (typeof getCachedInscriptions !== 'function') return;
+        var matches = getCachedInscriptions()
+          .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+          .slice(0, 8);
+        if (!matches.length) return;
+        suggestEl.style.display = 'block';
+        matches.forEach(function(i) {
+          var remaining = (typeof getPassRemaining === 'function' && i.pass)
+            ? getPassRemaining(i.id) : null;
+          var exhausted = remaining === 0;
+          var item = document.createElement('div');
+          item.className = 'pf-suggest-item';
+          item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
+            + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
+          var nameSpan = document.createElement('span');
+          nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+          item.appendChild(nameSpan);
+          if (i.pass) {
+            var remSpan = document.createElement('span');
+            remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
+            remSpan.textContent = exhausted
+              ? '🎫 Pass 2026 · épuisé'
+              : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
+            item.appendChild(remSpan);
+          }
+          if (!exhausted) {
+            item.addEventListener('mousedown', function(e) {
+              e.preventDefault();
+              nomEl.value             = i.nom.toUpperCase();
+              prenomEl.value          = i.prenom;
+              _linkedPfInscriptionId  = i.id;
+              _close();
+              prenomEl.focus();
+            });
+            item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
+            item.addEventListener('mouseout',  function() { item.style.background = ''; });
+          }
+          suggestEl.appendChild(item);
+        });
+      }
     });
 
     nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
@@ -763,14 +961,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   })();
 
   document.getElementById('pf-add').addEventListener('click', async () => {
-    const prenom = document.getElementById('pf-prenom').value.trim();
-    const nom    = document.getElementById('pf-nom').value.trim().toUpperCase();
-    const accompagnants = parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
+    const nom           = document.getElementById('pf-nom').value.trim().toUpperCase();
     const resaType      = document.querySelector('#pf-type .radio-btn.selected').dataset.value;
-    const errEl = document.getElementById('pf-error');
+    const accompagnants = resaType === 'groupe'
+      ? Math.max(1, parseInt(document.getElementById('pf-empl').value) || 1)
+      : parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
+    const prenom = resaType === 'groupe' ? '' : document.getElementById('pf-prenom').value.trim();
+    const errEl  = document.getElementById('pf-error');
 
-    if (!prenom || !nom) {
-      errEl.textContent = 'Prénom et nom sont obligatoires.';
+    if (!nom || (resaType !== 'groupe' && !prenom)) {
+      errEl.textContent = resaType === 'groupe' ? 'Le nom du groupe est obligatoire.' : 'Prénom et nom sont obligatoires.';
       return;
     }
 
@@ -778,19 +978,30 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       getReservationList(dateISO, slot.id),
       getReservations(dateISO, slot.id),
     ]);
-    const count = all.filter(r => resaType === 'normal'
-      ? (!r.resaType || r.resaType === 'normal') : r.resaType === 'groupe').length;
-    const arrivedCount = resaType === 'normal'
-      ? Object.values(spotsMap).filter(r => r.type === 'reserved').length : 0;
     const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
-    if (count + arrivedCount >= limit) {
-      errEl.textContent = 'Capacité maximale atteinte (' + limit + ').';
-      return;
+    if (resaType === 'groupe') {
+      const existingEmpl = all.filter(function(r) { return r.resaType === 'groupe'; })
+        .reduce(function(sum, r) { return sum + (r.nbUsagers || 1); }, 0);
+      if (existingEmpl + accompagnants > limit) {
+        errEl.textContent = 'Capacité maximale atteinte (' + limit + ' emplacements).';
+        return;
+      }
+    } else {
+      const count        = all.filter(function(r) { return !r.resaType || r.resaType === 'normal'; }).length;
+      const arrivedCount = Object.values(spotsMap).filter(function(r) { return r.type === 'reserved'; }).length;
+      if (count + arrivedCount >= limit) {
+        errEl.textContent = 'Capacité maximale atteinte (' + limit + ').';
+        return;
+      }
     }
 
     errEl.textContent = '';
     try {
-      await callbacks.onAdd({ nom, prenom, accompagnants, resaType, inscriptionId: _linkedPfInscriptionId });
+      const addData = resaType === 'groupe'
+        ? { nom, prenom: '', accompagnants: 0, nbEmpl: accompagnants, resaType, inscriptionId: null, groupeId: _linkedGroupeId }
+        : { nom, prenom, accompagnants, resaType, inscriptionId: _linkedPfInscriptionId, groupeId: null };
+      _linkedGroupeId = null;
+      await callbacks.onAdd(addData);
       _linkedPfInscriptionId = null;
       document.getElementById('pf-prenom').value = '';
       document.getElementById('pf-nom').value    = '';
@@ -836,5 +1047,5 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, openGroupCheckinModal, closeModal };
 }

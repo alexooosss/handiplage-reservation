@@ -51,11 +51,11 @@ async function renderAccueil(container, inscription, showView) {
       + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
-      +   '<div class="usager-tile usager-tile-primary" data-view="reserver"><div class="usager-tile-icon">🗓️</div><div class="usager-tile-label">Réserver</div></div>'
-      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon">📄</div><div class="usager-tile-label">Mes réservations</div></div>'
-      +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon">🪪</div><div class="usager-tile-label">Mon compte</div></div>'
-      +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon">💡</div><div class="usager-tile-label">Infos</div></div>'
-      +   '<div class="usager-tile" data-view="contact"><div class="usager-tile-icon">📞</div><div class="usager-tile-label">Contact</div></div>'
+      +   '<div class="usager-tile usager-tile-primary" data-view="reserver"><div class="usager-tile-icon"><img src="icone%20r%C3%A9server.svg" alt="Réserver"></div><div class="usager-tile-label">Réserver</div></div>'
+      +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon"><img src="icone%20mes%20r%C3%A9servations.svg" alt="Mes réservations"></div><div class="usager-tile-label">Mes réservations</div></div>'
+      +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon"><img src="icone%20mon%20compte.svg" alt="Mon compte"></div><div class="usager-tile-label">Mon compte</div></div>'
+      +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon"><img src="icone%20infos.svg" alt="Infos"></div><div class="usager-tile-label">Infos</div></div>'
+      +   '<div class="usager-tile" data-view="contact"><div class="usager-tile-icon"><img src="icone%20contact.svg" alt="Contact"></div><div class="usager-tile-label">Contact</div></div>'
       + '</div>';
 
     container.querySelectorAll('.usager-tile[data-view]').forEach(function(tile) {

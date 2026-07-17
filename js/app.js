@@ -4,7 +4,7 @@ const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
   let _selectionMode = null; // { id, resa } | null
-  let _currentView = 'carte'; // 'carte' | 'planning' | 'mc' | 'inscription'
+  let _currentView = 'carte'; // 'carte' | 'planning' | 'mc' | 'inscription' | 'groupes'
   let _planningWeekOffset = 0;
   let _mcDate = null;
 
@@ -19,12 +19,22 @@ const App = (() => {
     if (typeof getInscriptions === 'function') {
       getInscriptions().catch(function(err) { console.warn('Preload inscriptions:', err); });
     }
+    // Préchargement groupes (pour autocomplete planning)
+    if (typeof getGroupes === 'function') {
+      getGroupes().catch(function(err) { console.warn('Preload groupes:', err); });
+    }
 
     // Realtime : s'abonner aux inscriptions
     if (typeof subscribeInscriptions === 'function') {
       subscribeInscriptions(function() {
         getInscriptions().catch(function() {});
         if (_currentView === 'inscription') _renderInscription();
+      });
+    }
+    // Realtime : s'abonner aux groupes
+    if (typeof subscribeGroupes === 'function') {
+      subscribeGroupes(function() {
+        if (_currentView === 'groupes') _renderGroupesView();
       });
     }
 
@@ -59,6 +69,14 @@ const App = (() => {
       });
     }
 
+    // Groupes tab button
+    const btnGroupes = document.getElementById('btn-groupes-tab');
+    if (btnGroupes) {
+      btnGroupes.addEventListener('click', () => {
+        showView(_currentView === 'groupes' ? 'carte' : 'groupes');
+      });
+    }
+
     // Messages tab button
     const btnMessages = document.getElementById('btn-messages-tab');
     if (btnMessages) {
@@ -72,6 +90,14 @@ const App = (() => {
     if (btnStats) {
       btnStats.addEventListener('click', () => {
         showView(_currentView === 'stats' ? 'carte' : 'stats');
+      });
+    }
+
+    // Profil tab button
+    const btnProfil = document.getElementById('btn-profil-tab');
+    if (btnProfil) {
+      btnProfil.addEventListener('click', () => {
+        showView(_currentView === 'profil' ? 'carte' : 'profil');
       });
     }
 
@@ -98,13 +124,17 @@ const App = (() => {
     const planningView   = document.getElementById('planning-view');
     const mcView         = document.getElementById('mc-view');
     const inscView       = document.getElementById('insc-view');
+    const groupesView    = document.getElementById('groupes-view');
     const messagesView   = document.getElementById('messages-view');
     const statsView      = document.getElementById('stats-view');
     const btnPlanning    = document.getElementById('btn-planning-tab');
     const btnMc          = document.getElementById('btn-mc-tab');
     const btnInsc        = document.getElementById('btn-insc-tab');
+    const btnGroupes     = document.getElementById('btn-groupes-tab');
     const btnMessages    = document.getElementById('btn-messages-tab');
     const btnStats       = document.getElementById('btn-stats-tab');
+    const btnProfil      = document.getElementById('btn-profil-tab');
+    const profilView     = document.getElementById('profil-view');
 
     // Masquer tout
     if (beachPanel)   beachPanel.style.display   = 'none';
@@ -112,13 +142,17 @@ const App = (() => {
     if (planningView) planningView.style.display  = 'none';
     if (mcView)       mcView.style.display        = 'none';
     if (inscView)     inscView.style.display      = 'none';
+    if (groupesView)  groupesView.style.display   = 'none';
     if (messagesView) messagesView.style.display  = 'none';
     if (statsView)    statsView.style.display     = 'none';
+    if (profilView)   profilView.style.display    = 'none';
     if (btnPlanning)  btnPlanning.classList.remove('active');
     if (btnMc)        btnMc.classList.remove('active');
     if (btnInsc)      btnInsc.classList.remove('active');
+    if (btnGroupes)   btnGroupes.classList.remove('active');
     if (btnMessages)  btnMessages.classList.remove('active');
     if (btnStats)     btnStats.classList.remove('active');
+    if (btnProfil)    btnProfil.classList.remove('active');
 
     if (view === 'planning') {
       if (planningView) planningView.style.display = 'flex';
@@ -131,6 +165,10 @@ const App = (() => {
       if (typeof subscribeMc === 'function') {
         subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
       }
+    } else if (view === 'groupes') {
+      if (groupesView) groupesView.style.display = 'flex';
+      if (btnGroupes)  btnGroupes.classList.add('active');
+      _renderGroupesView(inscriptionId); // inscriptionId slot réutilisé pour groupeId
     } else if (view === 'inscription') {
       if (inscView) inscView.style.display = 'flex';
       if (btnInsc)  btnInsc.classList.add('active');
@@ -143,6 +181,10 @@ const App = (() => {
       if (statsView) statsView.style.display = 'block';
       if (btnStats)  btnStats.classList.add('active');
       StatsView.render(statsView).catch(console.error);
+    } else if (view === 'profil') {
+      if (profilView) profilView.style.display = 'block';
+      if (btnProfil)  btnProfil.classList.add('active');
+      renderStaffProfil(profilView).catch(console.error);
     } else {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
@@ -153,6 +195,12 @@ const App = (() => {
     const d = new Date(iso + 'T12:00:00');
     d.setDate(d.getDate() + delta);
     return d.toISOString().slice(0, 10);
+  }
+
+  function _renderGroupesView(selectedGroupeId) {
+    const container = document.getElementById('groupes-view');
+    if (!container) return;
+    if (typeof renderGroupes === 'function') renderGroupes(container, selectedGroupeId);
   }
 
   async function _renderInscription(selectedId) {
@@ -255,6 +303,7 @@ const App = (() => {
       onAddReservation: () => _openAddReservation(),
       onWalkin:         () => _openWalkin(freeSpots),
       onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
+      onGroupCheckin:   (index, resa) => _openGroupCheckin(resa, freeSpots),
       onItemClick:      spotId => { _onSpotClick(spotId, reservations, freeSpots); },
       onDepartedClick:  async spotId => {
         const history = await _buildProfileHistory(reservations[spotId]);
@@ -286,11 +335,26 @@ const App = (() => {
     const history = await _buildProfileHistory(resa);
     openSpotDetailModal(spotId, resa, {
       onCheckin: async id => {
-        await updateStatus(_date, _selectedSlotId, id, 'present', { checkinTime: Date.now() });
+        const now = Date.now();
+        const durationMs = Math.max(0, Math.min(DURATION_MS, _slotEndTimestamp(_selectedSlotId) - now));
+        await updateStatus(_date, _selectedSlotId, id, 'present', { checkinTime: now, durationMs });
         await refresh();
       },
       onDepart: async id => {
-        await updateStatus(_date, _selectedSlotId, id, 'departed', { departTime: Date.now() });
+        const departResa = reservations[id];
+        const now = Date.now();
+        if (departResa && departResa.resaType === 'groupe') {
+          const groupNom = (departResa.nom || '').toUpperCase();
+          const groupIds = Object.entries(reservations)
+            .filter(([, r]) => r.resaType === 'groupe' && (r.nom || '').toUpperCase() === groupNom
+              && r.status !== 'departed')
+            .map(([sid]) => sid);
+          await Promise.all(groupIds.map(sid =>
+            updateStatus(_date, _selectedSlotId, sid, 'departed', { departTime: now })
+          ));
+        } else {
+          await updateStatus(_date, _selectedSlotId, id, 'departed', { departTime: now });
+        }
         await refresh();
       },
       onAbsent: async id => {
@@ -325,11 +389,22 @@ const App = (() => {
   // ── Arrivée sans réservation (walk-in) ──
   function _openWalkin(freeSpots, preselectedSpotId) {
     openCheckinModal(freeSpots, preselectedSpotId, async (spotId, data) => {
-      const checkinData = { ...data, durationMs: DURATION_MS };
+      const durationMs = Math.max(0, Math.min(DURATION_MS, _slotEndTimestamp(_selectedSlotId) - Date.now()));
+      const checkinData = { ...data, durationMs };
       await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
       await _registerOverflow(spotId, checkinData);
       await refresh();
     });
+  }
+
+  // Timestamp de fin officielle d'un créneau pour aujourd'hui
+  function _slotEndTimestamp(slotId) {
+    const slot = getSlotById(slotId);
+    if (!slot) return Infinity;
+    const [h, m] = slot.end.split(':').map(Number);
+    const t = new Date();
+    t.setHours(h, m, 0, 0);
+    return t.getTime();
   }
 
   // Inscrit la personne dans tous les créneaux suivants dont le début est
@@ -347,6 +422,34 @@ const App = (() => {
     }));
   }
 
+  // ── Accueil groupe : saisie des effectifs + attribution multi-spots ──
+  function _openGroupCheckin(resa, freeSpots) {
+    const nbSpotsHint = resa.nbUsagers || 1;
+    openGroupCheckinModal(resa, freeSpots, async ({ nbUsagers, nbAcc, spots }) => {
+      const now        = Date.now();
+      const durationMs = Math.max(0, Math.min(DURATION_MS, _slotEndTimestamp(_selectedSlotId) - now));
+      for (const spotId of spots) {
+        const checkinData = {
+          nom:           resa.nom,
+          prenom:        resa.prenom,
+          accompagnants: nbAcc,
+          nbUsagers,
+          type:          'reserved',
+          checkinTime:   now,
+          durationMs,
+          status:        'present',
+          resaType:      'groupe',
+          inscriptionId: resa.inscriptionId || null,
+          groupeId:      resa.groupeId      || null,
+        };
+        await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
+        await _registerOverflow(spotId, checkinData);
+      }
+      await removeReservation(resa.id);
+      await refresh();
+    }, nbSpotsHint);
+  }
+
   // ── Assigner un emplacement à une personne de la liste d'attente ──
   function _openAssign(index, resa, freeSpots) {
     _selectionMode = { id: resa.id, resa };
@@ -361,7 +464,9 @@ const App = (() => {
     _selectionMode = null;
 
     const isDouble    = await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
-    const durationMs  = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
+    const maxSlotId   = isDouble ? _selectedSlotId + 1 : _selectedSlotId;
+    const baseDuration = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
+    const durationMs  = Math.max(0, Math.min(baseDuration, _slotEndTimestamp(maxSlotId) - Date.now()));
     const checkinTime = Date.now();
     const checkinData = {
       nom: waitingResa.nom,
@@ -454,5 +559,6 @@ const App = (() => {
   return {
     init, selectSlot, refresh, showView,
     navigateToInscription: function(id) { closeModal(); showView('inscription', id); },
+    navigateToGroupe: function(id) { closeModal(); showView('groupes', id); },
   };
 })();

@@ -142,7 +142,8 @@ body {
 .usager-tile:hover   { background: var(--blue-light); border-color: var(--blue); }
 .usager-tile-primary { background: var(--blue); color: white; grid-column: 1 / -1; }
 .usager-tile-primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
-.usager-tile-icon  { font-size: 1.75rem; margin-bottom: 8px; }
+.usager-tile-icon  { margin-bottom: 8px; }
+.usager-tile-icon img { width: 40px; height: 40px; display: block; margin: 0 auto; }
 .usager-tile-label { font-size: .9375rem; font-weight: 700; }
 
 /* ── Réserver : barre de jours ─────────────────────────────────── */
@@ -173,6 +174,19 @@ body {
 .usager-day-letter          { font-size: .75rem; font-weight: 700; text-transform: uppercase; }
 .usager-day-num             { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
 .usager-day-dot             { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin: 4px auto 0; }
+.usager-month-sep {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-muted);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 4px 2px;
+  opacity: .7;
+}
 
 /* ── Créneaux ──────────────────────────────────────────────────── */
 .usager-slot-card {
@@ -198,10 +212,21 @@ body {
 .usager-slot-c5:not(.full):not(.booked) { background: #f9a82518; }
 .usager-slot-dot               { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .usager-slot-body              { flex: 1; }
+.usager-slot-body-booked       { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .usager-slot-label             { font-weight: 700; font-size: 1rem; }
 .usager-slot-badge             { font-size: .8125rem; font-weight: 600; color: var(--green); }
 .usager-slot-badge.full-badge  { color: var(--text-muted); }
-.usager-slot-badge.booked-badge{ color: var(--green); }
+.usager-slot-badge.booked-badge{
+  color: var(--green);
+  font-size: 1rem;
+  font-weight: 700;
+  background: var(--green-light);
+  border: 1.5px solid #a5d6a7;
+  border-radius: 20px;
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* ── Confirmation ──────────────────────────────────────────────── */
 .usager-recap-icon   { font-size: 2.5rem; text-align: center; margin: 16px 0 20px; }
@@ -294,7 +319,17 @@ body {
 /* ── Loading / erreur ───────────────────────────────────────────── */
 .usager-loading { text-align: center; color: var(--text-muted); padding: 40px; }
 .usager-error   { background: var(--red-light); border-radius: 10px; padding: 14px; color: var(--red); font-size: .9rem; margin-bottom: 12px; }
-.usager-success { background: var(--green-light); border: 1px solid #a5d6a7; border-radius: 10px; padding: 14px; color: var(--green); text-align: center; }
+.usager-success { background: var(--green-light); border: 1px solid #a5d6a7; border-radius: 14px; padding: 24px 16px 20px; color: var(--green); text-align: center; margin-bottom: 16px; }
+.usager-success-icon  { font-size: 2.4rem; margin-bottom: 10px; }
+.usager-success-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+.usager-success-detail { font-size: .9375rem; color: #2e7d32cc; }
+.usager-success-actions { display: flex; flex-direction: column; gap: 10px; }
+.usager-cancel-confirm {
+  background: var(--red-light); border: 1px solid #ef9a9a;
+  border-radius: 12px; padding: 16px; margin-top: 12px;
+}
+.usager-cancel-confirm-text { font-size: .9375rem; font-weight: 600; color: var(--red); margin-bottom: 12px; text-align: center; }
+.usager-cancel-confirm-row  { display: flex; gap: 10px; }
 
 /* ── Bannière règle absences (Mes réservations) ─────────────────── */
 .usager-absence-info {

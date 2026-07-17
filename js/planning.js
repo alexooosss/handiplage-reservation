@@ -100,9 +100,9 @@ async function renderPlanning(container, weekOffset, onCellClick) {
         return nowMinutes >= slotEndParts[0] * 60 + slotEndParts[1];
       })());
 
-      const slotCounts = (counts[iso] && counts[iso][slot.id]) || { waiting_normal: 0, waiting_groupe: 0, arrived_reserved: 0, walkins: 0 };
+      const slotCounts = (counts[iso] && counts[iso][slot.id]) || { waiting_normal: 0, waiting_groupe: 0, arrived_reserved: 0, arrived_groupe: 0, walkins: 0 };
       const cntN       = slotCounts.waiting_normal + slotCounts.arrived_reserved;
-      const cntG       = slotCounts.waiting_groupe;
+      const cntG       = slotCounts.waiting_groupe + (slotCounts.arrived_groupe || 0);
       const walkins    = slotCounts.walkins;
 
       let classes = 'planning-cell';

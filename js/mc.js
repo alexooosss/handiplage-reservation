@@ -5,8 +5,8 @@ var _mcCurrentData = null;
 const MC_COLS = [
   { key: 'resa',         label: 'Usagers\nrésas',      auto: true  },
   { key: 'walkin',       label: 'Usagers\nsans résa',   auto: true  },
-  { key: 'gpe_pers',    label: 'Groupes\npersonnes',   auto: false },
-  { key: 'gpe_acc',     label: 'Groupes\nacc.',        auto: false },
+  { key: 'gpe_pers',    label: 'Groupes\npersonnes',   auto: true  },
+  { key: 'gpe_acc',     label: 'Groupes\nacc.',        auto: true  },
   { key: 'tiralos',     label: 'Tiralos',              auto: false },
   { key: 'hippocampes', label: 'Hippo-\ncampes',       auto: false },
   { key: 'audioplage',  label: 'Audio-\nplage',        auto: false },
@@ -36,7 +36,20 @@ async function renderMc(container, date) {
     if (!_mcCurrentData.slots[s.id]) _mcCurrentData.slots[s.id] = _mcDefault().slots[s.id];
     try {
       const vals = Object.values(await getReservations(date, s.id));
-      _mcCurrentData.slots[s.id].resa   = vals.filter(r => r.type === 'reserved').length;
+      // Comptages groupes (dédupliqués par nom+prénom)
+      const seenGroups = {};
+      let gpe_pers = 0, gpe_acc = 0;
+      vals.filter(r => r.resaType === 'groupe').forEach(r => {
+        const key = ((r.nom || '') + '_' + (r.prenom || '')).toUpperCase();
+        if (!seenGroups[key]) {
+          seenGroups[key] = true;
+          gpe_pers += r.nbUsagers || 0;
+          gpe_acc  += r.accompagnants || 0;
+        }
+      });
+      _mcCurrentData.slots[s.id].gpe_pers = gpe_pers;
+      _mcCurrentData.slots[s.id].gpe_acc  = gpe_acc;
+      _mcCurrentData.slots[s.id].resa   = vals.filter(r => r.type === 'reserved' && r.resaType !== 'groupe').length;
       _mcCurrentData.slots[s.id].walkin = vals.filter(r => r.type === 'walkin').length;
     } catch (e) {
       // Laisse resa/walkin à 0 si le créneau échoue — n'interrompt pas le rendu
@@ -56,7 +69,7 @@ async function renderMc(container, date) {
     + '<span class="mc-nav-label">' + _fmtDateFr(date) + '</span>'
     + '<button id="mc-nav-next" class="mc-nav-btn"' + (isToday ? ' disabled' : '') + '>&#8594;</button>'
     + (!isToday ? '<button id="mc-nav-today" class="mc-nav-return">↩ Aujourd\'hui</button>' : '')
-    + '<button id="mc-nav-list" class="mc-nav-list-btn">📅 Historique'
+    + '<button id="mc-nav-list" class="mc-nav-list-btn"><img src="icone%20r%C3%A9server.svg" alt="" style="height:16px;width:16px;display:block;flex-shrink:0"> Historique'
     + (allDates.length > 0 ? ' (' + allDates.length + ')' : '') + '</button>'
     + '</div>';
 
