@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26.97 22.81">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: .75px;
+      }
+
+      .cls-2 {
+        stroke-linecap: round;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M26.6,4.17v16.46c0,1-.81,1.81-1.8,1.81H2.2c-1,0-1.81-.81-1.81-1.81V4.17c0-1,.81-1.81,1.81-1.81h1.14v1.5c0,.53.43.95.96.95s.96-.42.96-.95v-1.5h2.23v1.5c0,.53.43.95.96.95s.96-.42.96-.95v-1.5h8.14v1.5c0,.53.43.95.95.95s.96-.42.96-.95v-1.5h2.24v1.5c0,.53.42.95.95.95s.96-.42.96-.95v-1.5h1.19c.99,0,1.8.81,1.8,1.81Z"/>
+  <rect class="cls-1" x="7.41" y="8.68" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="12.18" y="8.68" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="16.95" y="8.68" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="21.72" y="8.68" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="12.18" y="13.08" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="16.95" y="13.08" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="21.72" y="13.08" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="7.41" y="17.49" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="12.18" y="17.49" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="2.65" y="13.08" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <rect class="cls-1" x="2.65" y="17.49" width="2.58" height="2.63" rx=".29" ry=".29"/>
+  <line class="cls-2" x1="7.49" y1="13.23" x2="9.9" y2="15.64"/>
+  <line class="cls-2" x1="7.53" y1="15.62" x2="9.92" y2="13.23"/>
+  <line class="cls-2" x1=".38" y1="6.39" x2="26.55" y2="6.39"/>
+  <path class="cls-2" d="M5.26,1.34v2.52c0,.53-.43.95-.96.95s-.96-.42-.96-.95V1.34c0-.53.43-.96.96-.96s.96.43.96.96Z"/>
+  <path class="cls-2" d="M9.41,1.34v2.52c0,.53-.43.95-.96.95s-.96-.42-.96-.95V1.34c0-.53.43-.96.96-.96s.96.43.96.96Z"/>
+  <path class="cls-2" d="M19.46,1.34v2.52c0,.53-.43.95-.96.95s-.95-.42-.95-.95V1.34c0-.53.43-.96.95-.96s.96.43.96.96Z"/>
+  <path class="cls-2" d="M23.61,1.34v2.52c0,.53-.43.95-.96.95s-.95-.42-.95-.95V1.34c0-.53.42-.96.95-.96s.96.43.96.96Z"/>
+</svg>
