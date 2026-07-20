@@ -67,9 +67,10 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   // Nav bar
   const navHtml = `
     <div class="planning-nav">
-      <button id="btn-plan-prev">&#8592;</button>
+      <button id="btn-plan-prev" class="plan-nav-arrow" title="Semaine précédente">&#8592;</button>
       <span class="planning-nav-label">${_formatWeekLabel(days)}</span>
-      <button id="btn-plan-next">&#8594;</button>
+      <button id="btn-plan-today" class="plan-nav-today"${weekOffset === 0 ? ' disabled' : ''}>Aujourd'hui</button>
+      <button id="btn-plan-next" class="plan-nav-arrow" title="Semaine suivante">&#8594;</button>
     </div>
   `;
 
@@ -154,6 +155,9 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   });
   document.getElementById('btn-plan-next').addEventListener('click', () => {
     if (container._onNext) container._onNext();
+  });
+  document.getElementById('btn-plan-today').addEventListener('click', () => {
+    if (container._onToday) container._onToday();
   });
 
   // Wire cell clicks
@@ -263,11 +267,11 @@ async function exportSlotPDF(dateISO, slot) {
     + '<div class="sbox"><span class="n">' + walkins.length + '</span><span class="l">Sans réservation</span></div>'
     + '<div class="sbox"><span class="n">' + (normal.length + groupes.length + walkins.length) + '</span><span class="l">Total</span></div>'
     + '</div>'
-    + '<div class="sec"><div class="sec-title">👤 Réservations (' + normal.length + ' / ' + CAPACITY_NORMAL + ')</div>'
+    + '<div class="sec"><div class="sec-title">Réservations (' + normal.length + ' / ' + CAPACITY_NORMAL + ')</div>'
     + '<table><thead><tr><th>#</th><th>Nom Prénom</th><th>Accompagnants</th><th>Emplacement</th></tr></thead>'
     + '<tbody>' + sectionNormal + '</tbody></table></div>'
     + (groupes.length > 0
-        ? '<div class="sec"><div class="sec-title">👥 Groupes (' + groupes.length + ' / ' + CAPACITY_GROUPE + ')</div>'
+        ? '<div class="sec"><div class="sec-title">Groupes (' + groupes.length + ' / ' + CAPACITY_GROUPE + ')</div>'
           + '<table><thead><tr><th>#</th><th>Référent</th><th>Accompagnants</th></tr></thead>'
           + '<tbody>' + sectionGroupes + '</tbody></table></div>'
         : '')

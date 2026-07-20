@@ -29,6 +29,7 @@ function _rowToUsagerReservation(row) {
     accompagnants: row.accompagnants,
     spotId:        row.spot_id || null,
     createdAt:     row.created_at,
+    heureFin:      (row.creneaux && row.creneaux.heure_fin) || null,
   };
 }
 
@@ -138,7 +139,7 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
 async function getUserReservations(inscriptionId) {
   var result = await supabaseClient
     .from('reservations')
-    .select('id, date, creneau_id, statut, accompagnants, spot_id, created_at')
+    .select('id, date, creneau_id, statut, accompagnants, spot_id, created_at, creneaux(heure_fin)')
     .eq('inscription_id', inscriptionId)
     .order('date', { ascending: false });
   if (result.error) throw result.error;
@@ -195,10 +196,10 @@ async function cancelUserReservation(reservationId) {
   if (result.error) throw result.error;
 }
 
-async function sendUsagerMessage(inscriptionId, text) {
+async function sendUsagerMessage(inscriptionId, sujet, text) {
   var result = await supabaseClient.from('messages').insert({
     inscription_id: inscriptionId,
-    motif_refus:    '[USAGER] Demande de réactivation des réservations',
+    motif_refus:    '[USAGER] ' + sujet,
     contenu:        text,
     lu:             false,
   });

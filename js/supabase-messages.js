@@ -2,10 +2,13 @@
 'use strict';
 
 function _rowToMessage(row) {
+  var motifRefus = row.motif_refus || '';
+  var isUsager   = motifRefus.startsWith('[USAGER]');
   return {
     id:             row.id,
     inscriptionId:  row.inscription_id,
-    motifRefus:     row.motif_refus,
+    motifRefus:     motifRefus,
+    sujet:          isUsager ? (motifRefus.replace(/^\[USAGER\]\s*/, '') || 'Message') : null,
     token:          row.token,
     tokenExpiresAt: row.token_expires_at,
     contenu:        row.contenu || null,

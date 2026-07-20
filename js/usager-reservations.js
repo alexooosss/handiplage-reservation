@@ -16,9 +16,18 @@ async function renderReservations(container, inscription, showView) {
     var resas    = await getUserReservations(inscription.id);
     var todayISO = new Date().toISOString().slice(0, 10);
     var monthKey = todayISO.slice(0, 7);
-    var today    = todayISO;
-    var upcoming = resas.filter(function(r) { return r.date >= today && r.statut !== 'annule'; }).sort(function(a,b){ return a.date<b.date?-1:1; });
-    var past     = resas.filter(function(r) { return r.date < today || r.statut === 'annule'; }).sort(function(a,b){ return a.date>b.date?-1:1; });
+    var nowHHMM  = new Date().toTimeString().slice(0, 5); // "HH:MM"
+
+    function _isUpcoming(r) {
+      if (r.statut === 'annule') return false;
+      if (r.date > todayISO) return true;
+      if (r.date < todayISO) return false;
+      // Même jour : vérifier si l'heure de fin du créneau est déjà passée
+      return !r.heureFin || r.heureFin > nowHHMM;
+    }
+
+    var upcoming = resas.filter(_isUpcoming).sort(function(a,b){ return a.date<b.date?-1:1; });
+    var past     = resas.filter(function(r) { return !_isUpcoming(r); }).sort(function(a,b){ return a.date>b.date?-1:1; });
     var absentsThisMonth = resas.filter(function(r) { return r.statut === 'absent' && r.date && r.date.startsWith(monthKey); }).length;
 
     var passHtml = '';
@@ -90,7 +99,7 @@ async function renderReservations(container, inscription, showView) {
         btn.textContent = 'Envoi…';
         status.textContent = '';
         try {
-          await sendUsagerMessage(inscription.id, text);
+          await sendUsagerMessage(inscription.id, 'Réactivation des réservations', text);
           container.querySelector('#usager-contact-form').style.display = 'none';
           btnOpenContact.textContent = '✓ Message envoyé';
           btnOpenContact.disabled = true;

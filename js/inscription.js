@@ -19,7 +19,7 @@ async function renderInscription(container, selectedId) {
     + '</div>'
     + '<div class="insc-main" id="insc-main">'
     +   '<div class="insc-empty">'
-    +     '<div class="insc-empty-icon">📋</div>'
+    +     ''
     +     '<p>Sélectionnez une inscription ou créez-en une nouvelle.</p>'
     +     '<p class="insc-count">' + inscriptions.length + ' inscription' + (inscriptions.length !== 1 ? 's' : '') + ' enregistrée' + (inscriptions.length !== 1 ? 's' : '') + '</p>'
     +   '</div>'
@@ -631,7 +631,7 @@ function _renderAbsenceBlock(insc, absentsCount) {
     ? '<div class="absence-block-hd">⚠️ Absences — <span style="color:#c00">' + absentsCount + '/3 ce mois · Réservations suspendues</span></div>'
       + '<p class="pass-meta">L\'usager ne peut plus réserver ce mois (' + monthLbl + '). Il peut venir sans réservation.</p>'
       + '<div class="pass-actions"><button type="button" class="btn-primary" id="absence-reactivate">✓ Réactiver les réservations</button></div>'
-    : '<div class="absence-block-hd">📋 Absences — <span style="color:' + (absentsCount >= 2 ? '#e65100' : '#2e7d32') + '">' + absentsCount + '/3 ce mois</span></div>'
+    : '<div class="absence-block-hd">Absences — <span style="color:' + (absentsCount >= 2 ? '#e65100' : '#2e7d32') + '">' + absentsCount + '/3 ce mois</span></div>'
       + '<p class="pass-meta">' + (absentsCount === 0 ? 'Aucune absence ce mois.' : absentsCount === 1 ? '1 absence ce mois — 2 restantes avant suspension.' : '2 absences ce mois — 1 restante avant suspension.') + '</p>'
       + (insc.absenceOverrideMonth === monthKey ? '<p class="pass-meta" style="color:#1565c0">Réactivation staff en vigueur ce mois.</p>' : '');
 

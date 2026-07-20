@@ -8,7 +8,7 @@ function renderInfos(container, inscription, showView) {
   }).join('');
 
   container.innerHTML = ''
-    + '<div class="usager-infos-back"><button class="usager-btn-back" id="infos-back">← Retour</button></div>'
+    + '<button class="usager-back" id="infos-back">← Accueil</button>'
     + '<div class="usager-card">'
     +   '<div class="usager-infos-slogan">2 plages horaires max / jour &nbsp;·&nbsp; 40 plages horaires max / mois</div>'
     + '</div>'

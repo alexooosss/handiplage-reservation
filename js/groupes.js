@@ -23,8 +23,7 @@ function renderGroupes(container, selectedId) {
       </div>
       <div id="gp-detail" class="groupes-detail">
         <div class="groupes-empty-state">
-          <div class="empty-icon">👥</div>
-          <p>Sélectionnez un groupe ou créez-en un nouveau</p>
+                    <p>Sélectionnez un groupe ou créez-en un nouveau</p>
         </div>
       </div>
     </div>

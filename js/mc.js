@@ -69,6 +69,7 @@ async function renderMc(container, date) {
     + '<span class="mc-nav-label">' + _fmtDateFr(date) + '</span>'
     + '<button id="mc-nav-next" class="mc-nav-btn"' + (isToday ? ' disabled' : '') + '>&#8594;</button>'
     + (!isToday ? '<button id="mc-nav-today" class="mc-nav-return">↩ Aujourd\'hui</button>' : '')
+    + '<button id="mc-nav-entretien" class="mc-nav-entretien-btn">Fiches d\'entretien</button>'
     + '<button id="mc-nav-list" class="mc-nav-list-btn"><img src="icone%20r%C3%A9server.svg" alt="" style="height:16px;width:16px;display:block;flex-shrink:0"> Historique'
     + (allDates.length > 0 ? ' (' + allDates.length + ')' : '') + '</button>'
     + '</div>';
@@ -77,14 +78,14 @@ async function renderMc(container, date) {
   html += '<div class="mc-staff">'
     + '<div class="mc-staff-main">'
     + '<div class="mc-staff-row">'
-    +   '<span class="mc-staff-label">🔧 Entretien</span>'
+    +   '<span class="mc-staff-label">Entretien</span>'
     +   '<div class="mc-staff-inputs">'
     +     '<label class="mc-field-label">Matin<input type="text" class="mc-staff-inp" id="mc-ent-m" value="' + _esc(st.entretien_matin) + '" placeholder="Prénom Nom"></label>'
     +     '<label class="mc-field-label">Après-midi<input type="text" class="mc-staff-inp" id="mc-ent-a" value="' + _esc(st.entretien_aprem) + '" placeholder="Prénom Nom"></label>'
     +   '</div>'
     + '</div>'
     + '<div class="mc-staff-row">'
-    +   '<span class="mc-staff-label">👋 Accueil</span>'
+    +   '<span class="mc-staff-label">Accueil</span>'
     +   '<div class="mc-staff-inputs">'
     +     '<label class="mc-field-label">Matin<input type="text" class="mc-staff-inp" id="mc-acc-m" value="' + _esc(st.accueil_matin) + '" placeholder="Prénom Nom"></label>'
     +     '<label class="mc-field-label">Après-midi<input type="text" class="mc-staff-inp" id="mc-acc-a" value="' + _esc(st.accueil_aprem) + '" placeholder="Prénom Nom"></label>'
@@ -93,11 +94,11 @@ async function renderMc(container, date) {
     + '</div>'
     + '<div class="mc-staff-checks">'
     + '<div class="mc-check-row">'
-    +   '<span class="mc-check-label">🚔 Passage de la police</span>'
+    +   '<span class="mc-check-label">Passage de la police</span>'
     +   '<button class="' + policeCls + '" id="mc-toggle-police">' + (st.police ? 'OUI' : 'NON') + '</button>'
     + '</div>'
     + '<div class="mc-check-row">'
-    +   '<span class="mc-check-label">🧹 Plage nettoyée par la ville</span>'
+    +   '<span class="mc-check-label">Plage nettoyée par la ville</span>'
     +   '<button class="' + plageCls + '" id="mc-toggle-plage">' + (st.plage_nettoyee ? 'OUI' : 'NON') + '</button>'
     + '</div>'
     + '</div>'
@@ -132,7 +133,7 @@ async function renderMc(container, date) {
 
   // ── Notes ──
   html += '<div class="mc-notes">'
-    + '<div class="mc-notes-hd">📝 Notes</div>'
+    + '<div class="mc-notes-hd">Notes</div>'
     + '<div class="mc-notes-add">'
     +   '<input type="text" class="mc-note-reporter-inp" id="mc-note-reporter" placeholder="Qui rapporte ?">'
     +   '<textarea id="mc-note-inp" placeholder="Saisir une note ou un événement notable… (Entrée pour valider, Maj+Entrée pour saut de ligne)"></textarea>'
@@ -239,6 +240,13 @@ async function renderMc(container, date) {
   if (nextBtn) nextBtn.addEventListener('click', () => { if (container._onMcNext) container._onMcNext(); });
   const todayBtn = document.getElementById('mc-nav-today');
   if (todayBtn) todayBtn.addEventListener('click', () => { if (container._onMcToday) container._onMcToday(); });
+
+  const entretienBtn = document.getElementById('mc-nav-entretien');
+  if (entretienBtn) {
+    entretienBtn.addEventListener('click', () => {
+      renderEntretien(container, () => renderMc(container, date));
+    });
+  }
 
   const listBtn = document.getElementById('mc-nav-list');
   if (listBtn) {

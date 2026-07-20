@@ -58,18 +58,23 @@ body {
 
 /* ── Navigation retour ─────────────────────────────────────────── */
 .usager-back {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--blue);
-  font-weight: 600;
-  font-size: .9375rem;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
   cursor: pointer;
-  padding: 4px 0 16px;
-  background: none;
+  padding: 12px 24px;
   border: none;
+  border-radius: 50px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 8px rgba(0,85,164,0.18);
+  transition: background 0.15s, transform 0.1s;
 }
-.usager-back:hover { text-decoration: underline; }
+.usager-back:hover  { background: #0047a0; }
+.usager-back:active { transform: scale(0.97); }
 
 /* ── Carte ─────────────────────────────────────────────────────── */
 .usager-card {
@@ -354,7 +359,18 @@ body {
 }
 .usager-absence-contact-btn:hover { background: var(--blue-light); }
 .usager-absence-contact-btn:disabled { opacity: .6; cursor: default; }
-.usager-contact-form { margin-top: 12px; }
+.usager-contact-label  { display: block; font-size: .875rem; font-weight: 600; margin-bottom: 6px; }
+.usager-contact-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .9375rem;
+  font-family: inherit;
+  background: white;
+  margin-bottom: 10px;
+}
+.usager-contact-form { margin-top: 0; }
 .usager-contact-textarea {
   width: 100%;
   padding: 10px;

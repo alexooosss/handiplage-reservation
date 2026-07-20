@@ -202,7 +202,114 @@ function openAssignSpotModal(resa, freeSpots, onConfirm) {
   _dialog().showModal();
 }
 
-// ── Modale 3 : Check-in direct (arrivée sans réservation — walk-in) ──
+// ── Modale 3a : Saisie walk-in (étape 1 — sans emplacement) ──
+// onConfirm({ nom, prenom, accompagnants })
+function openWalkinEntryModal(onConfirm) {
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>↓ Sans réservation — Arrivée</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" id="f-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nombre d'accompagnants</label>
+        <div class="radio-group" id="f-accompagnants">
+          <div class="radio-btn selected" data-value="0">0</div>
+          <div class="radio-btn"          data-value="1">1</div>
+          <div class="radio-btn"          data-value="2">2</div>
+        </div>
+      </div>
+      <p class="modal-hint">L'emplacement sera assigné depuis la carte après l'accueil.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modal-cancel">Annuler</button>
+      <button class="btn-primary"   id="modal-confirm">✓ Enregistrer l'arrivée</button>
+    </div>
+  `;
+
+  _bindRadioGroup('f-accompagnants');
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('f-prenom').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
+  });
+  document.getElementById('modal-confirm').addEventListener('click', () => {
+    const prenom = document.getElementById('f-prenom').value.trim();
+    const nom    = document.getElementById('f-nom').value.trim().toUpperCase();
+    const accompagnants = parseInt(
+      document.querySelector('#f-accompagnants .radio-btn.selected').dataset.value
+    );
+    if (!nom) { alert('Le nom est obligatoire.'); return; }
+    closeModal();
+    onConfirm({ nom, prenom, accompagnants });
+  });
+
+  _dialog().showModal();
+  document.getElementById('f-prenom').focus();
+}
+
+// ── Modale 3b : Choix de placement (étape 2 — depuis un emplacement libre) ──
+// arrivedList : [{id, nom, prenom, accompagnants, checkinTime, type, resaType, ...}]
+// spotId : l'emplacement libre cliqué
+// onConfirm(resa) : la personne choisie à placer
+// onWalkin() : ajouter un walk-in à la place
+function openPlacementPickerModal(arrivedList, spotId, onConfirm, onWalkin) {
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const listHtml = arrivedList.length
+    ? arrivedList.map((r, i) => {
+        const acc = r.resaType === 'groupe'
+          ? `${r.nbUsagers||1} empl.`
+          : r.accompagnants === 0 ? 'seul·e' : r.accompagnants + ' acc.';
+        const arrivedAt = r.checkinTime
+          ? ' · ' + new Date(r.checkinTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          : '';
+        const typeTag = r.type === 'walkin' ? '<span class="tag-walkin">Sans résa</span>' : '';
+        return `<div class="placement-picker-item" data-index="${i}">
+          <div class="placement-picker-name">${_esc(r.nom)} ${_esc(r.prenom)} ${typeTag}</div>
+          <div class="placement-picker-meta">${_esc(acc)}${arrivedAt}</div>
+        </div>`;
+      }).join('')
+    : `<div class="placement-picker-empty">Aucune personne sur plage en attente d'emplacement</div>`;
+
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>📍 Placer en ${_esc(spotId)}</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div class="placement-picker-list">${listHtml}</div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn-secondary" id="modal-walkin">↓ Walk-in direct</button>
+      <button class="btn-secondary" id="modal-cancel">Annuler</button>
+    </div>
+  `;
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-walkin').addEventListener('click', () => { closeModal(); onWalkin && onWalkin(); });
+  _dialog().querySelectorAll('.placement-picker-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const resa = arrivedList[parseInt(el.dataset.index)];
+      closeModal();
+      onConfirm(resa);
+    });
+  });
+
+  _dialog().showModal();
+}
+
+// ── Modale 3c : Check-in direct (arrivée sans réservation — walk-in) — conservé ──
 // freeSpots : ['P1','P3',...], preselectedSpotId optionnel
 // onConfirm(spotId, data)
 function openCheckinModal(freeSpots, preselectedSpotId, onConfirm) {
@@ -450,7 +557,7 @@ function openWaitingDetailModal(resa, history, callbacks) {
 
   _dialog().innerHTML = `
     <div class="modal-header">
-      <h3>⏳ ${resa.prenom} ${resa.nom}</h3>
+      <h3>${resa.prenom} ${resa.nom}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body" id="waiting-detail-body">
@@ -532,7 +639,7 @@ function openGroupCheckinModal(resa, freeSpots, onConfirm, nbSpotsHint) {
     const ok     = spots.length >= needed;
     _dialog().innerHTML = `
       <div class="modal-header">
-        <h3>👥 Accueil Groupe · ${resa.nom} ${resa.prenom}</h3>
+        <h3>Accueil Groupe · ${resa.nom} ${resa.prenom}</h3>
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
@@ -605,6 +712,10 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   _dialog().innerHTML = `
     <div class="modal-header">
       <h3>${titleLabel}</h3>
+      <div class="radio-group radio-sm pf-type-header" id="pf-type">
+        <div class="radio-btn selected" data-value="normal">Usager</div>
+        <div class="radio-btn" data-value="groupe">Groupe</div>
+      </div>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body plan-modal-body">
@@ -622,24 +733,9 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
             </div>
             <div id="pf-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
           </div>
-          <div class="plan-form-group" id="pf-accomp-grp">
-            <label>Acc.</label>
-            <div class="radio-group radio-sm" id="pf-accomp">
-              <div class="radio-btn selected" data-value="0">0</div>
-              <div class="radio-btn" data-value="1">1</div>
-              <div class="radio-btn" data-value="2">2</div>
-            </div>
-          </div>
           <div class="plan-form-group" id="pf-empl-grp" style="display:none">
             <label>Empl.</label>
             <input type="number" id="pf-empl" min="1" max="10" value="1" class="plan-empl-inp">
-          </div>
-          <div class="plan-form-group">
-            <label>Type</label>
-            <div class="radio-group radio-sm" id="pf-type">
-              <div class="radio-btn selected" data-value="normal">Usager</div>
-              <div class="radio-btn" data-value="groupe">Groupe</div>
-            </div>
           </div>
           <button class="btn-primary" id="pf-add" style="align-self:flex-end">＋ Ajouter</button>
         </div>
@@ -649,7 +745,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <div class="plan-lists">
         <div class="plan-section">
           <div class="plan-section-hd">
-            <span class="plan-section-title">👤 Réservations</span>
+            <span class="plan-section-title">Réservations</span>
             <span class="plan-section-cap" id="cap-normal"></span>
           </div>
           <div id="planning-list-normal"></div>
@@ -657,7 +753,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         <div class="plan-section-sep"></div>
         <div class="plan-section">
           <div class="plan-section-hd">
-            <span class="plan-section-title">👥 Groupes</span>
+            <span class="plan-section-title">Groupes</span>
             <span class="plan-section-cap" id="cap-groupe"></span>
           </div>
           <div id="planning-list-groupe"></div>
@@ -666,14 +762,14 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <!-- Personnes sans réservation (walk-ins du jour) -->
       <div id="plan-walkins-section" style="display:none" class="plan-walkins-section">
         <div class="plan-section-hd" style="padding:10px 16px 4px">
-          <span class="plan-section-title">🚶 Sans réservation</span>
+          <span class="plan-section-title">Sans réservation</span>
           <span class="plan-section-cap" id="cap-walkins"></span>
         </div>
         <div id="planning-list-walkins" style="padding:0 16px 10px;display:flex;flex-direction:column;gap:4px"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-ghost" id="btn-export-pdf">📄 Exporter PDF</button>
+      <button class="btn-ghost" id="btn-export-pdf">Exporter PDF</button>
       ${goLiveBtn}
       <button class="btn-secondary" id="modal-cancel">Fermer</button>
     </div>
@@ -845,14 +941,12 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     ]);
   }
 
-  _bindRadioGroup('pf-accomp');
   _bindRadioGroup('pf-type');
 
   // Bascule Acc. ↔ Empl. et Nom/Prénom ↔ Nom du groupe selon le type
   document.querySelectorAll('#pf-type .radio-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const isGroupe = btn.dataset.value === 'groupe';
-      document.getElementById('pf-accomp-grp').style.display  = isGroupe ? 'none' : '';
       document.getElementById('pf-empl-grp').style.display    = isGroupe ? '' : 'none';
       document.getElementById('pf-prenom-wrap').style.display = isGroupe ? 'none' : '';
       document.getElementById('pf-nom-label').textContent     = isGroupe ? 'Nom du groupe' : 'Nom';
@@ -965,7 +1059,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     const resaType      = document.querySelector('#pf-type .radio-btn.selected').dataset.value;
     const accompagnants = resaType === 'groupe'
       ? Math.max(1, parseInt(document.getElementById('pf-empl').value) || 1)
-      : parseInt(document.querySelector('#pf-accomp .radio-btn.selected').dataset.value);
+      : 0;
     const prenom = resaType === 'groupe' ? '' : document.getElementById('pf-prenom').value.trim();
     const errEl  = document.getElementById('pf-error');
 
@@ -1047,5 +1141,5 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, openGroupCheckinModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openWalkinEntryModal, openPlacementPickerModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, openGroupCheckinModal, closeModal };
 }

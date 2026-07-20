@@ -4,6 +4,7 @@ const App = (() => {
   let _selectedSlotId = null;
   let _date = null;
   let _selectionMode = null; // { id, resa } | null
+  let _waitingList   = [];   // snapshot courant de la liste d'attente (spot_id=null)
   let _currentView = 'carte'; // 'carte' | 'planning' | 'mc' | 'inscription' | 'groupes'
   let _planningWeekOffset = 0;
   let _mcDate = null;
@@ -242,8 +243,9 @@ const App = (() => {
   async function _renderPlanning() {
     const container = document.getElementById('planning-view');
     if (!container) return;
-    container._onPrev = () => { _planningWeekOffset--; _renderPlanning(); };
-    container._onNext = () => { _planningWeekOffset++; _renderPlanning(); };
+    container._onPrev  = () => { _planningWeekOffset--; _renderPlanning(); };
+    container._onNext  = () => { _planningWeekOffset++; _renderPlanning(); };
+    container._onToday = () => { _planningWeekOffset = 0; _renderPlanning(); };
     await renderPlanning(container, _planningWeekOffset, async (dateISO, slot) => {
       const isToday = dateISO === _date;
       openSlotPlanningModal(dateISO, slot, {
@@ -271,6 +273,7 @@ const App = (() => {
       getReservations(_date, _selectedSlotId),
       getReservationList(_date, _selectedSlotId),
     ]);
+    _waitingList = waitingList;
     const slot      = getSlotById(_selectedSlotId);
     const mapEl     = document.getElementById('beach-map');
     const panelEl   = document.getElementById('side-panel');
@@ -279,7 +282,7 @@ const App = (() => {
       .map(s => s.id);
 
     const mapHandler = _selectionMode
-      ? spotId => _doAssignSpot(spotId, reservations, freeSpots).catch(console.error)
+      ? spotId => _doPlaceOnSpot(spotId, reservations).catch(console.error)
       : spotId => { _onSpotClick(spotId, reservations, freeSpots).catch(console.error); };
     renderMapSpots(mapEl, reservations, mapHandler, !!_selectionMode);
 
@@ -288,7 +291,7 @@ const App = (() => {
     if (_selectionMode) {
       banner.style.display = 'flex';
       banner.innerHTML = `
-        <span class="banner-text">👆 Cliquez sur un emplacement libre pour <strong>${_selectionMode.resa.nom} ${_selectionMode.resa.prenom}</strong></span>
+        <span class="banner-text">📍 Cliquez sur un emplacement libre pour placer <strong>${_selectionMode.resa.nom} ${_selectionMode.resa.prenom}</strong></span>
         <button class="btn-cancel-selection" id="btn-cancel-sel">✕ Annuler</button>
       `;
       document.getElementById('btn-cancel-sel').addEventListener('click', () => {
@@ -301,8 +304,9 @@ const App = (() => {
 
     renderPanel(panelEl, slot, reservations, waitingList, {
       onAddReservation: () => _openAddReservation(),
-      onWalkin:         () => _openWalkin(freeSpots),
-      onAssign:         (index, resa) => _openAssign(index, resa, freeSpots),
+      onWalkin:         () => _openWalkinEntry(),
+      onMarkArrival:    resa => _onMarkArrival(resa),
+      onPlace:          resa => _openPlace(resa),
       onGroupCheckin:   (index, resa) => _openGroupCheckin(resa, freeSpots),
       onItemClick:      spotId => { _onSpotClick(spotId, reservations, freeSpots); },
       onDepartedClick:  async spotId => {
@@ -329,7 +333,12 @@ const App = (() => {
   async function _onSpotClick(spotId, reservations, freeSpots) {
     const resa = reservations[spotId];
     if (!resa || resa.status === 'free') {
-      _openWalkin(freeSpots, spotId);
+      // Emplacement libre : proposer de placer une personne arrivée non placée
+      const arrivedUnplaced = _waitingList.filter(r => r.status === 'present');
+      openPlacementPickerModal(arrivedUnplaced, spotId, async selectedResa => {
+        _selectionMode = { id: selectedResa.id, resa: selectedResa };
+        await _doPlaceOnSpot(spotId, reservations);
+      }, () => _openWalkinEntry());
       return;
     }
     const history = await _buildProfileHistory(resa);
@@ -386,15 +395,24 @@ const App = (() => {
     });
   }
 
-  // ── Arrivée sans réservation (walk-in) ──
-  function _openWalkin(freeSpots, preselectedSpotId) {
-    openCheckinModal(freeSpots, preselectedSpotId, async (spotId, data) => {
-      const durationMs = Math.max(0, Math.min(DURATION_MS, _slotEndTimestamp(_selectedSlotId) - Date.now()));
-      const checkinData = { ...data, durationMs };
-      await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
-      await _registerOverflow(spotId, checkinData);
+  // ── Étape 1 : noter l'arrivée d'un walk-in (sans emplacement) ──
+  function _openWalkinEntry() {
+    openWalkinEntryModal(async data => {
+      await addWalkinToList(_date, _selectedSlotId, data);
       await refresh();
     });
+  }
+
+  // ── Étape 1 : noter l'arrivée depuis la liste d'attente ──
+  async function _onMarkArrival(resa) {
+    await markArrivalFromList(resa.id);
+    await refresh();
+  }
+
+  // ── Étape 2A : activer le mode sélection depuis le panneau ──
+  function _openPlace(resa) {
+    _selectionMode = { id: resa.id, resa };
+    refresh();
   }
 
   // Timestamp de fin officielle d'un créneau pour aujourd'hui
@@ -450,49 +468,42 @@ const App = (() => {
     }, nbSpotsHint);
   }
 
-  // ── Assigner un emplacement à une personne de la liste d'attente ──
-  function _openAssign(index, resa, freeSpots) {
-    _selectionMode = { id: resa.id, resa };
-    refresh();
-  }
-
-  async function _doAssignSpot(spotId, reservations, freeSpots) {
-    const resa = reservations[spotId];
-    if (resa && resa.status !== 'free' && resa.status !== 'departed') return;
+  // ── Étape 2B : placer une personne sur un emplacement (depuis carte ou panneau) ──
+  async function _doPlaceOnSpot(spotId, reservations) {
+    const occupant = reservations[spotId];
+    if (occupant && occupant.status !== 'free' && occupant.status !== 'departed') return;
 
     const { id: waitingResaId, resa: waitingResa } = _selectionMode;
     _selectionMode = null;
 
-    const isDouble    = await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
-    const maxSlotId   = isDouble ? _selectedSlotId + 1 : _selectedSlotId;
+    const isDouble     = await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
+    const maxSlotId    = isDouble ? _selectedSlotId + 1 : _selectedSlotId;
     const baseDuration = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
-    const durationMs  = Math.max(0, Math.min(baseDuration, _slotEndTimestamp(maxSlotId) - Date.now()));
-    const checkinTime = Date.now();
-    const checkinData = {
-      nom: waitingResa.nom,
-      prenom: waitingResa.prenom,
-      accompagnants: waitingResa.accompagnants,
-      type: 'reserved',
-      checkinTime,
-      durationMs,
-      status: 'present',
-      inscriptionId: waitingResa.inscriptionId || null,
-    };
+    const durationMs   = Math.max(0, Math.min(baseDuration, _slotEndTimestamp(maxSlotId) - Date.now()));
 
-    await saveCheckin(_date, _selectedSlotId, spotId, checkinData);
-    await removeReservation(waitingResaId);
+    // Assigne le spot_id sur l'enregistrement existant (déjà statut=present)
+    await assignSpotFromWaiting(waitingResaId, spotId);
 
     if (isDouble) {
-      const nextSlotId = _selectedSlotId + 1;
-      const nextList   = await getReservationList(_date, nextSlotId);
-      const nextEntry  = nextList.find(r =>
+      const nextList  = await getReservationList(_date, _selectedSlotId + 1);
+      const nextEntry = nextList.find(r =>
         r.nom.toUpperCase()    === waitingResa.nom.toUpperCase() &&
         r.prenom.toUpperCase() === waitingResa.prenom.toUpperCase()
       );
       if (nextEntry) await removeReservation(nextEntry.id);
     }
 
-    await _registerOverflow(spotId, checkinData);
+    const overflowData = {
+      nom:           waitingResa.nom,
+      prenom:        waitingResa.prenom,
+      accompagnants: waitingResa.accompagnants,
+      type:          waitingResa.type || 'reserved',
+      checkinTime:   waitingResa.checkinTime || Date.now(),
+      durationMs,
+      status:        'present',
+      inscriptionId: waitingResa.inscriptionId || null,
+    };
+    await _registerOverflow(spotId, overflowData);
     await refresh();
   }
 

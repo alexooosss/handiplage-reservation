@@ -46,10 +46,12 @@ function _rowToWaitingResa(row) {
     prenom:        row.prenom,
     accompagnants: row.accompagnants,
     status:        row.statut === 'attente' ? 'waiting' : _dbStatutToLocal(row.statut),
+    checkinTime:   _tsToMs(row.checkin_time),
     inscriptionId: row.inscription_id || null,
     groupeId:      row.groupe_id || null,
     resaType:      row.resa_type || 'normal',
     nbUsagers:     row.nb_usagers || null,
+    type:          row.type || 'reserved',
   };
 }
 
@@ -244,6 +246,44 @@ async function getPassRemainingCount(inscriptionId, monthISO) {
   return result.count || 0;
 }
 
+// ── Flux 2 étapes ──
+
+async function markArrivalFromList(id) {
+  var result = await supabaseClient.from('reservations').update({
+    statut: 'present',
+    checkin_time: new Date().toISOString(),
+  }).eq('id', id);
+  if (result.error) throw result.error;
+}
+
+async function addWalkinToList(date, slotId, data) {
+  var row = {
+    date:          date,
+    creneau_id:    slotId,
+    nom:           data.nom,
+    prenom:        data.prenom || '',
+    accompagnants: data.accompagnants || 0,
+    type:          'walkin',
+    statut:        'present',
+    spot_id:       null,
+    checkin_time:  new Date().toISOString(),
+    inscription_id: null,
+    resa_type:     'normal',
+    nb_usagers:    null,
+    groupe_id:     null,
+  };
+  var result = await supabaseClient.from('reservations').insert(row).select().single();
+  if (result.error) throw result.error;
+  return _rowToWaitingResa(result.data);
+}
+
+async function assignSpotFromWaiting(reservationId, spotId) {
+  var result = await supabaseClient.from('reservations')
+    .update({ spot_id: spotId })
+    .eq('id', reservationId);
+  if (result.error) throw result.error;
+}
+
 async function getReservationsForGroupe(groupeId, groupeNom) {
   var [byId, byNom] = await Promise.all([
     supabaseClient.from('reservations')
@@ -300,6 +340,7 @@ if (typeof module !== 'undefined') {
     updateReservationStatus, updateReservationField,
     getWeekReservationCounts, getAbsentsThisMonthCount, getPassRemainingCount,
     getReservationsForInscription, getReservationsForGroupe,
+    markArrivalFromList, addWalkinToList, assignSpotFromWaiting,
     subscribeSlot, unsubscribeSlot,
   };
 }

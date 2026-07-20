@@ -4,12 +4,11 @@
 // slot        : { id, label, start, end } or null
 // reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
 // waitingList : [{ nom, prenom, accompagnants, status }, ...] — from getReservationList()
-// callbacks   : { onAddReservation, onWalkin, onAssign(index, resa), onPasVenu(resaId), onAnnule(resaId), onItemClick(spotId) }
+// callbacks   : { onAddReservation, onWalkin, onMarkArrival(resa), onPlace(resa), onGroupCheckin, onPasVenu(resaId), onAnnule(resaId), onItemClick(spotId) }
 function renderPanel(container, slot, reservations, waitingList, callbacks) {
   const { present, walkin, absent, departed } = _categorizeSpots(reservations);
-  const { waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
+  const { arrived, waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
 
-  // Sort present+walkin by time remaining ascending (urgent first)
   const sortByTime = arr => arr.sort(([,a],[,b]) =>
     getTimeRemaining(a.checkinTime, a.durationMs) - getTimeRemaining(b.checkinTime, b.durationMs)
   );
@@ -22,15 +21,19 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   }).length;
 
   container.innerHTML = `
-    ${_renderHeader(slot, presentCount, freeCount, walkin.length, waiting.length)}
+    ${_renderHeader(slot, presentCount, freeCount, walkin.length, waiting.length, arrived.length)}
     <div class="panel-actions">
       <button class="add-resa-btn" id="btn-add-resa">＋ Ajouter réservation</button>
       <button class="walkin-btn"   id="btn-walkin">↓ Sans réservation</button>
     </div>
     <div class="resa-list">
+      ${arrived.length ? `
+        <div class="resa-section-title section-arrived">Sur plage · non placé·es (${arrived.length})</div>
+        ${arrived.map(r => _renderArrivedUnplacedItem(r, waitingList.indexOf(r))).join('')}
+      ` : ''}
       ${waiting.length ? `
-        <div class="resa-section-title">⏳ En attente d'arrivée (${waiting.length})</div>
-        ${waiting.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), true)).join('')}
+        <div class="resa-section-title">En attente d'arrivée (${waiting.length})</div>
+        ${waiting.map(r => _renderWaitingItem(r, waitingList.indexOf(r), true)).join('')}
       ` : ''}
       ${presentSorted.length ? `
         <div class="resa-section-title">✓ Présents (${presentSorted.length})</div>
@@ -46,15 +49,14 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
       ` : ''}
       ${pasVenus.length ? `
         <div class="resa-section-title">⊘ Pas venus (${pasVenus.length})</div>
-        ${pasVenus.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
+        ${pasVenus.map(r => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
       ` : ''}
       ${annules.length ? `
         <div class="resa-section-title">✗ Annulés (${annules.length})</div>
-        ${annules.map((r, i) => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
+        ${annules.map(r => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
       ` : ''}
-      ${(waiting.length + presentSorted.length + departed.length + absent.length + pasVenus.length + annules.length) === 0 ? `
+      ${(arrived.length + waiting.length + presentSorted.length + departed.length + absent.length + pasVenus.length + annules.length) === 0 ? `
         <div class="empty-state">
-          <div class="empty-icon">🏖️</div>
           <p>Aucune réservation pour ce créneau</p>
         </div>
       ` : ''}
@@ -65,9 +67,13 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   document.getElementById('btn-add-resa').addEventListener('click', callbacks.onAddReservation);
   document.getElementById('btn-walkin').addEventListener('click', callbacks.onWalkin);
 
-  container.querySelectorAll('.btn-assign[data-index]').forEach(btn => {
+  container.querySelectorAll('.btn-arrive[data-index]').forEach(btn => {
     const idx = parseInt(btn.dataset.index);
-    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onAssign(idx, waitingList[idx]); });
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onMarkArrival && callbacks.onMarkArrival(waitingList[idx]); });
+  });
+  container.querySelectorAll('.btn-place[data-index]').forEach(btn => {
+    const idx = parseInt(btn.dataset.index);
+    btn.addEventListener('click', e => { e.stopPropagation(); callbacks.onPlace && callbacks.onPlace(waitingList[idx]); });
   });
   container.querySelectorAll('.btn-accueil-groupe[data-index]').forEach(btn => {
     const idx = parseInt(btn.dataset.index);
@@ -91,7 +97,15 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   });
   container.querySelectorAll('.waiting-item[data-index]').forEach(el => {
     el.addEventListener('click', e => {
-      if (e.target.closest('button')) return; // ne pas interférer avec les boutons d'action
+      if (e.target.closest('button')) return;
+      const idx  = parseInt(el.dataset.index);
+      const resa = waitingList[idx];
+      callbacks.onWaitingClick && callbacks.onWaitingClick(resa && resa.id);
+    });
+  });
+  container.querySelectorAll('.arrived-unplaced-item[data-index]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('button')) return;
       const idx  = parseInt(el.dataset.index);
       const resa = waitingList[idx];
       callbacks.onWaitingClick && callbacks.onWaitingClick(resa && resa.id);
@@ -113,13 +127,14 @@ function _categorizeSpots(reservations) {
 }
 
 function _categorizeWaiting(waitingList) {
+  const arrived  = waitingList.filter(r => r.status === 'present');
   const waiting  = waitingList.filter(r => !r.status || r.status === 'waiting');
   const pasVenus = waitingList.filter(r => r.status === 'pas_venu');
   const annules  = waitingList.filter(r => r.status === 'annule');
-  return { waiting, pasVenus, annules };
+  return { arrived, waiting, pasVenus, annules };
 }
 
-function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount) {
+function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount, arrivedCount) {
   const now = new Date();
   const endMin = slot ? timeToMinutes(slot.end) : 0;
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -134,6 +149,33 @@ function _renderHeader(slot, presentCount, freeCount, walkinCount, waitingCount)
         <div class="stat-chip"><span class="stat-dot" style="background:var(--amber)"></span>${waitingCount} en attente</div>
         <div class="stat-chip"><span class="stat-dot" style="background:var(--red)"></span>${presentCount} présents</div>
         <div class="stat-chip"><span class="stat-dot" style="background:var(--green)"></span>${freeCount} libres</div>
+      </div>
+    </div>
+  `;
+}
+
+function _renderArrivedUnplacedItem(resa, index) {
+  const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
+  const isGroupe = resa.resaType === 'groupe';
+  const accompLabel = isGroupe ? `${resa.nbUsagers || 1} empl.`
+    : resa.accompagnants === 0 ? 'seul·e'
+    : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
+  const typeLabel = resa.type === 'walkin' ? ' · Sans résa' : '';
+  const arrivedAt = resa.checkinTime
+    ? ' · ' + new Date(resa.checkinTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  return `
+    <div class="resa-item arrived-unplaced-item" data-index="${index}" style="cursor:pointer">
+      <div class="resa-avatar" style="background:var(--green-dark, #2e7d32)">${initials}</div>
+      <div class="resa-info">
+        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-meta">${accompLabel}${typeLabel}${arrivedAt}</div>
+      </div>
+      <div class="waiting-actions">
+        ${isGroupe
+          ? `<button class="btn-accueil-groupe" data-index="${index}">Placer</button>`
+          : `<button class="btn-place" data-index="${index}">📍 Placer</button>`
+        }
       </div>
     </div>
   `;
@@ -154,7 +196,7 @@ function _renderWaitingItem(resa, index, showActions) {
     <div class="waiting-actions">
       ${isGroupe
         ? `<button class="btn-accueil-groupe" data-index="${index}">Accueillir</button>`
-        : `<button class="btn-assign" data-index="${index}">Assigner</button>`
+        : `<button class="btn-arrive" data-index="${index}">✓ Arrivée</button>`
       }
       <button class="btn-pas-venu" data-index="${index}">Pas venu</button>
       <button class="btn-annule"   data-index="${index}">Annuler</button>
