@@ -165,6 +165,7 @@ function _renderDetail(panel, msg, listItem) {
       : ''
     )
     + '<button type="button" class="btn-ghost" id="msg-btn-reply">✉ Répondre par email</button>'
+    + '<button type="button" class="btn-danger" id="msg-btn-delete">Supprimer</button>'
     + '</div>'
 
     + '<div id="msg-reply-form" style="display:none;margin-top:16px">'
@@ -223,6 +224,25 @@ function _renderDetail(panel, msg, listItem) {
       } catch (e) {
         btnTraite.disabled = false;
         btnTraite.textContent = '✓ Marquer comme traité';
+      }
+    });
+  }
+
+  // Wirer le bouton Supprimer
+  var btnDelete = document.getElementById('msg-btn-delete');
+  if (btnDelete) {
+    btnDelete.addEventListener('click', async function() {
+      if (!confirm('Supprimer définitivement ce message ?')) return;
+      btnDelete.disabled = true;
+      btnDelete.textContent = 'Suppression…';
+      try {
+        await deleteMessage(msg.id);
+        if (listItem) listItem.remove();
+        panel.innerHTML = '<div class="msg-detail-empty"><p>Message supprimé.</p></div>';
+      } catch (e) {
+        btnDelete.disabled = false;
+        btnDelete.textContent = 'Supprimer';
+        alert('Erreur : ' + e.message);
       }
     });
   }

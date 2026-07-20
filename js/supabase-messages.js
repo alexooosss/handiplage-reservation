@@ -59,6 +59,14 @@ async function getUnreadCount() {
   return result.count || 0;
 }
 
+async function deleteMessage(id) {
+  var result = await supabaseClient
+    .from('messages')
+    .delete()
+    .eq('id', id);
+  if (result.error) throw result.error;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { _rowToMessage, getMessages, getMessageById, markMessageRead, getUnreadCount };
+  module.exports = { _rowToMessage, getMessages, getMessageById, markMessageRead, getUnreadCount, deleteMessage };
 }
