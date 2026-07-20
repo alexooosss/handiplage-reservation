@@ -107,6 +107,34 @@
   }
   .arc-cell:hover { filter: brightness(1.2); }
 
+  /* ── PIN Gate ── */
+  #arc-pin-gate {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 28px 20px; min-height: 320px;
+  }
+  #arc-pin-title {
+    color: #ff4466; font-size: 13px; font-weight: 900; letter-spacing: 4px; text-align: center;
+  }
+  #arc-pin-subtitle { color: #3a6080; font-size: 10px; letter-spacing: 1.5px; text-align: center; }
+  #arc-pin-display { display: flex; gap: 16px; margin: 4px 0; }
+  .arc-pin-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid #00d4ff33; background: transparent; transition: background .15s;
+  }
+  .arc-pin-dot.filled { background: #00d4ff; border-color: #00d4ff; box-shadow: 0 0 8px #00d4ff77; }
+  #arc-pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; max-width: 210px; }
+  .arc-pin-btn {
+    background: #0c1220; border: 1.5px solid #1a3050; color: #00d4ff;
+    width: 60px; height: 60px; border-radius: 10px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 20px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .12s; user-select: none; touch-action: manipulation;
+  }
+  .arc-pin-btn:hover { background: #162030; border-color: #00d4ff44; }
+  .arc-pin-btn:active { background: #00d4ff22; transform: scale(.93); }
+  .arc-pin-btn-clear { color: #ff4466; border-color: #ff446633; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+  #arc-pin-error { color: #ff4466; font-size: 10px; letter-spacing: 1px; min-height: 14px; text-align: center; }
+
   /* footer hint */
   .site-footer-credit { cursor: pointer; transition: opacity .2s; }
   .site-footer-credit:hover { opacity: 0.7 !important; }
@@ -137,6 +165,8 @@
   // ═══════════════════════════════════════════════════════════
   let overlay, menuEl, gameEl, statusEl;
   let _currentGame = null, _cleanup = null;
+  let _arcadeUnlocked = false;
+  const PIN_CODE = '0717';
 
   function buildModal() {
     overlay = document.createElement('div');
@@ -148,6 +178,31 @@
           <button id="arc-close">✕</button>
         </div>
         <div id="arc-body">
+          <div id="arc-pin-gate" style="display:none">
+            <div id="arc-pin-title">⚠ ACCÈS RESTREINT</div>
+            <div id="arc-pin-subtitle">Entrez le code d'accès</div>
+            <div id="arc-pin-display">
+              <div class="arc-pin-dot" id="arc-pd-0"></div>
+              <div class="arc-pin-dot" id="arc-pd-1"></div>
+              <div class="arc-pin-dot" id="arc-pd-2"></div>
+              <div class="arc-pin-dot" id="arc-pd-3"></div>
+            </div>
+            <div id="arc-pin-pad">
+              <button class="arc-pin-btn" data-digit="1">1</button>
+              <button class="arc-pin-btn" data-digit="2">2</button>
+              <button class="arc-pin-btn" data-digit="3">3</button>
+              <button class="arc-pin-btn" data-digit="4">4</button>
+              <button class="arc-pin-btn" data-digit="5">5</button>
+              <button class="arc-pin-btn" data-digit="6">6</button>
+              <button class="arc-pin-btn" data-digit="7">7</button>
+              <button class="arc-pin-btn" data-digit="8">8</button>
+              <button class="arc-pin-btn" data-digit="9">9</button>
+              <button class="arc-pin-btn arc-pin-btn-clear" data-action="clear">Eff.</button>
+              <button class="arc-pin-btn" data-digit="0">0</button>
+              <button class="arc-pin-btn arc-pin-btn-clear" data-action="back">←</button>
+            </div>
+            <div id="arc-pin-error"></div>
+          </div>
           <div id="arc-menu"></div>
           <div id="arc-game">
             <div id="arc-game-title"></div>
@@ -185,7 +240,7 @@
   function openArcade() {
     if (!overlay) buildModal();
     overlay.style.display = 'flex';
-    showMenu();
+    if (!_arcadeUnlocked) { showPinGate(); } else { showMenu(); }
   }
   function closeArcade() {
     stop(); overlay.style.display = 'none';
@@ -193,8 +248,58 @@
   function stop() {
     if (_cleanup) { _cleanup(); _cleanup = null; }
   }
+  function showPinGate() {
+    stop();
+    menuEl.style.display = 'none';
+    gameEl.classList.remove('active');
+    overlay.querySelector('#arc-title').style.visibility = 'hidden';
+    var gate = overlay.querySelector('#arc-pin-gate');
+    gate.style.display = 'flex';
+
+    var entered = '';
+    var dots = [0, 1, 2, 3].map(function(i) { return overlay.querySelector('#arc-pd-' + i); });
+    var errorEl = overlay.querySelector('#arc-pin-error');
+
+    function updateDots() {
+      dots.forEach(function(d, i) { d.classList.toggle('filled', i < entered.length); });
+    }
+    function checkPin() {
+      if (entered === PIN_CODE) {
+        _arcadeUnlocked = true;
+        gate.style.display = 'none';
+        showMenu();
+      } else {
+        errorEl.textContent = '✕  Code incorrect';
+        entered = '';
+        updateDots();
+        setTimeout(function() { errorEl.textContent = ''; }, 1500);
+      }
+    }
+
+    var pad = overlay.querySelector('#arc-pin-pad');
+    var newPad = pad.cloneNode(true);
+    pad.parentNode.replaceChild(newPad, pad);
+    newPad.addEventListener('click', function(e) {
+      var btn = e.target.closest('.arc-pin-btn');
+      if (!btn) return;
+      var digit = btn.dataset.digit;
+      var action = btn.dataset.action;
+      if (action === 'clear') { entered = ''; updateDots(); errorEl.textContent = ''; }
+      else if (action === 'back') { entered = entered.slice(0, -1); updateDots(); }
+      else if (digit !== undefined && entered.length < 4) {
+        entered += digit;
+        updateDots();
+        if (entered.length === 4) setTimeout(checkPin, 80);
+      }
+    });
+
+    updateDots();
+    errorEl.textContent = '';
+  }
+
   function showMenu() {
     stop();
+    overlay.querySelector('#arc-title').style.visibility = 'visible';
     menuEl.style.display = 'grid';
     gameEl.classList.remove('active');
     _currentGame = null;
@@ -225,12 +330,14 @@
     const grid = document.createElement('div');
     grid.className = 'arc-board';
     grid.style.gridTemplateColumns = 'repeat(3,1fr)';
+    grid.style.background = '#f0f4f8';
+    grid.style.borderColor = '#c0ccd8';
     container.appendChild(grid);
 
     const cells = Array.from({ length: 9 }, (_, i) => {
       const c = document.createElement('div');
       c.className = 'arc-cell';
-      c.style.cssText = 'width:72px;height:72px;font-size:32px;font-weight:900;background:#0c1828;border:1.5px solid #182840;border-radius:6px;';
+      c.style.cssText = 'width:72px;height:72px;font-size:32px;font-weight:900;background:#ffffff;border:2px solid #c0ccd8;border-radius:6px;';
       c.addEventListener('click', () => play(i));
       grid.appendChild(c);
       return c;
@@ -240,7 +347,7 @@
     function render() {
       cells.forEach((c, i) => {
         c.textContent = board[i] || '';
-        c.style.color = board[i] === 'X' ? '#00d4ff' : '#ff4466';
+        c.style.color = board[i] === 'X' ? '#1565c0' : '#c62828';
       });
     }
     function play(i) {
@@ -265,7 +372,7 @@
 
     const grid = document.createElement('div');
     grid.className = 'arc-board';
-    grid.style.cssText = `grid-template-columns:repeat(${COLS},1fr);background:#001428;padding:6px;gap:4px;`;
+    grid.style.cssText = `grid-template-columns:repeat(${COLS},1fr);background:#ffffff;padding:6px;gap:4px;border:2px solid #ddd;`;
     container.appendChild(grid);
 
     const cells = [];
@@ -273,7 +380,7 @@
       for (let c = 0; c < COLS; c++) {
         const el = document.createElement('div');
         el.className = 'arc-cell';
-        el.style.cssText = 'width:44px;height:44px;border-radius:50%;background:#06080f;border:2px solid #0a1828;';
+        el.style.cssText = 'width:44px;height:44px;border-radius:50%;background:#c8def0;border:2px solid #7ab0d8;';
         el.addEventListener('click', () => drop(c));
         grid.appendChild(el);
         cells.push({ r, c, el });
@@ -295,7 +402,7 @@
     function render() {
       cells.forEach(({ r, c, el }) => {
         const v = board[c][r];
-        el.style.background = v === 1 ? '#e53935' : v === 2 ? '#ffd600' : '#06080f';
+        el.style.background = v === 1 ? '#e53935' : v === 2 ? '#ffd600' : '#c8def0';
         el.style.boxShadow  = v === 1 ? '0 0 8px #e53935' : v === 2 ? '0 0 8px #ffd600' : 'none';
       });
     }
@@ -788,9 +895,9 @@
 
     const cards=PAIRS.map((emoji,i)=>{
       const el=document.createElement('div');
-      el.style.cssText='width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:#0c1220;border:1.5px solid #182840;border-radius:8px;cursor:pointer;font-size:26px;transition:all .18s;user-select:none;';
+      el.style.cssText='width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:#1a4a7a;border:1.5px solid #4a90d9;border-radius:8px;cursor:pointer;font-size:26px;transition:all .18s;user-select:none;';
       el.textContent='?';
-      el.style.color='#182840';
+      el.style.color='#ffffff';
       el.addEventListener('click',()=>flip(i));
       grid.appendChild(el);
       return {el,emoji};
@@ -804,9 +911,9 @@
     }
     function hide(i){
       cards[i].el.textContent='?';
-      cards[i].el.style.color='#182840';
-      cards[i].el.style.background='#0c1220';
-      cards[i].el.style.borderColor='#182840';
+      cards[i].el.style.color='#ffffff';
+      cards[i].el.style.background='#1a4a7a';
+      cards[i].el.style.borderColor='#4a90d9';
     }
     function flip(i){
       if (lock||matched.has(i)||flipped.includes(i)) return;
@@ -1097,23 +1204,22 @@
     }
 
     function draw() {
-      ctx.fillStyle='#06080f'; ctx.fillRect(0,0,N*SZ,N*SZ);
+      ctx.fillStyle='#f0f0f0'; ctx.fillRect(0,0,N*SZ,N*SZ);
       const e=grid.indexOf(0);
       for(let i=0;i<N*N;i++){
         const v=grid[i], x=(i%N)*SZ, y=Math.floor(i/N)*SZ;
         if(v===0){
-          // case vide : légère indication
-          ctx.fillStyle='#0a0e18'; ctx.fillRect(x+3,y+3,SZ-6,SZ-6);
+          ctx.fillStyle='#c8cfd6'; ctx.fillRect(x+3,y+3,SZ-6,SZ-6);
           continue;
         }
         const correct=v===i+1;
-        ctx.fillStyle=correct?'#0a2040':'#0c1520';
+        ctx.fillStyle=correct?'#c8e6c9':'#ffffff';
         ctx.fillRect(x+3,y+3,SZ-6,SZ-6);
-        ctx.strokeStyle=correct?'#00d4ff88':'#1c3a5a';
+        ctx.strokeStyle=correct?'#2e7d32':'#bdbdbd';
         ctx.lineWidth=1.5; ctx.strokeRect(x+3,y+3,SZ-6,SZ-6);
         // reflet haut
-        ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(x+3,y+3,SZ-6,8);
-        ctx.fillStyle=correct?'#00d4ff':'#6090b0';
+        ctx.fillStyle='rgba(0,0,0,.04)'; ctx.fillRect(x+3,y+3,SZ-6,8);
+        ctx.fillStyle=correct?'#1b5e20':'#424242';
         ctx.font=`bold ${v>9?20:24}px Courier New`; ctx.textAlign='center';
         ctx.fillText(v,x+SZ/2,y+SZ/2+8);
         ctx.textAlign='left';
