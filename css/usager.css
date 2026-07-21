@@ -528,6 +528,12 @@ body {
     font-size: .875rem;
     flex-shrink: 0;
   }
+  .usager-sidebar-info-icon img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
 
   /* Zone photo : flex: 1 remplit la hauteur restante */
   .usager-sidebar-photo {
