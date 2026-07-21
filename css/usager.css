@@ -326,7 +326,7 @@ body {
 }
 .usager-info-row:last-child { border-bottom: none; }
 .usager-info-key  { color: var(--text-muted); }
-.usager-info-val  { font-weight: 600; text-align: right; max-width: 60%; }
+.usager-info-val  { font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; overflow-wrap: anywhere; }
 
 /* ── Loading / erreur ───────────────────────────────────────────── */
 .usager-loading { text-align: center; color: var(--text-muted); padding: 40px; }
