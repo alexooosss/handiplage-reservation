@@ -212,18 +212,19 @@ function openWalkinEntryModal(onConfirm) {
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group">
-          <label>Prénom</label>
-          <input type="text" id="f-prenom" placeholder="Prénom" autocomplete="off">
+        <div class="form-group" style="position:relative">
+          <label>NOM</label>
+          <input type="text" id="wk-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+          <div id="wk-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
         </div>
         <div class="form-group">
-          <label>Nom</label>
-          <input type="text" id="f-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
+          <label>Prénom</label>
+          <input type="text" id="wk-prenom" placeholder="Prénom" autocomplete="off">
         </div>
       </div>
       <div class="form-group">
         <label>Nombre d'accompagnants</label>
-        <div class="radio-group" id="f-accompagnants">
+        <div class="radio-group" id="wk-accompagnants">
           <div class="radio-btn selected" data-value="0">0</div>
           <div class="radio-btn"          data-value="1">1</div>
           <div class="radio-btn"          data-value="2">2</div>
@@ -237,17 +238,69 @@ function openWalkinEntryModal(onConfirm) {
     </div>
   `;
 
-  _bindRadioGroup('f-accompagnants');
+  _bindRadioGroup('wk-accompagnants');
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
-  document.getElementById('f-prenom').addEventListener('input', e => {
+  document.getElementById('wk-prenom').addEventListener('input', e => {
     e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase());
   });
+
+  // Autocomplete NOM → inscriptions
+  (function() {
+    var nomEl     = document.getElementById('wk-nom');
+    var prenomEl  = document.getElementById('wk-prenom');
+    var suggestEl = document.getElementById('wk-nom-suggest');
+    function _close() { suggestEl.style.display = 'none'; suggestEl.innerHTML = ''; }
+
+    nomEl.addEventListener('input', function() {
+      var val = nomEl.value.trim().toUpperCase();
+      _close();
+      if (!val || typeof getCachedInscriptions !== 'function') return;
+      var matches = getCachedInscriptions()
+        .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+        .slice(0, 8);
+      if (!matches.length) return;
+      suggestEl.style.display = 'block';
+      matches.forEach(function(i) {
+        var remaining = (typeof getPassRemaining === 'function' && i.pass)
+          ? getPassRemaining(i.id) : null;
+        var exhausted = remaining === 0;
+        var item = document.createElement('div');
+        item.className = 'pf-suggest-item';
+        item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
+          + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
+        var nameSpan = document.createElement('span');
+        nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+        item.appendChild(nameSpan);
+        if (i.pass) {
+          var remSpan = document.createElement('span');
+          remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
+          remSpan.textContent = exhausted
+            ? '🎫 Pass 2026 · épuisé'
+            : '🎫 Pass 2026 · ' + remaining + ' résa. rest.';
+          item.appendChild(remSpan);
+        }
+        item.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          nomEl.value    = i.nom.toUpperCase();
+          prenomEl.value = i.prenom;
+          _close();
+          prenomEl.focus();
+        });
+        item.addEventListener('mouseover', function() { item.style.background = '#f0f4ff'; });
+        item.addEventListener('mouseout',  function() { item.style.background = ''; });
+        suggestEl.appendChild(item);
+      });
+    });
+    nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
+    nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
+  })();
+
   document.getElementById('modal-confirm').addEventListener('click', () => {
-    const prenom = document.getElementById('f-prenom').value.trim();
-    const nom    = document.getElementById('f-nom').value.trim().toUpperCase();
+    const nom    = document.getElementById('wk-nom').value.trim().toUpperCase();
+    const prenom = document.getElementById('wk-prenom').value.trim();
     const accompagnants = parseInt(
-      document.querySelector('#f-accompagnants .radio-btn.selected').dataset.value
+      document.querySelector('#wk-accompagnants .radio-btn.selected').dataset.value
     );
     if (!nom) { alert('Le nom est obligatoire.'); return; }
     closeModal();
@@ -255,7 +308,7 @@ function openWalkinEntryModal(onConfirm) {
   });
 
   _dialog().showModal();
-  document.getElementById('f-prenom').focus();
+  document.getElementById('wk-nom').focus();
 }
 
 // ── Modale 3b : Choix de placement (étape 2 — depuis un emplacement libre) ──

@@ -94,16 +94,18 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var creneaux = crRes.data || [];
   var resas    = resaRes.data || [];
 
-  var counts        = {};
-  var userBooked    = {};
-  var userResaId    = {};
-  var userDayCounts = {};
+  var counts           = {};
+  var userBooked       = {};
+  var userResaId       = {};
+  var userResaStatut   = {};
+  var userDayCounts    = {};
   resas.forEach(function(r) {
     var key = r.date + '_' + r.creneau_id;
     counts[key] = (counts[key] || 0) + 1;
     if (inscriptionId && r.inscription_id === inscriptionId) {
       userBooked[key] = true;
       userResaId[key] = r.id;
+      userResaStatut[key] = r.statut;
       userDayCounts[r.date] = (userDayCounts[r.date] || 0) + 1;
     }
   });
@@ -127,9 +129,10 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
         count:      count,
         remaining:  Math.max(0, c.capacite_resa - count),
         available:  !booked && !dayLimitReached && count < c.capacite_resa,
-        userBooked: booked,
-        resaId:     userResaId[key] || null,
-        dayLimit:   dayLimitReached,
+        userBooked:    booked,
+        resaId:        userResaId[key] || null,
+        resaStatut:    userResaStatut[key] || null,
+        dayLimit:      dayLimitReached,
       };
     });
   }

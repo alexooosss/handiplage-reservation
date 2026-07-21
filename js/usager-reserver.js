@@ -119,10 +119,11 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
       var creneauObj = (days[selectedDate] || []).find(function(s) { return s.creneauId === creneauId; });
       if (!creneauObj) return;
       _renderResaManage(container, inscription, showView, {
-        resaId:    resaId,
-        dateISO:   selectedDate,
-        dateLabel: selLabel,
-        label:     creneauObj.label,
+        resaId:     resaId,
+        resaStatut: creneauObj.resaStatut,
+        dateISO:    selectedDate,
+        dateLabel:  selLabel,
+        label:      creneauObj.label,
         heureDebut: creneauObj.heureDebut,
         heureFin:   creneauObj.heureFin,
       });
@@ -192,8 +193,17 @@ function _renderResaManage(container, inscription, showView, params) {
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Date</span><span class="usager-recap-val">' + dateLabel + '</span></div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + ' (' + (params.heureDebut || '').slice(0,5) + '–' + (params.heureFin || '').slice(0,5) + ')</span></div>'
     + '</div>'
-    + '<button class="usager-btn usager-btn-danger" id="btn-annuler-manage">Annuler cette réservation</button>'
-    + '<div id="cancel-confirm-manage" style="display:none" class="usager-cancel-confirm">'
+    + (params.resaStatut === 'attente'
+      ? '<button class="usager-btn usager-btn-danger" id="btn-annuler-manage">Annuler cette réservation</button>'
+        + '<div id="cancel-confirm-manage" style="display:none" class="usager-cancel-confirm">'
+      : '<div class="usager-info-block" style="text-align:center;color:var(--text-muted);font-size:14px;margin-top:16px">'
+        + (params.resaStatut === 'present' ? '✓ Présence enregistrée par le staff'
+          : params.resaStatut === 'parti'  ? '✓ Votre venue a été enregistrée'
+          : params.resaStatut === 'absent' ? '⚠️ Absence enregistrée — contactez le staff si besoin'
+          : 'Annulation non disponible')
+        + '</div>'
+        + '<div id="cancel-confirm-manage" style="display:none" class="usager-cancel-confirm">'
+    )
     +   '<div class="usager-cancel-confirm-text">Confirmer l\'annulation ?</div>'
     +   '<div class="usager-cancel-confirm-row">'
     +     '<button class="usager-btn usager-btn-danger" id="btn-cancel-yes-manage">Oui, annuler</button>'
@@ -207,16 +217,23 @@ function _renderResaManage(container, inscription, showView, params) {
   });
   var annulerBtn   = container.querySelector('#btn-annuler-manage');
   var confirmBlock = container.querySelector('#cancel-confirm-manage');
-  annulerBtn.addEventListener('click', function() {
-    annulerBtn.style.display = 'none';
-    confirmBlock.style.display = 'block';
-  });
-  container.querySelector('#btn-cancel-no-manage').addEventListener('click', function() {
-    confirmBlock.style.display = 'none';
-    annulerBtn.style.display = '';
-  });
-  container.querySelector('#btn-cancel-yes-manage').addEventListener('click', async function() {
-    var btn   = container.querySelector('#btn-cancel-yes-manage');
+  if (annulerBtn) {
+    annulerBtn.addEventListener('click', function() {
+      annulerBtn.style.display = 'none';
+      confirmBlock.style.display = 'block';
+    });
+  }
+  var cancelNoBtn = container.querySelector('#btn-cancel-no-manage');
+  if (cancelNoBtn) {
+    cancelNoBtn.addEventListener('click', function() {
+      confirmBlock.style.display = 'none';
+      if (annulerBtn) annulerBtn.style.display = '';
+    });
+  }
+  var cancelYesBtn = container.querySelector('#btn-cancel-yes-manage');
+  if (!cancelYesBtn) return;
+  cancelYesBtn.addEventListener('click', async function() {
+    var btn   = cancelYesBtn;
     var errEl = container.querySelector('#cancel-err-manage');
     btn.disabled = true; btn.textContent = 'Annulation…';
     errEl.style.display = 'none';
