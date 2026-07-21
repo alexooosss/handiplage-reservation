@@ -1354,21 +1354,14 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 .entr-th-prod {
   text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px;
-  background: var(--panel-bg); width: 150px; min-width: 150px; max-width: 150px;
+  background: var(--panel-bg); width: 180px; min-width: 180px; max-width: 180px;
   position: sticky; left: 0; z-index: 3; border-right: 1px solid var(--border);
   overflow: hidden;
 }
-/* Colonne Produit (non-sticky) */
-.entr-th-info {
-  text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px;
-  background: var(--panel-bg); width: 110px; min-width: 110px; max-width: 110px;
-  border-right: 1px solid var(--border);
-}
-/* Colonne Matin/Midi/Après-midi (sticky après produit) */
+/* Colonne Matin/Midi/Après-midi (sticky juste après Surface) */
 .entr-th-slotcol {
-  background: var(--panel-bg); width: 76px; min-width: 76px;
-  position: sticky; left: 150px; z-index: 3; border-right: 2px solid var(--border);
+  background: var(--panel-bg); width: 80px; min-width: 80px;
+  position: sticky; left: 180px; z-index: 3; border-right: 2px solid var(--border);
 }
 
 .entr-row-top td { border-bottom: none; padding-bottom: 1px; }
@@ -1381,10 +1374,11 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
   background: #fff; vertical-align: middle;
   position: sticky; left: 0; z-index: 1;
   border-right: 1px solid var(--border);
-  width: 150px; min-width: 150px; max-width: 150px;
+  width: 180px; min-width: 180px; max-width: 180px;
   overflow: hidden; white-space: normal; word-break: break-word;
 }
 .entr-td-produit-name { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.entr-td-produit-info { font-size: 10px; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
 .entr-td-produit-freq {
   font-size: 10px; font-weight: 600; color: var(--blue);
   margin-top: 3px; letter-spacing: 0.2px;
@@ -1393,21 +1387,12 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 }
 .entr-row-alt .entr-td-produit { background: #f7f9fb; }
 
-.entr-td-info {
-  padding: 6px 10px; font-size: 11px; color: var(--text-muted);
-  background: #fff; vertical-align: middle;
-  border-right: 1px solid var(--border);
-  width: 110px; min-width: 110px; max-width: 110px;
-  overflow: hidden; white-space: normal; word-break: break-word;
-}
-.entr-row-alt .entr-td-info { background: #f7f9fb; }
-
 .entr-td-slot {
   text-align: center; padding: 4px 6px; font-size: 10px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;
   background: #fff; white-space: nowrap;
-  position: sticky; left: 150px; z-index: 1;
-  border-right: 2px solid var(--border); width: 76px; min-width: 76px;
+  position: sticky; left: 180px; z-index: 1;
+  border-right: 2px solid var(--border); width: 80px; min-width: 80px;
 }
 .entr-row-alt .entr-td-slot { background: #f7f9fb; }
 

@@ -118,7 +118,6 @@ function _renderFicheTable(fiche, data, year, month) {
 
   let thead = '<thead><tr>';
   thead += '<th class="entr-th-prod">Surface</th>';
-  thead += '<th class="entr-th-prod entr-th-info">Produit</th>';
   thead += '<th class="entr-th-slotcol"></th>';
   for (let d = 1; d <= days; d++) {
     const dayObj = new Date(year, month - 1, d);
@@ -143,9 +142,9 @@ function _renderFicheTable(fiche, data, year, month) {
       if (si === 0) {
         tbody += '<td class="entr-td-produit" rowspan="' + rowspan + '">'
           + '<div class="entr-td-produit-name">' + p.label + '</div>'
+          + (p.info ? '<div class="entr-td-produit-info">' + p.info + '</div>' : '')
           + (p.frequence ? '<div class="entr-td-produit-freq">' + p.frequence + '</div>' : '')
           + '</td>';
-        tbody += '<td class="entr-td-info" rowspan="' + rowspan + '">' + (p.info || '') + '</td>';
       }
 
       tbody += '<td class="entr-td-slot">' + (SLOT_LABELS[slot] || slot) + '</td>';
@@ -166,7 +165,7 @@ function _renderFicheTable(fiche, data, year, month) {
     });
 
     if (pi < fiche.produits.length - 1) {
-      tbody += '<tr class="entr-sep"><td colspan="' + (days + 3) + '"></td></tr>';
+      tbody += '<tr class="entr-sep"><td colspan="' + (days + 2) + '"></td></tr>';
     }
   });
   tbody += '</tbody>';
