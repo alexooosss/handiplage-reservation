@@ -10,10 +10,27 @@ async function renderAccueil(container, inscription, showView) {
 
   try {
     var resas   = await getUserReservations(inscription.id);
-    var today   = new Date().toISOString().slice(0, 10);
+    var now     = new Date();
+    var today   = now.getFullYear() + '-'
+      + String(now.getMonth() + 1).padStart(2, '0') + '-'
+      + String(now.getDate()).padStart(2, '0');
+    var nowMin  = now.getHours() * 60 + now.getMinutes();
 
-    var upcoming = resas.filter(function(r) { return r.date >= today && r.statut !== 'annule'; })
-      .sort(function(a, b) { return a.date < b.date ? -1 : 1; });
+    var upcoming = resas.filter(function(r) {
+      if (r.statut === 'annule') return false;
+      if (r.date < today) return false;
+      if (r.date === today && typeof getSlotById === 'function') {
+        var slot = getSlotById(r.creneauId);
+        if (slot) {
+          var ep = slot.end.split(':').map(Number);
+          if (nowMin >= ep[0] * 60 + ep[1]) return false;
+        }
+      }
+      return true;
+    }).sort(function(a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.creneauId || 0) - (b.creneauId || 0);
+    });
     var next    = upcoming[0] || null;
 
     var balance = computePassBalance(resas, PASS_QUOTA_USAGER);
@@ -73,6 +90,6 @@ function _formatDateShort(iso) {
 }
 
 function _creneauLabel(id) {
-  var labels = { 1: 'Matin', 2: 'Matin 2', 3: 'Après-midi', 4: 'Après-midi 2', 5: 'Soir' };
-  return labels[id] || ('Créneau ' + id);
+  var slot = (typeof getSlotById === 'function') ? getSlotById(id) : null;
+  return slot ? slot.label : ('Créneau ' + id);
 }
