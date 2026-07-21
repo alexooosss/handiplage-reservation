@@ -115,15 +115,15 @@ body {
   margin-bottom: 8px;
 }
 .usager-summary-value {
-  font-size: 1.1rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: var(--blue);
   line-height: 1.2;
 }
 .usager-summary-sub {
-  font-size: .8125rem;
+  font-size: .9rem;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .usager-summary-pass .usager-summary-value { color: var(--green); }
 
