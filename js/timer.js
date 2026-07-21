@@ -23,6 +23,16 @@ function getUrgencyLevel(ms) {
   return 'ok';
 }
 
+// Millisecondes restantes jusqu'à la fin officielle d'un créneau
+function slotEndMs(slotId) {
+  var slot = (typeof getSlotById === 'function') ? getSlotById(slotId) : null;
+  if (!slot) return 0;
+  var parts = slot.end.split(':').map(Number);
+  var t = new Date();
+  t.setHours(parts[0], parts[1], 0, 0);
+  return Math.max(0, t.getTime() - Date.now());
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { DURATION_MS, DURATION_MS_DOUBLE, getTimeRemaining, formatCountdown, getUrgencyLevel };
+  module.exports = { DURATION_MS, DURATION_MS_DOUBLE, getTimeRemaining, formatCountdown, getUrgencyLevel, slotEndMs };
 }

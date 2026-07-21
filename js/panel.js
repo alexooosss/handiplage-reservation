@@ -9,9 +9,8 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
   const { present, walkin, absent, departed } = _categorizeSpots(reservations);
   const { arrived, waiting, pasVenus, annules } = _categorizeWaiting(waitingList);
 
-  const sortByTime = arr => arr.sort(([,a],[,b]) =>
-    getTimeRemaining(a.checkinTime, a.durationMs) - getTimeRemaining(b.checkinTime, b.durationMs)
-  );
+  const _slotMs = r => (typeof slotEndMs === 'function' && r.slotId) ? slotEndMs(r.slotId) : 0;
+  const sortByTime = arr => arr.sort(([,a],[,b]) => _slotMs(a) - _slotMs(b));
   const presentSorted = sortByTime([...present, ...walkin]);
 
   const presentCount = present.length + walkin.length;
@@ -217,12 +216,12 @@ function _renderWaitingItem(resa, index, showActions) {
 function _renderPresentItem(spotId, resa) {
   const initials = `${(resa.prenom||'')[0]||''}${(resa.nom||'')[0]||''}`.toUpperCase();
   const avatarColor = resa.type === 'walkin' ? 'var(--orange)' : 'var(--red-dark)';
-  const ms = getTimeRemaining(resa.checkinTime, resa.durationMs);
+  const ms = (typeof slotEndMs === 'function' && resa.slotId) ? slotEndMs(resa.slotId) : 0;
   const urgency = getUrgencyLevel(ms);
   const timerHtml = `<div class="resa-timer ${urgency}">${formatCountdown(ms)}</div>`;
   const accompLabel = resa.accompagnants === 0 ? 'seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
-  const doubleLabel = resa.durationMs && resa.durationMs > 105 * 60 * 1000 ? ' · 2 créneaux' : '';
+  const doubleLabel = resa.nbCreneaux > 1 ? ' · 2 créneaux' : '';
   return `
     <div class="resa-item" data-state="${resa.status}" data-spot-id="${spotId}">
       <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>

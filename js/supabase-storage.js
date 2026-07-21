@@ -36,6 +36,9 @@ function _rowToSpotResa(row) {
     groupeId:      row.groupe_id || null,
     resaType:      row.resa_type || 'normal',
     nbUsagers:     row.nb_usagers || null,
+    slotId:        row.creneau_id,
+    // pour walk-ins : nb_usagers stocke le nombre de créneaux (1 ou 2)
+    nbCreneaux:    row.type === 'walkin' ? (row.nb_usagers || 1) : 1,
   };
 }
 
@@ -52,6 +55,9 @@ function _rowToWaitingResa(row) {
     resaType:      row.resa_type || 'normal',
     nbUsagers:     row.nb_usagers || null,
     type:          row.type || 'reserved',
+    slotId:        row.creneau_id,
+    // pour walk-ins : nb_usagers stocke le nombre de créneaux (1 ou 2)
+    nbCreneaux:    row.type === 'walkin' ? (row.nb_usagers || 1) : 1,
   };
 }
 
@@ -269,7 +275,7 @@ async function addWalkinToList(date, slotId, data) {
     checkin_time:  new Date().toISOString(),
     inscription_id: null,
     resa_type:     'normal',
-    nb_usagers:    null,
+    nb_usagers:    data.nbCreneaux > 1 ? data.nbCreneaux : null,
     groupe_id:     null,
   };
   var result = await supabaseClient.from('reservations').insert(row).select().single();

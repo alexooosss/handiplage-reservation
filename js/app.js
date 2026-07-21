@@ -345,8 +345,7 @@ const App = (() => {
     openSpotDetailModal(spotId, resa, {
       onCheckin: async id => {
         const now = Date.now();
-        const durationMs = Math.max(0, Math.min(DURATION_MS, _slotEndTimestamp(_selectedSlotId) - now));
-        await updateStatus(_date, _selectedSlotId, id, 'present', { checkinTime: now, durationMs });
+        await updateStatus(_date, _selectedSlotId, id, 'present', { checkinTime: now });
         await refresh();
       },
       onDepart: async id => {
@@ -397,10 +396,15 @@ const App = (() => {
 
   // ── Étape 1 : noter l'arrivée d'un walk-in (sans emplacement) ──
   function _openWalkinEntry() {
+    const minutesSince = (typeof minutesSinceSlotStart === 'function')
+      ? minutesSinceSlotStart(_selectedSlotId) : 0;
+    const isLate   = minutesSince > 45;
+    const nextSlot = (isLate && !isLastSlot(_selectedSlotId))
+      ? getSlotById(_selectedSlotId + 1) : null;
     openWalkinEntryModal(async data => {
       await addWalkinToList(_date, _selectedSlotId, data);
       await refresh();
-    });
+    }, { isLate, nextSlot });
   }
 
   // ── Étape 1 : noter l'arrivée depuis la liste d'attente ──
@@ -476,7 +480,9 @@ const App = (() => {
     const { id: waitingResaId, resa: waitingResa } = _selectionMode;
     _selectionMode = null;
 
-    const isDouble     = await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
+    const isDouble = waitingResa.type === 'walkin'
+      ? (waitingResa.nbCreneaux > 1)
+      : await _detectDoubleSlot(waitingResa.nom, waitingResa.prenom);
     const maxSlotId    = isDouble ? _selectedSlotId + 1 : _selectedSlotId;
     const baseDuration = isDouble ? DURATION_MS_DOUBLE : DURATION_MS;
     const durationMs   = Math.max(0, Math.min(baseDuration, _slotEndTimestamp(maxSlotId) - Date.now()));

@@ -203,8 +203,19 @@ function openAssignSpotModal(resa, freeSpots, onConfirm) {
 }
 
 // ── Modale 3a : Saisie walk-in (étape 1 — sans emplacement) ──
-// onConfirm({ nom, prenom, accompagnants })
-function openWalkinEntryModal(onConfirm) {
+// onConfirm({ nom, prenom, accompagnants, nbCreneaux })
+// opts : { isLate: bool, nextSlot: { label, end } | null }
+function openWalkinEntryModal(onConfirm, opts) {
+  opts = opts || {};
+  const showCreneaux = !!(opts.isLate && opts.nextSlot);
+  const hintCreneaux = showCreneaux ? `
+      <div class="form-group" id="wk-creneaux-row">
+        <label>Durée souhaitée</label>
+        <div class="radio-group" id="wk-creneaux">
+          <div class="radio-btn selected" data-value="1">1 créneau (jusqu'à ${opts.nextSlot && opts.nextSlot.start ? opts.nextSlot.start.replace(':', 'h') : ''})</div>
+          <div class="radio-btn"          data-value="2">2 créneaux (jusqu'à ${opts.nextSlot && opts.nextSlot.end ? opts.nextSlot.end.replace(':', 'h') : ''})</div>
+        </div>
+      </div>` : '';
   _dialog().innerHTML = `
     <div class="modal-header">
       <h3>↓ Sans réservation — Arrivée</h3>
@@ -230,6 +241,7 @@ function openWalkinEntryModal(onConfirm) {
           <div class="radio-btn"          data-value="2">2</div>
         </div>
       </div>
+      ${hintCreneaux}
       <p class="modal-hint">L'emplacement sera assigné depuis la carte après l'accueil.</p>
     </div>
     <div class="modal-footer">
@@ -239,6 +251,7 @@ function openWalkinEntryModal(onConfirm) {
   `;
 
   _bindRadioGroup('wk-accompagnants');
+  if (showCreneaux) _bindRadioGroup('wk-creneaux');
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   document.getElementById('wk-prenom').addEventListener('input', e => {
@@ -302,9 +315,12 @@ function openWalkinEntryModal(onConfirm) {
     const accompagnants = parseInt(
       document.querySelector('#wk-accompagnants .radio-btn.selected').dataset.value
     );
+    const nbCreneaux = showCreneaux
+      ? parseInt(document.querySelector('#wk-creneaux .radio-btn.selected').dataset.value)
+      : 1;
     if (!nom) { alert('Le nom est obligatoire.'); return; }
     closeModal();
-    onConfirm({ nom, prenom, accompagnants });
+    onConfirm({ nom, prenom, accompagnants, nbCreneaux });
   });
 
   _dialog().showModal();
@@ -492,7 +508,9 @@ function _bindProfilBtn(bodyId, btnId, history) {
 // callbacks : { onCheckin, onDepart, onAbsent }
 // history   : [{ slot, spotId, resa }] — historique du jour (optionnel)
 function openSpotDetailModal(spotId, resa, callbacks, history) {
-  const ms = resa.checkinTime ? getTimeRemaining(resa.checkinTime, resa.durationMs) : null;
+  const ms = (resa.status === 'present' || resa.status === 'walkin') && resa.slotId
+    ? (typeof slotEndMs === 'function' ? slotEndMs(resa.slotId) : null)
+    : null;
   const urgency = ms !== null ? getUrgencyLevel(ms) : 'ok';
 
   const timerHtml = ms !== null
@@ -501,7 +519,7 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
 
   const accompLabel = resa.accompagnants === 0 ? 'Seul·e'
     : resa.accompagnants === 1 ? '1 accompagnant' : '2 accompagnants';
-  const doubleLabel = resa.durationMs && resa.durationMs > 105 * 60 * 1000 ? ' (2 créneaux)' : '';
+  const doubleLabel = resa.nbCreneaux > 1 ? ' (2 créneaux)' : '';
 
   const actionBtns = resa.status === 'reserved_waiting'
     ? `<button class="btn-primary" id="btn-checkin">▶ Confirmer arrivée</button>
@@ -569,7 +587,7 @@ function openDepartedModal(spotId, resa, history) {
   }
 
   const typeLabel = resa.type === 'walkin' ? 'Sans réservation' : 'Avec réservation';
-  const doubleLabel = resa.durationMs && resa.durationMs > 105 * 60 * 1000 ? ' · double créneau' : '';
+  const doubleLabel = resa.nbCreneaux > 1 ? ' · double créneau' : '';
 
   _dialog().innerHTML = `
     <div class="modal-header">

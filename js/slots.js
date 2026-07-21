@@ -33,6 +33,19 @@ function getSlotById(id) {
   return SLOTS.find(s => s.id === id) || null;
 }
 
+// Minutes écoulées depuis le début du créneau (peut être négatif si avant le début)
+function minutesSinceSlotStart(slotId) {
+  const slot = getSlotById(slotId);
+  if (!slot) return 0;
+  const now = new Date();
+  const currentMin = now.getHours() * 60 + now.getMinutes();
+  return currentMin - timeToMinutes(slot.start);
+}
+
+function isLastSlot(slotId) {
+  return slotId >= SLOTS[SLOTS.length - 1].id;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { SLOTS, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById };
+  module.exports = { SLOTS, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot };
 }
