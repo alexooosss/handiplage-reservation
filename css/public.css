@@ -13,19 +13,85 @@ body {
 .pub-header {
   background: #1565c0;
   color: white;
-  padding: 16px 20px;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-.pub-header-title { font-size: 1.1rem; font-weight: 700; }
-.pub-header-sub   { font-size: 0.875rem; opacity: .85; }
+.pub-header-logo { height: 36px; width: auto; display: block; }
+.pub-header-sub  { font-size: 0.875rem; opacity: .85; }
+
+/* Shell responsive */
+.pub-shell { display: block; }
+.pub-sidebar { display: none; }
 
 /* Contenu principal */
+.pub-main { flex: 1; min-width: 0; }
 .pub-container {
   max-width: 680px;
   margin: 0 auto;
   padding: 16px;
+}
+
+/* ── Sidebar (desktop) ───────────────────────────────────────────── */
+.pub-sidebar-inner {
+  padding: 28px 24px 20px;
+  flex: 1;
+}
+.pub-sidebar-tagline {
+  font-size: .9rem;
+  opacity: .85;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+.pub-sidebar-hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,.2);
+  margin-bottom: 20px;
+}
+.pub-sidebar-infos { display: flex; flex-direction: column; gap: 14px; }
+.pub-sidebar-info  { display: flex; align-items: center; gap: 12px; font-size: .875rem; opacity: .9; }
+.pub-sidebar-info-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.13);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pub-sidebar-info-icon img { width: 18px; height: 18px; object-fit: contain; }
+.pub-sidebar-deco { flex-shrink: 0; }
+.pub-sidebar-deco svg { display: block; width: 100%; height: 60px; }
+
+/* ── Desktop ≥1024px ─────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  body { display: flex; flex-direction: column; }
+  .pub-shell {
+    display: flex;
+    flex: 1;
+  }
+  .pub-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 25%;
+    flex-shrink: 0;
+    align-self: flex-start;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+    background: linear-gradient(168deg, #080f30 0%, #0a2a6e 28%, #1565c0 62%, #1976d2 100%);
+    color: white;
+  }
+  .pub-main { overflow-x: hidden; }
+  .pub-container { max-width: none; padding: 28px 40px 48px; }
+}
+
+/* ── Tablette 640–1023px ─────────────────────────────────────────── */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .pub-container { max-width: 720px; padding: 20px 28px 40px; }
 }
 
 /* Carte section */
