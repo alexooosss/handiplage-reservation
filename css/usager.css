@@ -562,10 +562,17 @@ body {
   /* ── Contenu principal ── */
   #usager-content {
     flex: 1;
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 24px 28px 40px;
+    max-width: none;
+    margin: 0;
+    padding: 28px 40px 48px;
   }
+
+  /* Tuiles : 4 colonnes sur desktop */
+  .usager-tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  /* Réserver reste pleine largeur */
+  .usager-tile-primary { grid-column: 1 / -1; }
 
   /* Footer pleine largeur (hors du shell) */
   .site-footer { margin-top: 0; }
