@@ -121,7 +121,7 @@ body {
   line-height: 1.2;
 }
 .usager-summary-sub {
-  font-size: .9rem;
+  font-size: 1.1rem;
   color: var(--text-muted);
   margin-top: 6px;
 }
