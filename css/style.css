@@ -1354,14 +1354,21 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 .entr-th-prod {
   text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px;
-  background: var(--panel-bg); width: 160px; min-width: 160px; max-width: 160px;
+  background: var(--panel-bg); width: 150px; min-width: 150px; max-width: 150px;
   position: sticky; left: 0; z-index: 3; border-right: 1px solid var(--border);
   overflow: hidden;
 }
-/* Colonne Matin/Après-midi (sticky après produit) */
+/* Colonne Produit (non-sticky) */
+.entr-th-info {
+  text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px;
+  background: var(--panel-bg); width: 110px; min-width: 110px; max-width: 110px;
+  border-right: 1px solid var(--border);
+}
+/* Colonne Matin/Midi/Après-midi (sticky après produit) */
 .entr-th-slotcol {
   background: var(--panel-bg); width: 76px; min-width: 76px;
-  position: sticky; left: 160px; z-index: 3; border-right: 2px solid var(--border);
+  position: sticky; left: 150px; z-index: 3; border-right: 2px solid var(--border);
 }
 
 .entr-row-top td { border-bottom: none; padding-bottom: 1px; }
@@ -1374,16 +1381,25 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
   background: #fff; vertical-align: middle;
   position: sticky; left: 0; z-index: 1;
   border-right: 1px solid var(--border);
-  width: 160px; min-width: 160px; max-width: 160px;
+  width: 150px; min-width: 150px; max-width: 150px;
   overflow: hidden; white-space: normal; word-break: break-word;
 }
 .entr-row-alt .entr-td-produit { background: #f7f9fb; }
+
+.entr-td-info {
+  padding: 6px 10px; font-size: 11px; color: var(--text-muted);
+  background: #fff; vertical-align: middle;
+  border-right: 1px solid var(--border);
+  width: 110px; min-width: 110px; max-width: 110px;
+  overflow: hidden; white-space: normal; word-break: break-word;
+}
+.entr-row-alt .entr-td-info { background: #f7f9fb; }
 
 .entr-td-slot {
   text-align: center; padding: 4px 6px; font-size: 10px; font-weight: 700;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;
   background: #fff; white-space: nowrap;
-  position: sticky; left: 160px; z-index: 1;
+  position: sticky; left: 150px; z-index: 1;
   border-right: 2px solid var(--border); width: 76px; min-width: 76px;
 }
 .entr-row-alt .entr-td-slot { background: #f7f9fb; }

@@ -1,34 +1,79 @@
 'use strict';
 
-// À remplacer par la liste réelle fournie par l'équipe
+const SLOT_LABELS = { matin: 'Matin', midi: 'Midi', aprem: 'Après-midi', util: 'Utilisation' };
+
 const ENTRETIEN_FICHES = [
   {
-    id: 'toilettes',
-    label: 'Toilettes',
+    id: 'plage',
+    label: 'Plage adaptée',
     produits: [
-      { id: 'desinfectant_wc',  label: 'Désinfectant WC (cuvette, abattant, rambardes)' },
-      { id: 'nettoyant_sol',    label: 'Nettoyant sol' },
-      { id: 'nettoyant_lavabo', label: 'Lavabos / robinetterie' },
-      { id: 'desodorisant',     label: 'Désodorisant' },
+      { id: 'transats',         label: 'Transats plastique',          info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'chaises',          label: 'Chaises plastiques',          info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'tapis',            label: 'Tapis de circulation',         info: 'Balayage',                   slots: ['util'] },
+      { id: 'tiralo',           label: 'Tiralo',                       info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'hippocampe',       label: 'Hippocampe',                   info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'rampe_entree',     label: 'Rampe d\'entrée plage',        info: 'Exeol surf désinfectant',    slots: ['matin', 'midi', 'aprem'] },
+      { id: 'sol_rampe_entree', label: 'Sol rampe d\'entrée plage',    info: 'Balayage',                   slots: ['matin'] },
+      { id: 'rampe_eau',        label: 'Rampe d\'accès à l\'eau',      info: 'Exeol surf désinfectant',    slots: ['matin', 'midi', 'aprem'] },
+      { id: 'sol_rampe_eau',    label: 'Sol rampe d\'accès à l\'eau',  info: 'Balayage',                   slots: ['matin'] },
+      { id: 'audio',            label: 'Audio plage',                  info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'fauteuil',         label: 'Fauteuil roulant',             info: 'Exeol surf désinfectant',    slots: ['util'] },
+      { id: 'deambulateur',     label: 'Déambulateur',                 info: 'Exeol surf désinfectant',    slots: ['util'] },
+    ]
+  },
+  {
+    id: 'sanitaire',
+    label: 'Sanitaire',
+    produits: [
+      { id: 'lavabo',       label: 'Lavabo',                       info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'dist_savon',   label: 'Distributeur de savon',        info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'dist_essuie',  label: 'Distributeur d\'essuie-mains', info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'miroir',       label: 'Miroir',                       info: 'Alcène vitres',              slots: ['matin', 'aprem'] },
+      { id: 'interrupteur', label: 'Interrupteur',                  info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'wc',           label: 'WC',                           info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'barre_appui',  label: 'Barre d\'appui',               info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'poubelle',     label: 'Poubelle',                     info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'porte',        label: 'Porte / poignée de porte',     info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'mur',          label: 'Mur',                          info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'sol',          label: 'Sol',                          info: 'Ultrafresh 3D',              slots: ['matin', 'aprem'] },
     ]
   },
   {
     id: 'vestiaires',
     label: 'Vestiaires',
     produits: [
-      { id: 'nettoyant_sol',    label: 'Nettoyant sol' },
-      { id: 'desinfectant',     label: 'Désinfectant surfaces / bancs' },
-      { id: 'nettoyant_douche', label: 'Douches / anticalcaire' },
+      { id: 'lavabo_rob',    label: 'Lavabo robinet',               info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'dist_savon',    label: 'Distributeur de savon',        info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'dist_essuie',   label: 'Distributeur d\'essuie-mains', info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'miroir',        label: 'Miroir',                       info: 'Alcène Vitres',              slots: ['matin', 'aprem'] },
+      { id: 'interrupteur',  label: 'Interrupteur',                  info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'porte_vitree',  label: 'Porte vitrée',                 info: 'Alcène Vitres',              slots: ['matin', 'aprem'] },
+      { id: 'cabine_change', label: 'Cabine de change',             info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'chaise',        label: 'Chaise',                       info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'barre_appui',   label: 'Barre d\'appui',               info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'poubelle',      label: 'Poubelle',                     info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'porte',         label: 'Porte / poignée de porte',     info: 'Exeol surf désinfectant',    slots: ['matin', 'aprem'] },
+      { id: 'mur',           label: 'Mur',                          info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'aprem'] },
+      { id: 'sol',           label: 'Sol',                          info: 'Ultrafresh 3D',              slots: ['matin', 'aprem'] },
     ]
   },
   {
-    id: 'reserve',
-    label: 'Réserve',
+    id: 'douche_ext',
+    label: 'Douche extérieure',
     produits: [
-      { id: 'nettoyant_sol',  label: 'Nettoyant sol' },
-      { id: 'depoussiérant',  label: 'Dépoussiérant étagères / matériel' },
+      { id: 'barre_appui',    label: 'Barre d\'appui',              info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'midi', 'aprem'] },
+      { id: 'poignee_douche', label: 'Poignée de douche',           info: 'Ultra Bac Sanit 5+',         slots: ['matin', 'midi', 'aprem'] },
     ]
-  }
+  },
+  {
+    id: 'local_tech',
+    label: 'Local technique',
+    produits: [
+      { id: 'sol',          label: 'Sol',                            info: 'Balayage',                   slots: ['matin'] },
+      { id: 'interrupteur', label: 'Interrupteur',                   info: 'Exeol surf désinfectant',    slots: ['matin'] },
+      { id: 'porte',        label: 'Poignée / porte',                info: 'Exeol surf désinfectant',    slots: ['matin'] },
+    ]
+  },
 ];
 
 function _entrKey(year, month) { return 'entretien_' + year + '_' + month; }
@@ -45,7 +90,7 @@ function _saveEntr(year, month, data) {
 }
 
 function _daysInMonth(year, month) {
-  return new Date(year, month, 0).getDate(); // month est 1-based
+  return new Date(year, month, 0).getDate();
 }
 
 function _isoDay(year, month, day) {
@@ -55,12 +100,6 @@ function _isoDay(year, month, day) {
 function _fmtMonthYear(year, month) {
   const s = new Date(year, month - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function _fmtDayLabel(year, month, day) {
-  const d = new Date(year, month - 1, day);
-  const wd = d.toLocaleDateString('fr-FR', { weekday: 'short' });
-  return day + ' ' + wd.charAt(0).toUpperCase() + wd.slice(1).replace(/\.$/, '');
 }
 
 function _getVal(data, ficheId, dayISO, produitId, slot) {
@@ -77,9 +116,9 @@ function _setVal(data, ficheId, dayISO, produitId, slot, val) {
 function _renderFicheTable(fiche, data, year, month) {
   const days = _daysInMonth(year, month);
 
-  // En-tête : colonne produit + colonne M/AM + 1 colonne par jour
   let thead = '<thead><tr>';
-  thead += '<th class="entr-th-prod">Produit</th>';
+  thead += '<th class="entr-th-prod">Surface</th>';
+  thead += '<th class="entr-th-prod entr-th-info">Produit</th>';
   thead += '<th class="entr-th-slotcol"></th>';
   for (let d = 1; d <= days; d++) {
     const dayObj = new Date(year, month - 1, d);
@@ -93,23 +132,21 @@ function _renderFicheTable(fiche, data, year, month) {
   }
   thead += '</tr></thead>';
 
-  // Corps : pour chaque produit, 2 lignes (M et AM)
   let tbody = '<tbody>';
   fiche.produits.forEach((p, pi) => {
-    const altCls = pi % 2 === 1 ? ' entr-row-alt' : '';
+    const altCls   = pi % 2 === 1 ? ' entr-row-alt' : '';
+    const rowspan  = p.slots.length;
 
-    ['matin', 'aprem'].forEach((slot, si) => {
-      tbody += '<tr class="entr-row' + altCls + (si === 0 ? ' entr-row-top' : ' entr-row-bot') + '">';
+    p.slots.forEach((slot, si) => {
+      tbody += '<tr class="entr-row' + altCls + (si === 0 ? ' entr-row-top' : '') + (si === rowspan - 1 ? ' entr-row-bot' : '') + '">';
 
-      // Nom du produit — rowspan 2, sticky gauche
       if (si === 0) {
-        tbody += '<td class="entr-td-produit" rowspan="2">' + p.label + '</td>';
+        tbody += '<td class="entr-td-produit" rowspan="' + rowspan + '">' + p.label + '</td>';
+        tbody += '<td class="entr-td-info" rowspan="' + rowspan + '">' + (p.info || '') + '</td>';
       }
 
-      // Label M / AM — sticky gauche (deuxième colonne)
-      tbody += '<td class="entr-td-slot">' + (slot === 'matin' ? 'Matin' : 'Après-midi') + '</td>';
+      tbody += '<td class="entr-td-slot">' + (SLOT_LABELS[slot] || slot) + '</td>';
 
-      // Cellules jours
       for (let d = 1; d <= days; d++) {
         const iso    = _isoDay(year, month, d);
         const dayObj = new Date(year, month - 1, d);
@@ -125,9 +162,8 @@ function _renderFicheTable(fiche, data, year, month) {
       tbody += '</tr>';
     });
 
-    // Séparateur visuel entre produits
     if (pi < fiche.produits.length - 1) {
-      tbody += '<tr class="entr-sep"><td colspan="' + (days + 2) + '"></td></tr>';
+      tbody += '<tr class="entr-sep"><td colspan="' + (days + 3) + '"></td></tr>';
     }
   });
   tbody += '</tbody>';
@@ -137,17 +173,15 @@ function _renderFicheTable(fiche, data, year, month) {
 
 function _wireInputs(container, data, year, month, onDataChange) {
   container.querySelectorAll('.entr-init-inp').forEach(inp => {
-    // Majuscules en temps réel
     inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase(); });
 
     inp.addEventListener('blur', () => {
-      const val     = inp.value.trim().toUpperCase();
+      const val  = inp.value.trim().toUpperCase();
       const { fiche, day, prod, slot } = inp.dataset;
       inp.value = val;
       _setVal(data, fiche, day, prod, slot, val);
       inp.closest('td').classList.toggle('entr-filled', val.length > 0);
 
-      // Pré-remplissage des autres produits de la même demi-journée si vides
       if (val) {
         container.querySelectorAll(
           '.entr-init-inp[data-day="' + day + '"][data-slot="' + slot + '"]'
