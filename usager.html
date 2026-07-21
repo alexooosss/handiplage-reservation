@@ -17,9 +17,46 @@
   <button id="btn-logout-usager">D&eacute;connexion</button>
 </header>
 
-<main id="usager-content">
-  <!-- Inject&eacute; par usager-app.js -->
-</main>
+<div class="usager-shell">
+
+  <aside class="usager-sidebar">
+    <div class="usager-sidebar-inner">
+      <div class="usager-sidebar-brand">
+        <img src="logo-handiplage.svg" alt="" class="usager-sidebar-logo">
+        <span class="usager-sidebar-brand-name">Handiplage</span>
+      </div>
+      <p class="usager-sidebar-tagline">Votre espace plage accessible à Antibes</p>
+      <hr class="usager-sidebar-hr">
+      <div class="usager-sidebar-infos">
+        <div class="usager-sidebar-info">
+          <div class="usager-sidebar-info-icon">📍</div>
+          <span>Plage du Ponteil, Antibes</span>
+        </div>
+        <div class="usager-sidebar-info">
+          <div class="usager-sidebar-info-icon">🕐</div>
+          <span>8h30 – 18h15 · 5 créneaux</span>
+        </div>
+        <div class="usager-sidebar-info">
+          <div class="usager-sidebar-info-icon">📅</div>
+          <span>Juin – Septembre 2026</span>
+        </div>
+      </div>
+    </div>
+    <!-- Zone photo : affecter background-image: url(...) sur .usager-sidebar-photo quand la photo est disponible -->
+    <div class="usager-sidebar-photo">
+      <svg class="usager-sidebar-waves" viewBox="0 0 300 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <path d="M0,20 C50,0 100,40 150,20 C200,0 250,40 300,20 L300,60 L0,60 Z" fill="rgba(255,255,255,0.07)"/>
+        <path d="M0,34 C60,14 120,50 180,32 C230,16 270,46 300,34 L300,60 L0,60 Z" fill="rgba(255,255,255,0.05)"/>
+        <path d="M0,46 C70,30 140,60 210,44 C250,34 280,54 300,46 L300,60 L0,60 Z" fill="rgba(255,255,255,0.04)"/>
+      </svg>
+    </div>
+  </aside>
+
+  <main id="usager-content">
+    <!-- Inject&eacute; par usager-app.js -->
+  </main>
+
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/env.js"></script>
