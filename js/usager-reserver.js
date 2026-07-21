@@ -191,7 +191,7 @@ function _renderResaManage(container, inscription, showView, params) {
     +   '<div class="usager-recap-icon">📋</div>'
     +   '<div class="usager-recap-title">Votre réservation</div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Date</span><span class="usager-recap-val">' + dateLabel + '</span></div>'
-    +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + ' (' + (params.heureDebut || '').slice(0,5) + '–' + (params.heureFin || '').slice(0,5) + ')</span></div>'
+    +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + '</span></div>'
     + '</div>'
     + (params.resaStatut === 'attente'
       ? '<button class="usager-btn usager-btn-danger" id="btn-annuler-manage">Annuler cette réservation</button>'
@@ -344,7 +344,7 @@ async function renderConfirmation(container, inscription, showView, params) {
     +   '<div class="usager-recap-icon">📋</div>'
     +   '<div class="usager-recap-title">Votre réservation</div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Date</span><span class="usager-recap-val">' + dateLabel + '</span></div>'
-    +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + ' (' + (params.heureDebut || '').slice(0, 5) + '–' + (params.heureFin || '').slice(0, 5) + ')</span></div>'
+    +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + '</span></div>'
     +   passImpactHtml
     + '</div>'
     + '<div id="confirm-error" class="usager-error" style="display:none"></div>'
