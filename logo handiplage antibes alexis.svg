@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 29.87 16.15">
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-0.4 -0.4 26.37 14.63">
   <defs>
     <style>
       .cls-1 {
@@ -85,5 +85,5 @@
       </g>
     </symbol>
   </defs>
-  <use width="219.69" height="118.79" transform="scale(.14)" xlink:href="#Nouveau_symbole"/>
+  <use width="219.69" height="118.79" transform="scale(.12)" xlink:href="#Nouveau_symbole"/>
 </svg>
