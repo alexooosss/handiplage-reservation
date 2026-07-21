@@ -93,7 +93,10 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
   container.querySelectorAll('.usager-day-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       selectedDate = btn.dataset.date;
+      var savedScroll = (container.querySelector('.usager-week-bar') || {}).scrollLeft || 0;
       _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate);
+      var newBar = container.querySelector('.usager-week-bar');
+      if (newBar) newBar.scrollLeft = savedScroll;
     });
   });
 
