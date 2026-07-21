@@ -23,6 +23,16 @@ body {
 }
 .pub-header-logo { height: 36px; width: auto; display: block; }
 .pub-header-sub  { font-size: 0.875rem; opacity: .85; }
+.pub-header-back {
+  margin-left: auto;
+  color: white;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 600;
+  opacity: .85;
+  white-space: nowrap;
+}
+.pub-header-back:hover { opacity: 1; }
 
 /* Shell responsive */
 .pub-shell { display: block; }
