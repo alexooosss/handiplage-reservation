@@ -11,11 +11,11 @@
       }
 
       .cls-1, .cls-2, .cls-3, .cls-6, .cls-7, .cls-8 {
-        stroke: #312783;
+        stroke: #1a3a8c;
       }
 
       .cls-1, .cls-2, .cls-3, .cls-6, .cls-7, .cls-9 {
-        fill: #312783;
+        fill: #1a3a8c;
       }
 
       .cls-10 {
