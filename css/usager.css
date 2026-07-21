@@ -35,8 +35,15 @@ body {
   top: 0;
   z-index: 10;
 }
-.usager-logo { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.usager-logo { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .usager-logo-img { height: 34px; width: auto; display: block; }
+.usager-brand-sub {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .72rem; color: rgba(255,255,255,.85);
+  letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  white-space: nowrap;
+}
+.usager-brand-rule { flex: 1; height: 1px; background: rgba(255,255,255,.35); display: block; min-width: 18px; }
 #btn-logout-usager {
   background: rgba(255,255,255,.15);
   color: white;
