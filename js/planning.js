@@ -117,7 +117,7 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       const nSty = nCls === 'phalf-count' ? 'color:' + color : '';
 
       const walkinHtml = walkins > 0
-        ? '<div class="phalf-walkin-box"><span class="phalf-walkin-count" translate="no">' + walkins + '</span><span class="phalf-walkin-label">🚶 Sans résa</span></div>'
+        ? '<div class="phalf-walkin-box"><span class="phalf-walkin-count" translate="no">' + walkins + '</span><span class="phalf-walkin-label">Sans résa</span></div>'
         : '';
 
       // Les compteurs sont mis via textContent après rendu pour éviter tout problème d'interprétation
@@ -276,7 +276,7 @@ async function exportSlotPDF(dateISO, slot) {
           + '<tbody>' + sectionGroupes + '</tbody></table></div>'
         : '')
     + (walkins.length > 0
-        ? '<div class="sec"><div class="sec-title">🚶 Sans réservation (' + walkins.length + ')</div>'
+        ? '<div class="sec"><div class="sec-title">Sans réservation (' + walkins.length + ')</div>'
           + '<table><thead><tr><th>#</th><th>Nom Prénom</th><th>Accompagnants</th><th>Emplacement</th></tr></thead>'
           + '<tbody>' + sectionWalkins + '</tbody></table></div>'
         : '')
