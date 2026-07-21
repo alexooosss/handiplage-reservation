@@ -117,7 +117,7 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       const nSty = nCls === 'phalf-count' ? 'color:' + color : '';
 
       const walkinHtml = walkins > 0
-        ? '<div class="phalf-walkin-box"><span class="phalf-walkin-count" translate="no">' + walkins + '</span><span class="phalf-walkin-label">Sans résa</span></div>'
+        ? '<div class="phalf-walkin-box"><span class="phalf-walkin-count" translate="no">' + walkins + '</span><span class="phalf-walkin-label">Sans réservation</span></div>'
         : '';
 
       // Les compteurs sont mis via textContent après rendu pour éviter tout problème d'interprétation
