@@ -25,14 +25,22 @@ body {
 .pub-header-sub  { font-size: 0.875rem; opacity: .85; }
 .pub-header-back {
   margin-left: auto;
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  color: #1565c0;
   text-decoration: none;
-  font-size: .875rem;
-  font-weight: 600;
-  opacity: .85;
+  font-size: .9rem;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 50px;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  transition: background .15s, transform .1s;
 }
-.pub-header-back:hover { opacity: 1; }
+.pub-header-back:hover  { background: #e3f2fd; }
+.pub-header-back:active { transform: scale(0.97); }
 
 /* Shell responsive */
 .pub-shell { display: block; }
