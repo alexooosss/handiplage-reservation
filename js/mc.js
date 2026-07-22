@@ -3,14 +3,16 @@
 var _mcCurrentData = null;
 
 const MC_COLS = [
-  { key: 'resa',         label: 'Usagers\nrésas',      auto: true  },
-  { key: 'walkin',       label: 'Usagers\nsans résa',   auto: true  },
-  { key: 'gpe_pers',    label: 'Groupes\npersonnes',   auto: true  },
-  { key: 'gpe_acc',     label: 'Groupes\nacc.',        auto: true  },
-  { key: 'tiralos',     label: 'Tiralos',              auto: false },
-  { key: 'hippocampes', label: 'Hippo-\ncampes',       auto: false },
-  { key: 'audioplage',  label: 'Audio-\nplage',        auto: false },
-  { key: 'transferts',  label: 'Trans-\nferts',        auto: false },
+  { key: 'resa',          label: 'Usagers\nrésas',      auto: true  },
+  { key: 'walkin',        label: 'Usagers\nsans résa',   auto: true  },
+  { key: 'acc_total',     label: 'Accom-\npagnants',     auto: true  },
+  { key: 'gpe_pers',      label: 'Groupes\npersonnes',   auto: true  },
+  { key: 'gpe_acc',       label: 'Groupes\nacc.',        auto: true  },
+  { key: 'tiralos',       label: 'Tiralos',              auto: false },
+  { key: 'hippocampes',   label: 'Hippo-\ncampes',       auto: false },
+  { key: 'audioplage',    label: 'Audio-\nplage',        auto: false },
+  { key: 'transferts',    label: 'Trans-\nferts',        auto: false },
+  { key: 'leve_personne', label: 'Lève-\npersonne',      auto: false },
 ];
 
 function _fmtDateFr(iso) {
@@ -47,8 +49,9 @@ async function renderMc(container, date) {
           gpe_acc  += r.accompagnants || 0;
         }
       });
-      _mcCurrentData.slots[s.id].gpe_pers = gpe_pers;
-      _mcCurrentData.slots[s.id].gpe_acc  = gpe_acc;
+      _mcCurrentData.slots[s.id].gpe_pers  = gpe_pers;
+      _mcCurrentData.slots[s.id].gpe_acc   = gpe_acc;
+      _mcCurrentData.slots[s.id].acc_total = vals.filter(r => r.resaType !== 'groupe').reduce((sum, r) => sum + (r.accompagnants || 0), 0);
       _mcCurrentData.slots[s.id].resa   = vals.filter(r => r.type === 'reserved' && r.resaType !== 'groupe').length;
       _mcCurrentData.slots[s.id].walkin = vals.filter(r => r.type === 'walkin').length;
     } catch (e) {

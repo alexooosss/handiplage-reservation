@@ -28,7 +28,7 @@ async function renderInscription(container, selectedId) {
 
   document.getElementById('insc-search').addEventListener('input', async function() {
     const q = this.value.toLowerCase();
-    const list = await getInscriptions();
+    const list = getCachedInscriptions() || await getInscriptions();
     document.getElementById('insc-list').innerHTML = _renderListItems(list, q);
     _bindListItems(container);
   });
@@ -193,7 +193,7 @@ function _showForm(container, insc) {
     +   '</div>'
     +   '<div class="insc-engage-block">'
     +     '<div class="insc-engage-label">Données de santé <span class="req">*</span></div>'
-    +     '<label class="insc-check"><input type="checkbox" id="f-sante"' + chkB(v.rgpd) + '> Je consens expressément au traitement des données de santé (besoins d\'accompagnement et aides techniques — Art. 9 RGPD)</label>'
+    +     '<label class="insc-check"><input type="checkbox" id="f-sante"' + chkB(v.sante) + '> Je consens expressément au traitement des données de santé (besoins d\'accompagnement et aides techniques — Art. 9 RGPD)</label>'
     +   '</div>'
     +   '<div class="insc-engage-block">'
     +     '<div class="insc-engage-label">Communications du CCAS <span class="req">*</span></div>'
@@ -521,6 +521,7 @@ function _handleSubmit(container, existingId, existingData) {
     aidesTechniques:   atChecked,
     gilet,
     rgpd,
+    sante,
     ccasCommunications: ccas,
     reglement:         regl,
     signature:         sig,
@@ -596,12 +597,12 @@ function _loadHistory(inscriptionId) {
       histEl.innerHTML = '<em class="insc-history-empty">Aucune réservation enregistrée.</em>';
       return;
     }
-    var statutLabel = { attente: 'Réservation', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
+    var statutLabel = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé' };
     var slotLabel = {};
     if (typeof SLOTS !== 'undefined') {
       SLOTS.forEach(function(s) { slotLabel[s.id] = s.label; });
     }
-    histEl.innerHTML = rows.map(function(r) {
+    function _histRow(r) {
       var d = new Date(r.date + 'T00:00:00');
       var dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
       var statut  = statutLabel[r.statut] || r.statut;
@@ -613,7 +614,58 @@ function _loadHistory(inscriptionId) {
         + '<span class="insc-history-slot">' + _escI(slot) + spot + acc + '</span>'
         + '<span class="insc-history-statut insc-hs-' + r.statut + '">' + statut + '</span>'
         + '</div>';
+    }
+
+    var monthMap = {};
+    rows.forEach(function(r) {
+      var key = r.date.slice(0, 7);
+      if (!monthMap[key]) monthMap[key] = [];
+      monthMap[key].push(r);
+    });
+    var monthKeys = Object.keys(monthMap).sort().reverse();
+    var HIST_VISIBLE = 5;
+
+    histEl.innerHTML = monthKeys.map(function(key, idx) {
+      var items   = monthMap[key];
+      var s       = new Date(key + '-02').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      var label   = s.charAt(0).toUpperCase() + s.slice(1);
+      var isOpen  = idx === 0;
+      var visible = items.slice(0, HIST_VISIBLE);
+      var extra   = items.slice(HIST_VISIBLE);
+      return '<div class="insc-hist-group">'
+        + '<div class="insc-hist-header' + (isOpen ? ' open' : '') + '">'
+        +   '<span class="insc-hist-label">' + label + '</span>'
+        +   '<span class="insc-hist-meta">' + items.length + ' séance' + (items.length > 1 ? 's' : '') + '</span>'
+        +   '<span class="insc-hist-chevron">' + (isOpen ? '▾' : '▸') + '</span>'
+        + '</div>'
+        + '<div class="insc-hist-body' + (isOpen ? ' open' : '') + '">'
+        +   visible.map(_histRow).join('')
+        +   (extra.length
+            ? '<button class="insc-hist-more">▼ Voir les ' + extra.length + ' autre' + (extra.length > 1 ? 's' : '') + '</button>'
+              + '<div class="insc-hist-extra">' + extra.map(_histRow).join('') + '</div>'
+            : '')
+        + '</div>'
+        + '</div>';
     }).join('');
+
+    histEl.querySelectorAll('.insc-hist-header').forEach(function(hdr) {
+      hdr.addEventListener('click', function() {
+        var body = hdr.nextElementSibling;
+        var open = body.classList.toggle('open');
+        hdr.classList.toggle('open', open);
+        hdr.querySelector('.insc-hist-chevron').textContent = open ? '▾' : '▸';
+      });
+    });
+    histEl.querySelectorAll('.insc-hist-more').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var extra = btn.nextElementSibling;
+        var isOpen = extra.classList.toggle('open');
+        btn.textContent = isOpen
+          ? '▲ Replier'
+          : btn.dataset.label;
+      });
+      btn.dataset.label = btn.textContent;
+    });
   }).catch(function(e) {
     var histEl = document.getElementById('insc-history-list');
     if (histEl) histEl.innerHTML = '<em style="color:#c00;font-size:13px">Erreur de chargement.</em>';

@@ -288,6 +288,31 @@ body {
 .usager-resa-slot   { font-size: .875rem; color: var(--text-muted); }
 .usager-resa-spot   { font-size: .8125rem; color: var(--blue); width: 100%; }
 .usager-resa-statut { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 10px; }
+/* ── Accordéon mois ─────────────────────────────────────── */
+.resa-month-group { margin-bottom: 6px; }
+.resa-month-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 8px;
+  background: #f0f4ff; cursor: pointer;
+  user-select: none; transition: background .15s;
+}
+.resa-month-header:hover { background: #e3eaff; }
+.resa-month-label { font-size: .875rem; font-weight: 700; color: var(--blue); flex: 1; }
+.resa-month-meta  { font-size: .78rem; color: var(--text-muted); }
+.resa-month-chevron { font-size: .85rem; color: var(--blue); transition: transform .2s; }
+.resa-month-body { display: none; }
+.resa-month-body.open { display: block; }
+.resa-month-extra { display: none; }
+.resa-month-extra.open { display: block; }
+.resa-month-more {
+  display: block; width: 100%; margin: 4px 0 2px;
+  padding: 7px; border: none; border-radius: 6px;
+  background: #f5f5f5; color: var(--text-muted);
+  font-size: .8125rem; cursor: pointer; text-align: center;
+  transition: background .15s;
+}
+.resa-month-more:hover { background: #eaeaea; }
+/* ─────────────────────────────────────────────────────── */
 .resa-s-attente  { background: #fff9c4; color: #f57f17; }
 .resa-s-present  { background: var(--green-light); color: var(--green); }
 .resa-s-parti    { background: var(--blue-light); color: var(--blue); }

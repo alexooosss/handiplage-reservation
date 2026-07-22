@@ -283,7 +283,10 @@ function openWalkinEntryModal(onConfirm, opts) {
         item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
           + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
         var nameSpan = document.createElement('span');
-        nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+        var _b1 = document.createElement('strong');
+        _b1.textContent = i.nom.toUpperCase();
+        nameSpan.appendChild(_b1);
+        nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
         item.appendChild(nameSpan);
         if (i.pass) {
           var remSpan = document.createElement('span');
@@ -1062,7 +1065,9 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
           item.className = 'pf-suggest-item';
           item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center';
           var nameSpan = document.createElement('span');
-          nameSpan.innerHTML = '<strong>' + g.nom + '</strong>';
+          var _b2 = document.createElement('strong');
+          _b2.textContent = g.nom;
+          nameSpan.appendChild(_b2);
           item.appendChild(nameSpan);
           var metaSpan = document.createElement('span');
           metaSpan.style.cssText = 'font-size:11px;color:#888';
@@ -1094,7 +1099,10 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
           item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center'
             + (exhausted ? ';opacity:.5;cursor:not-allowed' : '');
           var nameSpan = document.createElement('span');
-          nameSpan.innerHTML = '<strong>' + i.nom.toUpperCase() + '</strong> ' + i.prenom;
+          var _b3 = document.createElement('strong');
+          _b3.textContent = i.nom.toUpperCase();
+          nameSpan.appendChild(_b3);
+          nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
           item.appendChild(nameSpan);
           if (i.pass) {
             var remSpan = document.createElement('span');

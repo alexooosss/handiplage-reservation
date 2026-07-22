@@ -201,7 +201,7 @@ function _renderResaManage(container, inscription, showView, params) {
         + '<div id="cancel-confirm-manage" style="display:none" class="usager-cancel-confirm">'
       : '<div class="usager-info-block" style="text-align:center;color:var(--text-muted);font-size:14px;margin-top:16px">'
         + (params.resaStatut === 'present' ? '✓ Présence enregistrée par le staff'
-          : params.resaStatut === 'parti'  ? '✓ Votre venue a été enregistrée'
+          : params.resaStatut === 'parti'  ? '✓ Présence enregistrée par le staff'
           : params.resaStatut === 'absent' ? '⚠️ Absence enregistrée — contactez le staff si besoin'
           : 'Annulation non disponible')
         + '</div>'

@@ -38,10 +38,6 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
         <div class="resa-section-title">✓ Présents (${presentSorted.length})</div>
         ${presentSorted.map(([id, r]) => _renderPresentItem(id, r)).join('')}
       ` : ''}
-      ${departed.length ? `
-        <div class="resa-section-title">↩ Partis (${departed.length})</div>
-        ${departed.map(([id, r]) => _renderDepartedItem(id, r)).join('')}
-      ` : ''}
       ${absent.length ? `
         <div class="resa-section-title">✕ Absents (${absent.length})</div>
         ${absent.map(([id, r]) => _renderAbsentItem(id, r)).join('')}
@@ -54,7 +50,7 @@ function renderPanel(container, slot, reservations, waitingList, callbacks) {
         <div class="resa-section-title">✗ Annulés (${annules.length})</div>
         ${annules.map(r => _renderWaitingItem(r, waitingList.indexOf(r), false)).join('')}
       ` : ''}
-      ${(arrived.length + waiting.length + presentSorted.length + departed.length + absent.length + pasVenus.length + annules.length) === 0 ? `
+      ${(arrived.length + waiting.length + presentSorted.length + absent.length + pasVenus.length + annules.length) === 0 ? `
         <div class="empty-state">
           <p>Aucune réservation pour ce créneau</p>
         </div>
@@ -117,9 +113,9 @@ function _categorizeSpots(reservations) {
   BEACH_CONFIG.spots.forEach(spot => {
     const r = reservations[spot.id];
     if (!r || r.status === 'free') return;
-    if (r.status === 'departed') { departed.push([spot.id, r]); return; }
-    if (r.status === 'absent')   { absent.push([spot.id, r]);   return; }
-    if (r.type === 'walkin')     { walkin.push([spot.id, r]);   return; }
+    if (r.status === 'departed') { present.push([spot.id, r]); return; }
+    if (r.status === 'absent')   { absent.push([spot.id, r]);  return; }
+    if (r.type === 'walkin')     { walkin.push([spot.id, r]);  return; }
     present.push([spot.id, r]);
   });
   return { present, walkin, absent, departed };
@@ -280,7 +276,7 @@ function _renderLegend() {
       <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>En attente</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Présent (réservé)</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Sans réservation</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--grey)"></div>Parti·e / Absent·e</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--grey)"></div>Absent·e</div>
     </div>
   `;
 }

@@ -150,7 +150,11 @@ async function addReservation(date, slotId, data) {
       .select('id', { count: 'exact', head: true })
       .eq('inscription_id', data.inscriptionId)
       .gte('date', monthKey + '-01')
-      .lte('date', monthKey + '-31')
+      .lt('date', (function() {
+        var d = new Date(monthKey + '-01');
+        d.setMonth(d.getMonth() + 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
+      })())
       .neq('statut', 'annule');
     if (monthRes.error) throw monthRes.error;
     if ((monthRes.count || 0) >= 40) throw new Error('Quota mensuel de 40 réservations atteint pour cet usager.');

@@ -174,8 +174,8 @@ async function _gpLoadHistory(g) {
       var d = new Date(e.date + 'T00:00:00');
       var dateStr = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
       var emplLabel = e.spots > 0 ? e.spots + ' empl.' : (e.nbUsagers ? e.nbUsagers + ' empl.' : '—');
-      var statutIcon = { parti: '↩', absent: '✕', present: '✓', attente: '⏳' }[e.statut] || '·';
-      var statutColor = { parti: 'var(--grey)', absent: 'var(--red)', present: 'var(--green)', attente: 'var(--amber)' }[e.statut] || '';
+      var statutIcon = { parti: '✓', absent: '✕', present: '✓', attente: '⏳' }[e.statut] || '·';
+      var statutColor = { parti: 'var(--green)', absent: 'var(--red)', present: 'var(--green)', attente: 'var(--amber)' }[e.statut] || '';
       return '<div class="gp-history-row">'
         + '<span class="gp-hist-date">' + dateStr + '</span>'
         + '<span class="gp-hist-slot">' + _gpEsc(slotLabel) + '</span>'

@@ -44,7 +44,7 @@ const App = (() => {
     const defaultSlot = active || upcoming || SLOTS[0];
     selectSlot(defaultSlot.id);
 
-    setInterval(refresh, 30000);
+    setInterval(function() { if (!_refreshing) refresh().catch(console.error); }, 30000);
 
     // Planning tab button
     const btnPlanning = document.getElementById('btn-planning-tab');
@@ -267,8 +267,11 @@ const App = (() => {
     refresh().catch(console.error);
   }
 
+  let _refreshing = false;
   async function refresh() {
-    if (!_selectedSlotId) return;
+    if (!_selectedSlotId || _refreshing) return;
+    _refreshing = true;
+    try {
     const [reservations, waitingList] = await Promise.all([
       getReservations(_date, _selectedSlotId),
       getReservationList(_date, _selectedSlotId),
@@ -327,6 +330,7 @@ const App = (() => {
       onPasVenu: async resaId => { await updateReservationStatus(resaId, 'pas_venu'); await refresh(); },
       onAnnule:  async resaId => { await updateReservationStatus(resaId, 'annule'); await refresh(); },
     });
+    } finally { _refreshing = false; }
   }
 
   // ── Spot click (carte ou liste) ──
@@ -416,7 +420,7 @@ const App = (() => {
   // ── Étape 2A : activer le mode sélection depuis le panneau ──
   function _openPlace(resa) {
     _selectionMode = { id: resa.id, resa };
-    refresh();
+    refresh().catch(console.error);
   }
 
   // Timestamp de fin officielle d'un créneau pour aujourd'hui

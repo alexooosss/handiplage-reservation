@@ -3,7 +3,7 @@
 function _mcDefault() {
   var slots = {};
   SLOTS.forEach(function(s) {
-    slots[s.id] = { resa:0, walkin:0, gpe_pers:0, gpe_acc:0, tiralos:0, hippocampes:0, audioplage:0, transferts:0 };
+    slots[s.id] = { resa:0, walkin:0, gpe_pers:0, gpe_acc:0, acc_total:0, tiralos:0, hippocampes:0, audioplage:0, transferts:0, leve_personne:0 };
   });
   return {
     staff: { entretien_matin:'', entretien_aprem:'', accueil_matin:'', accueil_aprem:'', police:false, plage_nettoyee:false },

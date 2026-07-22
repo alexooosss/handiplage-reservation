@@ -1,7 +1,7 @@
 // js/usager-storage.js
 'use strict';
 
-var PASS_QUOTA_USAGER = 40;
+// PASS_QUOTA est défini dans pass.js (chargé avant ce fichier)
 
 function _rowToUsagerInscription(row) {
   var obj = {

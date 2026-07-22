@@ -5,8 +5,8 @@ function _escRes(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-var STATUT_LABELS = { attente: 'Réservation', present: 'Présent·e', parti: 'Parti·e', absent: 'Absent·e', annule: 'Annulé' };
-var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-parti', absent: 'resa-s-absent', annule: 'resa-s-annule' };
+var STATUT_LABELS = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé' };
+var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-present', absent: 'resa-s-absent', annule: 'resa-s-annule' };
 var CRENEAU_LABELS = { 1: '8h30–10h15', 2: '10h30–12h15', 3: '12h30–14h15', 4: '14h30–16h15', 5: '16h30–18h15' };
 
 async function renderReservations(container, inscription, showView) {
@@ -32,7 +32,7 @@ async function renderReservations(container, inscription, showView) {
 
     var passHtml = '';
     if (inscription.passActif) {
-      var balance  = computePassBalance(resas, PASS_QUOTA_USAGER);
+      var balance  = computePassBalance(resas, PASS_QUOTA);
       var pct      = balance.quota > 0 ? Math.round((balance.remaining / balance.quota) * 100) : 0;
       var fillCls  = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
       var nextReset = new Date();
@@ -75,8 +75,8 @@ async function renderReservations(container, inscription, showView) {
       + absenceInfoHtml
       + '<div class="usager-resa-section-title">À venir (' + upcoming.length + ')</div>'
       + (upcoming.length ? upcoming.map(function(r) { return _resaCard(r, true); }).join('') : '<div class="usager-empty">Aucune réservation à venir.</div>')
-      + '<div class="usager-resa-section-title" style="margin-top:24px">Passées</div>'
-      + (past.length ? past.slice(0, 20).map(function(r) { return _resaCard(r, false); }).join('') : '<div class="usager-empty">Aucune réservation passée.</div>');
+      + '<div class="usager-resa-section-title" style="margin-top:24px">Historique des réservations</div>'
+      + _renderPastAccordion(past);
 
     container.querySelector('#back-accueil-resa').addEventListener('click', function() { showView('accueil'); });
 
@@ -112,6 +112,26 @@ async function renderReservations(container, inscription, showView) {
       });
     }
 
+    container.querySelectorAll('.resa-month-header').forEach(function(hdr) {
+      hdr.addEventListener('click', function() {
+        var body = hdr.nextElementSibling;
+        var isOpen = body.classList.toggle('open');
+        hdr.classList.toggle('open', isOpen);
+        hdr.querySelector('.resa-month-chevron').textContent = isOpen ? '▾' : '▸';
+      });
+    });
+
+    container.querySelectorAll('.resa-month-more').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var extra = btn.nextElementSibling;
+        var isOpen = extra.classList.toggle('open');
+        btn.textContent = isOpen
+          ? '▲ Replier'
+          : btn.dataset.label;
+      });
+      btn.dataset.label = btn.textContent;
+    });
+
     container.querySelectorAll('.usager-cancel-btn').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var id = btn.dataset.resaId;
@@ -132,6 +152,53 @@ async function renderReservations(container, inscription, showView) {
   } catch (e) {
     container.innerHTML = '<div class="usager-error">Erreur : ' + _escRes(e.message) + '</div>';
   }
+}
+
+function _groupByMonth(resas) {
+  var months = {};
+  resas.forEach(function(r) {
+    var key = r.date.slice(0, 7);
+    if (!months[key]) months[key] = [];
+    months[key].push(r);
+  });
+  return months;
+}
+
+function _monthLabel(key) {
+  var s = new Date(key + '-02').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+var PAST_VISIBLE = 5;
+
+function _renderPastAccordion(past) {
+  if (!past.length) return '<div class="usager-empty">Aucune réservation passée.</div>';
+
+  var months = _groupByMonth(past);
+  var keys = Object.keys(months).sort().reverse();
+
+  return keys.map(function(key, idx) {
+    var items = months[key];
+    var label = _monthLabel(key);
+    var isOpen = idx === 0;
+    var visible = items.slice(0, PAST_VISIBLE);
+    var extra   = items.slice(PAST_VISIBLE);
+
+    return '<div class="resa-month-group">'
+      + '<div class="resa-month-header' + (isOpen ? ' open' : '') + '">'
+      +   '<span class="resa-month-label">' + label + '</span>'
+      +   '<span class="resa-month-meta">' + items.length + ' séance' + (items.length > 1 ? 's' : '') + '</span>'
+      +   '<span class="resa-month-chevron">' + (isOpen ? '▾' : '▸') + '</span>'
+      + '</div>'
+      + '<div class="resa-month-body' + (isOpen ? ' open' : '') + '">'
+      +   visible.map(function(r) { return _resaCard(r, false); }).join('')
+      +   (extra.length
+          ? '<button class="resa-month-more">▼ Voir les ' + extra.length + ' autre' + (extra.length > 1 ? 's' : '') + '</button>'
+            + '<div class="resa-month-extra">' + extra.map(function(r) { return _resaCard(r, false); }).join('') + '</div>'
+          : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function _resaCard(r, isUpcoming) {

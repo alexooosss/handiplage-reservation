@@ -1777,6 +1777,31 @@ dialog.plan-dialog {
 .insc-hs-parti   { background: #cce5ff; color: #004085; }
 .insc-hs-absent  { background: #f8d7da; color: #721c24; }
 .insc-hs-annule  { background: #ffeeba; color: #856404; }
+/* ── Accordéon historique staff ─────────────────────────────── */
+.insc-hist-group { margin-bottom: 4px; }
+.insc-hist-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 6px;
+  background: #f0f4ff; cursor: pointer; user-select: none;
+  transition: background .15s;
+}
+.insc-hist-header:hover { background: #e3eaff; }
+.insc-hist-label   { font-size: .8125rem; font-weight: 700; color: #1a3a8c; flex: 1; }
+.insc-hist-meta    { font-size: .75rem; color: #888; }
+.insc-hist-chevron { font-size: .8rem; color: #1a3a8c; }
+.insc-hist-body  { display: none; }
+.insc-hist-body.open { display: block; }
+.insc-hist-extra { display: none; }
+.insc-hist-extra.open { display: block; }
+.insc-hist-more {
+  display: block; width: 100%; margin: 2px 0;
+  padding: 6px; border: none; border-radius: 5px;
+  background: #f5f5f5; color: #888;
+  font-size: .78rem; cursor: pointer; text-align: center;
+  transition: background .15s;
+}
+.insc-hist-more:hover { background: #eaeaea; }
+/* ─────────────────────────────────────────────────────────── */
 .insc-history-loading,
 .insc-history-empty { font-size: 13px; color: #aaa; }
 
@@ -2270,6 +2295,7 @@ dialog.plan-dialog {
   }
   .insc-section { break-inside: avoid; }
   .insc-row { flex-wrap: wrap; }
+  .insc-field-sm { flex: 0 0 88px; }
   .insc-rgpd-notice,
   .insc-form-err,
   .insc-form-actions { column-span: all; }
