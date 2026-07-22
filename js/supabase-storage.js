@@ -157,7 +157,7 @@ async function addReservation(date, slotId, data) {
       })())
       .neq('statut', 'annule');
     if (monthRes.error) throw monthRes.error;
-    if ((monthRes.count || 0) >= 40) throw new Error('Quota mensuel de 40 réservations atteint pour cet usager.');
+    if ((monthRes.count || 0) >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint pour cet usager.');
   }
 
   var row = {
@@ -232,7 +232,7 @@ async function getAbsentsThisMonthCount(inscriptionId) {
     .select('id', { count: 'exact', head: true })
     .eq('inscription_id', inscriptionId)
     .gte('date', monthKey + '-01')
-    .lte('date', monthKey + '-31')
+    .lt('date', (function() { var d = new Date(monthKey + '-01'); d.setMonth(d.getMonth() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })())
     .eq('statut', 'absent');
   if (result.error) throw result.error;
   return result.count || 0;

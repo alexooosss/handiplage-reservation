@@ -330,7 +330,7 @@ async function renderConfirmation(container, inscription, showView, params) {
   if (inscription.passActif) {
     try {
       var resas   = await getUserReservations(inscription.id);
-      var balance = computePassBalance(resas, PASS_QUOTA_USAGER);
+      var balance = computePassBalance(resas, PASS_QUOTA);
       if (balance.remaining === 0) {
         container.innerHTML = '<button class="usager-back" id="back-reserver">← Retour</button>'
           + '<div class="usager-error" style="margin-top:12px">Pass épuisé pour ce mois. Aucune réservation possible.</div>';

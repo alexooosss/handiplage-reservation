@@ -1,5 +1,7 @@
 'use strict';
 
+function _esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
 // container   : #side-panel element
 // slot        : { id, label, start, end } or null
 // reservations: { [spotId]: { nom, prenom, status, checkinTime, durationMs, ... } }
@@ -163,7 +165,7 @@ function _renderArrivedUnplacedItem(resa, index) {
     <div class="resa-item arrived-unplaced-item" data-index="${index}" style="cursor:pointer">
       <div class="resa-avatar" style="background:var(--green-dark, #2e7d32)">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-name">${_esc(resa.nom)} ${_esc(resa.prenom)}</div>
         <div class="resa-meta">${accompLabel}${typeLabel}${arrivedAt}</div>
       </div>
       <div class="waiting-actions">
@@ -201,7 +203,7 @@ function _renderWaitingItem(resa, index, showActions) {
     <div class="resa-item waiting-item" data-index="${index}" style="cursor:pointer">
       <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-name">${_esc(resa.nom)} ${_esc(resa.prenom)}</div>
         <div class="resa-meta">${accompLabel}${statusLabel}</div>
       </div>
       ${actions}
@@ -222,7 +224,7 @@ function _renderPresentItem(spotId, resa) {
     <div class="resa-item" data-state="${resa.status}" data-spot-id="${spotId}">
       <div class="resa-avatar" style="background:${avatarColor}">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-name">${_esc(resa.nom)} ${_esc(resa.prenom)}</div>
         <div class="resa-meta">${spotId} · ${accompLabel}${doubleLabel}</div>
       </div>
       <span class="spot-num">${spotId}</span>
@@ -246,7 +248,7 @@ function _renderDepartedItem(spotId, resa) {
     <div class="resa-item departed-item" data-state="departed" data-spot-id="${spotId}" style="cursor:pointer">
       <div class="resa-avatar" style="background:var(--grey)">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-name">${_esc(resa.nom)} ${_esc(resa.prenom)}</div>
         <div class="resa-meta">${spotId} · ${accompLabel}${dureeLabel}</div>
       </div>
       <span class="spot-num">${spotId}</span>
@@ -261,7 +263,7 @@ function _renderAbsentItem(spotId, resa) {
     <div class="resa-item" data-state="absent" data-spot-id="${spotId}">
       <div class="resa-avatar" style="background:var(--purple)">${initials}</div>
       <div class="resa-info">
-        <div class="resa-name">${resa.nom} ${resa.prenom}</div>
+        <div class="resa-name">${_esc(resa.nom)} ${_esc(resa.prenom)}</div>
         <div class="resa-meta">${spotId} · Absent·e</div>
       </div>
       <span class="spot-num">${spotId}</span>

@@ -1317,7 +1317,14 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 }
 .entr-month-btn:hover { background: #d1d9e0; }
 .entr-month-label { font-size: 15px; font-weight: 800; color: var(--text); min-width: 170px; text-align: center; }
+.entr-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .entr-header-title { font-size: 13px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.entr-export-btn {
+  background: var(--primary, #1a5fa8); color: #fff; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: background 0.15s;
+}
+.entr-export-btn:hover { background: var(--primary-dark, #154d8c); }
 
 .entr-tabs {
   display: flex; gap: 0;

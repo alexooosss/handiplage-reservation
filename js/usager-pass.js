@@ -16,7 +16,7 @@ async function renderPass(container, inscription, showView) {
 
   try {
     var resas   = await getUserReservations(inscription.id);
-    var balance = computePassBalance(resas, PASS_QUOTA_USAGER);
+    var balance = computePassBalance(resas, PASS_QUOTA);
     var pct     = balance.quota > 0 ? Math.round((balance.remaining / balance.quota) * 100) : 0;
     var fillCls = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
 
@@ -29,7 +29,7 @@ async function renderPass(container, inscription, showView) {
     var nextReset  = new Date(today.getFullYear(), today.getMonth() + 1, 1);
     var resetLabel = nextReset.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    var CRENEAU_LABELS_PASS = { 1: 'Matin', 2: 'Matin 2', 3: 'Après-midi', 4: 'Après-midi 2', 5: 'Soir' };
+    var CRENEAU_LABELS_PASS = { 1: '8h30–10h15', 2: '10h30–12h15', 3: '12h30–14h15', 4: '14h30–16h15', 5: '16h30–18h15' };
 
     container.innerHTML = '<button class="usager-back" id="back-pass">← Accueil</button>'
       + '<div class="usager-card">'

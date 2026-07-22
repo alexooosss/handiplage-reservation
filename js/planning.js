@@ -198,24 +198,25 @@ async function exportSlotPDF(dateISO, slot) {
   const genTime = now.toLocaleDateString('fr-FR') + ' à '
     + String(now.getHours()).padStart(2,'0') + 'h' + String(now.getMinutes()).padStart(2,'0');
 
+  const ep = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const mkRow = (r, i, withSpot) => {
     const spot = withSpot
       ? assignedByName[(r.nom + r.prenom).replace(/\s/g,'').toUpperCase()] || '—'
       : null;
     return '<tr>'
       + '<td class="num">' + (i + 1) + '</td>'
-      + '<td>' + r.nom + ' ' + r.prenom + '</td>'
+      + '<td>' + ep(r.nom) + ' ' + ep(r.prenom) + '</td>'
       + '<td>' + acc(r.accompagnants) + '</td>'
-      + (withSpot ? '<td class="spot">' + spot + '</td>' : '')
+      + (withSpot ? '<td class="spot">' + ep(spot) + '</td>' : '')
       + '</tr>';
   };
 
   const mkWalkinRow = ([spotId, r], i) =>
     '<tr>'
     + '<td class="num">' + (i + 1) + '</td>'
-    + '<td>' + r.prenom + ' ' + r.nom + '</td>'
+    + '<td>' + ep(r.prenom) + ' ' + ep(r.nom) + '</td>'
     + '<td>' + acc(r.accompagnants) + '</td>'
-    + '<td class="spot">' + spotId + '</td>'
+    + '<td class="spot">' + ep(spotId) + '</td>'
     + '</tr>';
 
   const emptyRow = cols => '<tr><td colspan="' + cols + '" class="empty">Aucune entrée</td></tr>';

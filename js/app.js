@@ -293,8 +293,9 @@ const App = (() => {
     const banner = document.getElementById('selection-banner');
     if (_selectionMode) {
       banner.style.display = 'flex';
+      const _escB = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       banner.innerHTML = `
-        <span class="banner-text">📍 Cliquez sur un emplacement libre pour placer <strong>${_selectionMode.resa.nom} ${_selectionMode.resa.prenom}</strong></span>
+        <span class="banner-text">📍 Cliquez sur un emplacement libre pour placer <strong>${_escB(_selectionMode.resa.nom)} ${_escB(_selectionMode.resa.prenom)}</strong></span>
         <button class="btn-cancel-selection" id="btn-cancel-sel">✕ Annuler</button>
       `;
       document.getElementById('btn-cancel-sel').addEventListener('click', () => {

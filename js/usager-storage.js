@@ -56,7 +56,7 @@ async function getAbsentsThisMonth(inscriptionId) {
     .select('id', { count: 'exact', head: true })
     .eq('inscription_id', inscriptionId)
     .gte('date', monthKey + '-01')
-    .lte('date', monthKey + '-31')
+    .lt('date', (function() { var d = new Date(monthKey + '-01'); d.setMonth(d.getMonth() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })())
     .eq('statut', 'absent');
   if (result.error) throw result.error;
   return result.count || 0;
@@ -114,7 +114,7 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var from = new Date(fromISO + 'T00:00:00');
   var to   = new Date(toISO   + 'T00:00:00');
   for (var d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-    var dateISO = d.toISOString().slice(0, 10);
+    var dateISO = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     days[dateISO] = creneaux.map(function(c) {
       var key            = dateISO + '_' + c.id;
       var count          = counts[key] || 0;
@@ -171,10 +171,10 @@ async function createUserReservation(inscription, dateISO, creneauId) {
     .select('id', { count: 'exact', head: true })
     .eq('inscription_id', inscription.id)
     .gte('date', monthKey + '-01')
-    .lte('date', monthKey + '-31')
+    .lt('date', (function() { var d = new Date(monthKey + '-01'); d.setMonth(d.getMonth() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })())
     .neq('statut', 'annule');
   if (monthRes.error) throw monthRes.error;
-  if ((monthRes.count || 0) >= PASS_QUOTA_USAGER) throw new Error('Quota mensuel de ' + PASS_QUOTA_USAGER + ' réservations atteint.');
+  if ((monthRes.count || 0) >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint.');
 
   var result = await supabaseClient.from('reservations').insert({
     date:           dateISO,

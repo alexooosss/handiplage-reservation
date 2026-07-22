@@ -531,13 +531,13 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
 
   _dialog().innerHTML = `
     <div class="modal-header">
-      <h3>${spotId} — ${resa.prenom} ${resa.nom}${doubleLabel}</h3>
+      <h3>${spotId} — ${_esc(resa.prenom)} ${_esc(resa.nom)}${doubleLabel}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body" id="spot-detail-body">
       <div class="spot-detail">
         <div class="detail-row"><span class="detail-label">Emplacement</span><span class="detail-value">${spotId}</span></div>
-        <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
+        <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${_esc(resa.prenom)} ${_esc(resa.nom)}</span></div>
         <div class="detail-row detail-row-editable" id="accomp-row" title="Cliquer pour modifier"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel} <span class="edit-hint">✏️</span></span></div>
         <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value">${resa.type === 'walkin' ? 'Sans réservation' : 'Avec réservation'}${doubleLabel}</span></div>
         ${timerHtml}
@@ -594,7 +594,7 @@ function openDepartedModal(spotId, resa, history) {
 
   _dialog().innerHTML = `
     <div class="modal-header">
-      <h3>↩ ${resa.prenom} ${resa.nom}</h3>
+      <h3>↩ ${_esc(resa.prenom)} ${_esc(resa.nom)}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body" id="departed-body">
@@ -631,12 +631,12 @@ function openWaitingDetailModal(resa, history, callbacks) {
 
   _dialog().innerHTML = `
     <div class="modal-header">
-      <h3>${resa.prenom} ${resa.nom}</h3>
+      <h3>${_esc(resa.prenom)} ${_esc(resa.nom)}</h3>
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body" id="waiting-detail-body">
       <div class="spot-detail">
-        <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${resa.prenom} ${resa.nom}</span></div>
+        <div class="detail-row"><span class="detail-label">Nom</span><span class="detail-value">${_esc(resa.prenom)} ${_esc(resa.nom)}</span></div>
         <div class="detail-row detail-row-editable" id="accomp-row" title="Cliquer pour modifier"><span class="detail-label">Accompagnants</span><span class="detail-value">${accompLabel} <span class="edit-hint">✏️</span></span></div>
         <div class="detail-row"><span class="detail-label">Statut</span><span class="detail-value">${statusLabel}</span></div>
       </div>
@@ -713,7 +713,7 @@ function openGroupCheckinModal(resa, freeSpots, onConfirm, nbSpotsHint) {
     const ok     = spots.length >= needed;
     _dialog().innerHTML = `
       <div class="modal-header">
-        <h3>Accueil Groupe · ${resa.nom} ${resa.prenom}</h3>
+        <h3>Accueil Groupe · ${_esc(resa.nom)} ${_esc(resa.prenom)}</h3>
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">

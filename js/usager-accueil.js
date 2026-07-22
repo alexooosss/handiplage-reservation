@@ -33,7 +33,7 @@ async function renderAccueil(container, inscription, showView) {
     });
     var next    = upcoming[0] || null;
 
-    var balance = computePassBalance(resas, PASS_QUOTA_USAGER);
+    var balance = computePassBalance(resas, PASS_QUOTA);
 
     var nextCard = next
       ? '<div class="usager-summary-card">'
