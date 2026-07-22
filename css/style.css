@@ -2263,18 +2263,16 @@ dialog.plan-dialog {
 
 /* ≥ 1101px : desktop — formulaire inscription en 2 colonnes */
 @media (min-width: 1101px) {
-  .insc-form-wrap { max-width: none; }
+  .insc-form-wrap { max-width: none; overflow: hidden; }
   .insc-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    align-items: start;
+    columns: 2;
+    column-gap: 20px;
   }
-  .insc-form .insc-section { min-width: 0; }
-  .insc-form .insc-row { flex-wrap: wrap; }
+  .insc-section { break-inside: avoid; }
+  .insc-row { flex-wrap: wrap; }
   .insc-rgpd-notice,
   .insc-form-err,
-  .insc-form-actions { grid-column: 1 / -1; min-width: 0; }
+  .insc-form-actions { column-span: all; }
 }
 
 /* ≤ 1100px : tablettes 10-11" typiques (Lenovo Tab P11, M10) */
