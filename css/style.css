@@ -1023,7 +1023,7 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 .insc-status-ko   { background: #ffebee; color: #e53935; }
 
 /* Contenu principal */
-.insc-main { flex: 1; overflow-y: auto; padding: 20px 28px; }
+.insc-main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 28px; min-width: 0; }
 .insc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); font-size: 14px; text-align: center; gap: 10px; line-height: 1.6; }
 .insc-empty-icon { font-size: 52px; }
 
@@ -2269,9 +2269,10 @@ dialog.plan-dialog {
     gap: 14px;
     align-items: start;
   }
+  .insc-form .insc-section { min-width: 0; }
   .insc-rgpd-notice,
   .insc-form-err,
-  .insc-form-actions { grid-column: 1 / -1; }
+  .insc-form-actions { grid-column: 1 / -1; min-width: 0; }
 }
 
 /* ≤ 1100px : tablettes 10-11" typiques (Lenovo Tab P11, M10) */
