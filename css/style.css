@@ -1040,11 +1040,12 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 .insc-row { display: flex; gap: 14px; }
 .insc-row .insc-field { margin-bottom: 0; }
 
-.insc-field { flex: 1; display: flex; flex-direction: column; gap: 5px; margin-bottom: 0; }
+.insc-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; margin-bottom: 0; }
 .insc-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 .insc-field input[type="text"],
 .insc-field input[type="email"],
 .insc-field input[type="tel"] {
+  width: 100%; min-width: 0;
   padding: 8px 12px;
   border: 1.5px solid var(--border);
   border-radius: 8px;
@@ -1058,7 +1059,7 @@ dialog::backdrop { background: rgba(10,22,40,0.88); }
 .insc-field-sm { flex: 0 0 130px; }
 
 .insc-dob { display: flex; align-items: center; gap: 6px; }
-.insc-dob select { padding: 7px 6px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
+.insc-dob select { min-width: 0; padding: 7px 6px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
 .insc-dob select:focus { border-color: var(--accent); }
 .insc-dob span { color: var(--text-muted); font-weight: 700; }
 
@@ -2270,6 +2271,7 @@ dialog.plan-dialog {
     align-items: start;
   }
   .insc-form .insc-section { min-width: 0; }
+  .insc-form .insc-row { flex-wrap: wrap; }
   .insc-rgpd-notice,
   .insc-form-err,
   .insc-form-actions { grid-column: 1 / -1; min-width: 0; }
