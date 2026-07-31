@@ -151,6 +151,7 @@ async function getUserReservations(inscriptionId) {
 
 async function createUserReservation(inscription, dateISO, creneauId) {
   if (!inscription.passActif) throw new Error('Pass non activé. Contactez l\'équipe Handiplage.');
+  if (inscription.isDemo) throw new Error('Compte démo — aucune réservation n\'est enregistrée.');
 
   // Vérification blocage absences (3 absences non justifiées ce mois)
   var absents = await getAbsentsThisMonth(inscription.id);

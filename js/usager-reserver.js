@@ -375,6 +375,22 @@ async function renderConfirmation(container, inscription, showView, params) {
     renderReserver(container, inscription, showView);
   });
   container.querySelector('#btn-confirm').addEventListener('click', async function() {
+    if (inscription.isDemo) {
+      container.innerHTML =
+        '<div class="usager-success">'
+        + '<div class="usager-success-icon">✅</div>'
+        + '<div class="usager-success-title">Réservation simulée !</div>'
+        + '<div class="usager-success-detail">' + dateLabel + ' — ' + _escR(params.label) + '</div>'
+        + '<div class="usager-demo-notice">Compte démo — aucune réservation réelle n\'a été enregistrée.</div>'
+        + '</div>'
+        + '<div class="usager-success-actions">'
+        +   '<button class="usager-btn usager-btn-primary" id="btn-demo-autre">＋ Faire une autre réservation</button>'
+        +   '<button class="usager-btn usager-btn-ghost" id="btn-demo-accueil">← Accueil</button>'
+        + '</div>';
+      container.querySelector('#btn-demo-autre').addEventListener('click', function() { renderReserver(container, inscription, showView); });
+      container.querySelector('#btn-demo-accueil').addEventListener('click', function() { showView('accueil'); });
+      return;
+    }
     var btn = container.querySelector('#btn-confirm');
     var errEl = container.querySelector('#confirm-error');
     btn.disabled = true;

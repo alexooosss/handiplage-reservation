@@ -248,6 +248,50 @@
       background: linear-gradient(to right, rgba(12,20,34,.25) 0%, transparent 25%);
     }
 
+    /* ── Compte démo ── */
+    .login-demo-sep {
+      display: flex; align-items: center; gap: 12px;
+      margin: 22px 0 14px;
+    }
+    .login-demo-sep::before, .login-demo-sep::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.07);
+    }
+    .login-demo-sep span {
+      font-size: .6875rem; color: rgba(255,255,255,.2);
+      letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+    }
+    .login-demo-card {
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .login-demo-title {
+      font-size: .6875rem; font-weight: 700; color: rgba(255,255,255,.3);
+      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px;
+    }
+    .login-demo-creds {
+      font-size: .8125rem; color: rgba(255,255,255,.5);
+      margin-bottom: 12px; line-height: 1.9;
+    }
+    .login-demo-creds strong {
+      font-family: monospace; color: rgba(255,255,255,.75);
+    }
+    .login-demo-btn {
+      width: 100%; padding: .65rem;
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.6);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      font-size: .8125rem; font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .login-demo-btn:hover {
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.88);
+    }
+
     /* ── Mobile ── */
     @media (max-width: 680px) {
       .login-photo { display: none; }
@@ -286,6 +330,16 @@
 
       <div class="login-signup-sep"><span>Pas encore inscrit ?</span></div>
       <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
+
+      <div class="login-demo-sep"><span>Ou explorer sans créer de compte</span></div>
+      <div class="login-demo-card">
+        <div class="login-demo-title">Compte démonstration</div>
+        <div class="login-demo-creds">
+          <div>Email : <strong>utilisateur.handiplage@gmail.com</strong></div>
+          <div>Mot de passe : <strong>Utilisateur</strong></div>
+        </div>
+        <button type="button" class="login-demo-btn" id="btn-demo">Essayer la démo →</button>
+      </div>
 
       <!-- Formulaire création mot de passe (visible après invitation) -->
       <form id="set-password-form" style="display:none" novalidate>
@@ -426,6 +480,12 @@
           submitBtn.disabled = false;
           submitBtn.textContent = 'Se connecter';
         }
+      });
+
+      document.getElementById('btn-demo').addEventListener('click', function() {
+        emailInput.value = 'utilisateur.handiplage@gmail.com';
+        passwordInput.value = 'Utilisateur';
+        submitBtn.click();
       });
 
       forgotBtn.addEventListener('click', async function () {

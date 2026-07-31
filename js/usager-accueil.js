@@ -64,7 +64,11 @@ async function renderAccueil(container, inscription, showView) {
       +   '<div class="usager-summary-sub">Contactez l\'équipe Handiplage</div>'
       + '</div>';
 
-    container.innerHTML = ''
+    var demoBanner = inscription.isDemo
+      ? '<div class="usager-demo-banner">👁 Compte démo — vos actions ne seront pas enregistrées</div>'
+      : '';
+
+    container.innerHTML = demoBanner
       + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'

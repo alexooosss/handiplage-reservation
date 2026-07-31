@@ -1,6 +1,8 @@
 // js/usager-app.js
 'use strict';
 
+const DEMO_EMAIL = 'utilisateur.handiplage@gmail.com';
+
 const UsagerApp = (() => {
   var _inscription = null;
 
@@ -10,6 +12,7 @@ const UsagerApp = (() => {
 
     try {
       _inscription = await getUserInscription();
+      _inscription.isDemo = (_inscription.mail === DEMO_EMAIL);
     } catch (e) {
       container.innerHTML = '<div class="usager-error" style="margin:20px">Impossible de charger votre profil : ' + (e.message || e) + '<br>Veuillez vous reconnecter.</div>';
       return;
