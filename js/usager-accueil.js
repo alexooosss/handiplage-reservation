@@ -65,7 +65,7 @@ async function renderAccueil(container, inscription, showView) {
       + '</div>';
 
     var demoBanner = inscription.isDemo
-      ? '<div class="usager-demo-banner">👁 Compte démo — vos actions ne seront pas enregistrées</div>'
+      ? '<div class="usager-demo-banner"><img src="icone%20demo.svg" alt="" style="height:16px;vertical-align:middle;margin-right:7px;filter:brightness(0)invert(1)">Compte démo — vos actions ne seront pas enregistrées</div>'
       : '';
 
     container.innerHTML = demoBanner
