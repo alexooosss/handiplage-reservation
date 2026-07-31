@@ -2,7 +2,7 @@
   "name": "Handiplage Antibes",
   "short_name": "Handiplage",
   "description": "Réservation en ligne — Handiplage d'Antibes",
-  "start_url": "/handiplage-reservation/login.html",
+  "start_url": "./login.html",
   "display": "standalone",
   "background_color": "#111b33",
   "theme_color": "#0772b8",
