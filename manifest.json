@@ -1,0 +1,24 @@
+{
+  "name": "Handiplage Antibes",
+  "short_name": "Handiplage",
+  "description": "Réservation en ligne — Handiplage d'Antibes",
+  "start_url": "/handiplage-reservation/login.html",
+  "display": "standalone",
+  "background_color": "#111b33",
+  "theme_color": "#0772b8",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "logo%20handiplage%20antibes%20alexis.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icone%20logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
