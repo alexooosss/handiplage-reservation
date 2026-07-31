@@ -154,6 +154,8 @@ body {
 .usager-tile:hover   { background: var(--blue-light); border-color: var(--blue); }
 .usager-tile-primary { background: var(--blue); color: white; grid-column: 1 / -1; }
 .usager-tile-primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
+.usager-tile-pass-off { opacity: .55; cursor: pointer; position: relative; }
+.usager-tile-lock { position: absolute; top: 8px; right: 10px; font-size: 14px; }
 .usager-tile-icon  { margin-bottom: 8px; }
 .usager-tile-icon img { width: 40px; height: 40px; display: block; margin: 0 auto; }
 .usager-tile-label { font-size: .9375rem; font-weight: 700; }

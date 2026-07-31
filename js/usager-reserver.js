@@ -6,6 +6,20 @@ function _escR(s) {
 }
 
 async function renderReserver(container, inscription, showView) {
+  if (!inscription.passActif) {
+    container.innerHTML = '<button class="usager-back" id="back-accueil-pass">← Accueil</button>'
+      + '<div class="usager-absence-block">'
+      +   '<div class="usager-absence-icon">🔒</div>'
+      +   '<div class="usager-absence-title">Pass non activé</div>'
+      +   '<div class="usager-absence-body">'
+      +     '<p>La réservation en ligne est réservée aux usagers disposant d\'un <strong>pass Handiplage actif</strong>.</p>'
+      +     '<p>Contactez l\'équipe Handiplage pour activer votre pass.</p>'
+      +   '</div>'
+      + '</div>';
+    container.querySelector('#back-accueil-pass').addEventListener('click', function() { showView('accueil'); });
+    return;
+  }
+
   container.innerHTML = '<div class="usager-loading">Chargement des disponibilités…</div>';
 
   try {
