@@ -75,7 +75,7 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
   var lastMonth = -1;
   dateKeys.forEach(function(dateISO) {
     var d        = new Date(dateISO + 'T00:00:00');
-    var slots    = days[dateISO];
+    var slots    = _filterSlotsByCutoff(days[dateISO], dateISO);
     var hasAvail = slots.some(function(s) { return s.available; });
     var cls      = hasAvail ? (dateISO === selectedDate ? 'selected available' : 'available') : 'full';
     if (dateISO === selectedDate) cls = hasAvail ? 'selected available' : 'selected full';
@@ -157,18 +157,23 @@ function _localTodayISO() {
     + String(d.getDate()).padStart(2, '0');
 }
 
+// Filtre les créneaux d'aujourd'hui : supprime ceux qui débutent dans moins d'1h.
+// Les créneaux déjà réservés par l'usager restent visibles (gestion annulation).
+function _filterSlotsByCutoff(slots, dateISO) {
+  if (dateISO !== _localTodayISO()) return slots || [];
+  var cutoff = new Date(Date.now() + 60 * 60 * 1000); // maintenant + 1h
+  return (slots || []).filter(function(s) {
+    if (s.userBooked) return true;
+    if (!s.heureDebut) return true;
+    var parts = s.heureDebut.split(':').map(Number);
+    var start = new Date();
+    start.setHours(parts[0], parts[1] || 0, 0, 0);
+    return start > cutoff;
+  });
+}
+
 function _renderSlots(slots, dateISO) {
-  // Pour aujourd'hui, masquer les créneaux dont l'heure de fin est déjà passée
-  if (dateISO === _localTodayISO()) {
-    var now = new Date();
-    slots = (slots || []).filter(function(s) {
-      if (!s.heureFin) return true;
-      var parts = s.heureFin.split(':');
-      var end = new Date();
-      end.setHours(parseInt(parts[0], 10), parseInt(parts[1] || '0', 10), 0, 0);
-      return end > now;
-    });
-  }
+  slots = _filterSlotsByCutoff(slots, dateISO);
   if (!slots || slots.length === 0) {
     return '<div class="usager-empty">Aucun créneau disponible pour cette journée.</div>';
   }
