@@ -216,11 +216,18 @@
     }
     .login-signup-link {
       display: block; text-align: center;
-      font-size: .875rem; font-weight: 600;
-      color: rgba(255,255,255,.5); text-decoration: none;
-      transition: color .15s;
+      font-size: .875rem; font-weight: 700;
+      color: rgba(255,255,255,.85); text-decoration: none;
+      padding: .75rem 1rem;
+      border: 1.5px solid rgba(255,255,255,.28);
+      border-radius: 10px;
+      transition: border-color .15s, background .15s, color .15s;
     }
-    .login-signup-link:hover { color: #c9bc24; }
+    .login-signup-link:hover {
+      border-color: #c9bc24;
+      color: #c9bc24;
+      background: rgba(201,188,36,.06);
+    }
 
     .login-footer {
       margin-top: auto;

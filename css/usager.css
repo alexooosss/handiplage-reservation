@@ -440,7 +440,7 @@ body {
 .usager-card-title { font-size: .8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--blue); margin-bottom: 10px; }
 .usager-infos-text { font-size: .9375rem; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
 .usager-infos-rule { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; background: rgba(7,114,184,.06); border-left: 3px solid #0772b8; border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: .9rem; color: var(--text); line-height: 1.5; }
-.usager-infos-rule-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.usager-infos-rule-icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; opacity: .75; }
 .usager-infos-table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
 .usager-infos-jour { color: var(--text); padding: 6px 0; text-transform: capitalize; }
 .usager-infos-heure { color: var(--text-muted); text-align: right; }
