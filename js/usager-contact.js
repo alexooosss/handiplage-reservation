@@ -5,11 +5,11 @@ function renderContact(container, inscription, showView) {
     + '<button class="usager-back" id="contact-back">← Accueil</button>'
     + '<div class="usager-card">'
     +   '<div class="usager-card-title">Contact</div>'
-    +   '<div class="usager-contact-row"><span class="usager-contact-icon">📞</span>'
+    +   '<div class="usager-contact-row"><span class="usager-contact-icon"><img src="icone%20contact.svg" alt=""></span>'
     +     '<a href="tel:+33492913906" class="usager-contact-link">+33 4 92 91 39 06</a></div>'
     +   '<div class="usager-contact-row"><span class="usager-contact-icon">✉️</span>'
     +     '<a href="mailto:handiplageresa@gmail.com" class="usager-contact-link">handiplageresa@gmail.com</a></div>'
-    +   '<div class="usager-contact-row"><span class="usager-contact-icon">📍</span>'
+    +   '<div class="usager-contact-row"><span class="usager-contact-icon"><img src="icone%20lieu.svg" alt=""></span>'
     +     '<span>Boulevard James Wyllie, Antibes</span></div>'
     + '</div>'
     + '<div class="usager-card">'
@@ -36,7 +36,7 @@ function renderContact(container, inscription, showView) {
     +   '</div>'
     +   '<a class="usager-btn usager-btn-primary" style="display:block;text-align:center;margin-top:12px;text-decoration:none;padding:12px" '
     +      'href="https://www.google.com/maps/dir/?api=1&destination=Boulevard+James+Wyllie+Antibes" target="_blank" rel="noopener">'
-    +     '🗺️ Obtenir l\'itinéraire'
+    +     'Obtenir l\'itinéraire'
     +   '</a>'
     + '</div>';
 

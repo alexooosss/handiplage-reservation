@@ -244,6 +244,7 @@ body {
 
 /* ── Confirmation ──────────────────────────────────────────────── */
 .usager-recap-icon   { font-size: 2.5rem; text-align: center; margin: 16px 0 20px; }
+.usager-recap-icon img { height: 44px; width: auto; vertical-align: middle; }
 .usager-recap-title  { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--blue); margin-bottom: 24px; }
 .usager-recap-row    { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .9375rem; }
 .usager-recap-row:last-child { border-bottom: none; }
@@ -271,6 +272,7 @@ body {
 .usager-btn-danger   { background: var(--red-light); color: var(--red); border: 1px solid #ef9a9a; }
 .usager-btn-ghost    { background: var(--grey); color: #444; }
 .usager-btn-ghost:hover { background: #e0e0e0; }
+.usager-btn-icon { height: 18px; width: auto; vertical-align: -3px; margin-right: 7px; filter: brightness(0) invert(1); }
 
 /* ── Mes réservations ───────────────────────────────────────────── */
 .usager-resa-section-title { font-size: .875rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: .05em; margin: 20px 0 10px; }
@@ -450,6 +452,7 @@ body {
 .usager-contact-row  { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: .9375rem; border-bottom: 1px solid var(--border); }
 .usager-contact-row:last-child { border-bottom: none; }
 .usager-contact-icon { font-size: 1.2rem; flex-shrink: 0; }
+.usager-contact-icon img { height: 20px; width: 20px; object-fit: contain; display: block; }
 .usager-contact-link { color: var(--blue); text-decoration: none; font-weight: 600; }
 .usager-map-wrap     { border-radius: 12px; overflow: hidden; height: 220px; }
 .usager-map-iframe   { width: 100%; height: 100%; border: none; display: block; }

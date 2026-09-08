@@ -1,7 +1,7 @@
 // tests/test-slots.js
 'use strict';
 const assert = require('assert');
-const { SLOTS, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById } = require('../js/slots.js');
+const { SLOTS, SEASON_START, SEASON_END, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById } = require('../js/slots.js');
 
 // timeToMinutes
 assert.strictEqual(timeToMinutes('08:30'), 510);
@@ -59,5 +59,23 @@ assert.strictEqual(timeToMinutes('23:59'), 1439);
 assert.strictEqual(getSlotById(1).label, '8h30 – 10h15');
 assert.strictEqual(getSlotById(5).label, '16h30 – 18h15');
 assert.strictEqual(getSlotById(99), null);
+
+// ── Période de saison ──
+assert.strictEqual(SEASON_END, '2026-09-15');
+assert.strictEqual(SEASON_START, '2026-06-12');
+
+// isWithinSeason
+assert.strictEqual(isWithinSeason('2026-06-12'), true,  'borne de début incluse');
+assert.strictEqual(isWithinSeason('2026-09-15'), true,  'borne de fin incluse');
+assert.strictEqual(isWithinSeason('2026-08-01'), true);
+assert.strictEqual(isWithinSeason('2026-09-16'), false, 'lendemain de fermeture exclu');
+assert.strictEqual(isWithinSeason('2026-06-11'), false);
+assert.strictEqual(isWithinSeason(''), false);
+assert.strictEqual(isWithinSeason(null), false);
+
+// clampToSeasonEnd
+assert.strictEqual(clampToSeasonEnd('2026-09-22'), '2026-09-15', 'date au-delà ramenée à la fin de saison');
+assert.strictEqual(clampToSeasonEnd('2026-09-15'), '2026-09-15', 'fin de saison inchangée');
+assert.strictEqual(clampToSeasonEnd('2026-09-08'), '2026-09-08', 'date en saison inchangée');
 
 console.log('✓ slots.js — tous les tests passent');

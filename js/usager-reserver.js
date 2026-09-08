@@ -23,6 +23,21 @@ async function renderReserver(container, inscription, showView) {
   container.innerHTML = '<div class="usager-loading">Chargement des disponibilités…</div>';
 
   try {
+    var todayISO = _localTodayISO();
+    // Saison terminée : plus aucune réservation possible au-delà de la fermeture de la plage
+    if (todayISO > SEASON_END) {
+      container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
+        + '<div class="usager-absence-block">'
+        +   '<div class="usager-absence-icon">🏖️</div>'
+        +   '<div class="usager-absence-title">Saison terminée</div>'
+        +   '<div class="usager-absence-body">'
+        +     '<p>La Handiplage a fermé pour la saison le <strong>15 septembre</strong>.</p>'
+        +     '<p>Les réservations en ligne rouvriront à la prochaine saison estivale.</p>'
+        +   '</div>'
+        + '</div>';
+      container.querySelector('#back-accueil').addEventListener('click', function() { showView('accueil'); });
+      return;
+    }
     // Vérification blocage absences avant tout chargement
     var absents = await getAbsentsThisMonth(inscription.id);
     if (isAbsenceBlocked(inscription, absents)) {
@@ -54,10 +69,12 @@ async function renderReserver(container, inscription, showView) {
     var toISO   = toDate.getFullYear() + '-'
       + String(toDate.getMonth() + 1).padStart(2, '0') + '-'
       + String(toDate.getDate()).padStart(2, '0');
+    // Ne jamais proposer de créneau après la fermeture de la plage (15 sept.)
+    toISO = clampToSeasonEnd(toISO);
 
     var days = await getAvailableDays(fromISO, toISO, inscription.id);
-    // Éliminer les jours passés (sécurité si l'API en renvoie)
-    var dateKeys = Object.keys(days).sort().filter(function(d) { return d >= fromISO; });
+    // Éliminer les jours passés ou hors saison (sécurité si l'API en renvoie)
+    var dateKeys = Object.keys(days).sort().filter(function(d) { return d >= fromISO && d <= SEASON_END; });
 
     var selectedDate = dateKeys[0];
     _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate);
@@ -210,7 +227,7 @@ function _renderResaManage(container, inscription, showView, params) {
   container.innerHTML =
     '<button class="usager-back" id="back-reserver">← Retour</button>'
     + '<div class="usager-card">'
-    +   '<div class="usager-recap-icon">📋</div>'
+    +   '<div class="usager-recap-icon"><img src="icone%20votre%20r%C3%A9servation.svg" alt=""></div>'
     +   '<div class="usager-recap-title">Votre réservation</div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Date</span><span class="usager-recap-val">' + dateLabel + '</span></div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + '</span></div>'
@@ -288,7 +305,7 @@ function _renderConfirmSuccess(container, inscription, showView, dateLabel, para
     + '<div class="usager-success-detail">' + dateLabel + ' — ' + _escR(params.label) + '</div>'
     + '</div>'
     + '<div class="usager-success-actions">'
-    +   '<button class="usager-btn usager-btn-primary" id="btn-voir-resas">📄 Mes réservations</button>'
+    +   '<button class="usager-btn usager-btn-primary" id="btn-voir-resas"><img src="icone%20mes%20r%C3%A9servations.svg" alt="" class="usager-btn-icon">Mes réservations</button>'
     +   '<button class="usager-btn usager-btn-ghost" id="btn-autre-resa">＋ Faire une autre réservation</button>'
     +   '<button class="usager-btn usager-btn-danger" id="btn-annuler-resa">Annuler cette réservation</button>'
     + '</div>'
@@ -363,7 +380,7 @@ async function renderConfirmation(container, inscription, showView, params) {
 
   container.innerHTML = '<button class="usager-back" id="back-reserver">← Retour</button>'
     + '<div class="usager-card">'
-    +   '<div class="usager-recap-icon">📋</div>'
+    +   '<div class="usager-recap-icon"><img src="icone%20votre%20r%C3%A9servation.svg" alt=""></div>'
     +   '<div class="usager-recap-title">Votre réservation</div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Date</span><span class="usager-recap-val">' + dateLabel + '</span></div>'
     +   '<div class="usager-recap-row"><span class="usager-recap-key">Créneau</span><span class="usager-recap-val">' + _escR(params.label) + '</span></div>'
