@@ -160,6 +160,18 @@ body {
 .usager-tile-icon img { width: 40px; height: 40px; display: block; margin: 0 auto; }
 .usager-tile-label { font-size: .9375rem; font-weight: 700; }
 
+/* Tuile Réserver (pleine largeur) : icône + libellé côte à côte, plus grands */
+.usager-tile-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 12px;
+}
+.usager-tile-primary .usager-tile-icon { margin-bottom: 0; }
+.usager-tile-primary .usager-tile-icon img { width: 52px; height: 52px; }
+.usager-tile-primary .usager-tile-label { font-size: 1.35rem; }
+
 /* ── Réserver : barre de jours ─────────────────────────────────── */
 .usager-week-bar {
   display: flex;
