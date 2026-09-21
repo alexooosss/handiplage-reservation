@@ -2265,7 +2265,9 @@ dialog.plan-dialog {
   height: 460px;
   border-radius: 12px;
   overflow: hidden;
-  background: var(--navy);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  cursor: grab;
 }
 .usagers-globe-tooltip {
   position: absolute;

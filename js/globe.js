@@ -174,8 +174,16 @@ export function create(container, options = {}) {
   const baseRadius = 1;
   const globeRadius = baseRadius * scaleMultiplier;
   const cameraDistance = 2.5 / scaleMultiplier;
-  camera.position.set(0, 0, cameraDistance);
-  camera.lookAt(0, 0, 0);
+  const MIN_ZOOM = 1;
+  // Borne dynamique : la caméra ne doit jamais franchir la surface du globe
+  // (marge de 15 %), quelle que soit la valeur de `scale` fournie.
+  const MAX_ZOOM = Math.max(1.5, (cameraDistance / globeRadius) / 1.15);
+  let zoom = 1;
+  function applyCamera() {
+    camera.position.set(0, 0, cameraDistance / zoom);
+    camera.lookAt(0, 0, 0);
+  }
+  applyCamera();
 
   const renderer = new WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(containerWidth, containerHeight);
@@ -470,16 +478,44 @@ export function create(container, options = {}) {
   }
   if (rotationSpeed !== 0) startAnimation();
 
+  const raycaster = new Raycaster();
+  const mouse = new Vector2();
+
+  function markerAtClient(clientX, clientY) {
+    if (!markerMeshes.length) return null;
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hit = raycaster.intersectObjects(markerMeshes)[0];
+    return hit ? hit.object.userData.marker : null;
+  }
+
+  // Centre le globe sur (lat, lng) et zoome — dérivé de la composition de
+  // rotations Three.js (ordre Euler XYZ, roll nul) pour amener le point
+  // exactement face à la caméra : yaw = -lng, pitch = lat.
+  function focusOn(marker, targetZoom) {
+    targetRotation.x = -(marker.lng * Math.PI / 180);
+    targetRotation.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, marker.lat * Math.PI / 180));
+    velocity.x = 0; velocity.y = 0;
+    zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom));
+    applyCamera();
+    startAnimation();
+  }
+
   function handleMouseDown(event) {
     isDragging = true;
     velocity.x = 0; velocity.y = 0;
     lastMouseX = event.clientX; lastMouseY = event.clientY;
+    const downX = event.clientX, downY = event.clientY;
+    let moved = 0;
     canvas.style.cursor = 'grabbing';
     startAnimation();
     const handleMouseMoveDrag = (moveEvent) => {
       const sensitivity = mapDragSpeedUiToSensitivity(dragSpeed);
       const dx = moveEvent.clientX - lastMouseX;
       const dy = moveEvent.clientY - lastMouseY;
+      moved += Math.abs(dx) + Math.abs(dy);
       targetRotation.x += dx * sensitivity;
       targetRotation.y += dy * sensitivity;
       targetRotation.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotation.y));
@@ -487,19 +523,31 @@ export function create(container, options = {}) {
       velocity.y = dy * sensitivity * 0.3;
       lastMouseX = moveEvent.clientX; lastMouseY = moveEvent.clientY;
     };
-    const handleMouseUp = () => {
+    const handleMouseUp = (upEvent) => {
       document.removeEventListener('mousemove', handleMouseMoveDrag);
       document.removeEventListener('mouseup', handleMouseUp);
       isDragging = false;
       canvas.style.cursor = 'grab';
+      // Clic (pas glissé) sur un marqueur → centre + zoome dessus
+      if (moved < 4 && Math.abs(upEvent.clientX - downX) < 4 && Math.abs(upEvent.clientY - downY) < 4) {
+        const marker = markerAtClient(upEvent.clientX, upEvent.clientY);
+        if (marker) focusOn(marker, Math.max(zoom, 3.5));
+      }
     };
     document.addEventListener('mousemove', handleMouseMoveDrag);
     document.addEventListener('mouseup', handleMouseUp);
   }
   canvas.addEventListener('mousedown', handleMouseDown);
 
-  const raycaster = new Raycaster();
-  const mouse = new Vector2();
+  function handleWheel(event) {
+    event.preventDefault();
+    const factor = Math.exp(-event.deltaY * 0.0012);
+    zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
+    applyCamera();
+    renderer.render(scene, camera);
+  }
+  canvas.addEventListener('wheel', handleWheel, { passive: false });
+
   let hoveredMarker = null;
   function handleMouseMove(event) {
     const rect = canvas.getBoundingClientRect();
@@ -514,6 +562,7 @@ export function create(container, options = {}) {
     if (onMarkerHover) {
       const hit = markerMeshes.length ? raycaster.intersectObjects(markerMeshes)[0] : null;
       const marker = hit ? hit.object.userData.marker : null;
+      canvas.style.cursor = (marker && !isDragging) ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
       if (marker !== hoveredMarker) {
         hoveredMarker = marker;
         onMarkerHover(marker, event.clientX, event.clientY);
@@ -535,8 +584,7 @@ export function create(container, options = {}) {
     camera.aspect = newWidth / newHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(newWidth, newHeight);
-    camera.position.set(0, 0, 2.5 / scaleMultiplier);
-    camera.lookAt(0, 0, 0);
+    applyCamera();
     renderer.render(scene, camera);
   });
   resizeObserver.observe(containerEl);
@@ -549,6 +597,7 @@ export function create(container, options = {}) {
     canvas.removeEventListener('mousedown', handleMouseDown);
     canvas.removeEventListener('mousemove', handleMouseMove);
     canvas.removeEventListener('mouseleave', handleMouseLeave);
+    canvas.removeEventListener('wheel', handleWheel);
     resizeObserver.disconnect();
     renderer.dispose();
     if (containerEl.parentNode) containerEl.parentNode.removeChild(containerEl);

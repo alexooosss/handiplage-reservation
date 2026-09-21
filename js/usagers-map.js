@@ -25,7 +25,7 @@ var UsagersMap = (function () {
     container.innerHTML = ''
       + '<div class="stats-card usagers-map-card">'
       +   '<div class="stats-card-title">Localisation des usagers</div>'
-      +   '<p class="usagers-map-hint">Position approximative (ville / code postal), pas l\'adresse précise. Glisser pour tourner le globe.</p>'
+      +   '<p class="usagers-map-hint">Position approximative (ville / code postal), pas l\'adresse précise. Glisser pour tourner, molette pour zoomer, cliquer un point pour le centrer.</p>'
       +   '<div id="usagers-map-status" class="usagers-map-status">Chargement…</div>'
       +   '<div id="usagers-globe" class="usagers-globe-wrap"></div>'
       + '</div>';
@@ -71,12 +71,12 @@ var UsagersMap = (function () {
       _globe = window.HandiplageGlobe.create(globeEl, {
         speed: 1.1,
         smoothing: 7,
-        scale: 9,
-        dots: { color: '#cfe0f2', size: 3.5, density: 7, allDots: false },
+        scale: 7,
+        dots: { color: '#00b090', size: 3.5, density: 7, allDots: false },
         markerConfig: { markers: markers, color: '#f0c93a', size: 55 },
-        oceanColor: '#0a1628',
-        outlineColor: 'rgba(255,255,255,0.28)',
-        graticuleColor: 'rgba(255,255,255,0.07)',
+        oceanColor: '#f8fafc',
+        outlineColor: 'rgba(10,22,40,0.25)',
+        graticuleColor: 'rgba(10,22,40,0.06)',
         initialLatitude: 20,
         initialLongitude: -10,
         onMarkerHover: function(marker, x, y) {

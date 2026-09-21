@@ -396,8 +396,8 @@ var StatsView = (function () {
   async function renderStats(container) {
     container.innerHTML = ''
       + '<div class="stats-subtabs">'
-      +   '<button class="stats-filter-btn' + (_subview === 'stats' ? ' active' : '') + '" data-subview="stats">📊 Statistiques</button>'
-      +   '<button class="stats-filter-btn' + (_subview === 'map'   ? ' active' : '') + '" data-subview="map">🌍 Carte des usagers</button>'
+      +   '<button class="stats-filter-btn' + (_subview === 'stats' ? ' active' : '') + '" data-subview="stats">Statistiques</button>'
+      +   '<button class="stats-filter-btn' + (_subview === 'map'   ? ' active' : '') + '" data-subview="map">Carte des usagers</button>'
       + '</div>'
       + '<div id="stats-subview"></div>';
 
