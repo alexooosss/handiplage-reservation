@@ -3,6 +3,7 @@
 var StatsView = (function () {
   var _period = 'month';
   var _charts = {};
+  var _subview = 'stats'; // 'stats' | 'map'
 
   var CRENEAU_LABELS = {
     1: '8h30–10h15',
@@ -379,7 +380,7 @@ var StatsView = (function () {
     container.querySelectorAll('.stats-filter-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         _period = btn.dataset.period;
-        renderStats(container);
+        _renderStatsPanel(container);
       });
     });
 
@@ -393,6 +394,36 @@ var StatsView = (function () {
   }
 
   async function renderStats(container) {
+    container.innerHTML = ''
+      + '<div class="stats-subtabs">'
+      +   '<button class="stats-filter-btn' + (_subview === 'stats' ? ' active' : '') + '" data-subview="stats">📊 Statistiques</button>'
+      +   '<button class="stats-filter-btn' + (_subview === 'map'   ? ' active' : '') + '" data-subview="map">🌍 Carte des usagers</button>'
+      + '</div>'
+      + '<div id="stats-subview"></div>';
+
+    container.querySelectorAll('[data-subview]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        if (_subview === 'map' && btn.dataset.subview !== 'map' && typeof UsagersMap !== 'undefined') {
+          UsagersMap.destroy();
+        }
+        _subview = btn.dataset.subview;
+        renderStats(container);
+      });
+    });
+
+    var sub = container.querySelector('#stats-subview');
+    if (_subview === 'map') {
+      if (typeof UsagersMap === 'undefined') {
+        sub.innerHTML = '<div class="stats-error">Module carte non chargé.</div>';
+        return;
+      }
+      await UsagersMap.render(sub);
+    } else {
+      await _renderStatsPanel(sub);
+    }
+  }
+
+  async function _renderStatsPanel(container) {
     container.innerHTML = '<div class="stats-loading">Chargement des statistiques…</div>';
     try {
       var today       = _today();

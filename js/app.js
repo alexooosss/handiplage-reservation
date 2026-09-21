@@ -118,6 +118,9 @@ const App = (() => {
     if (_currentView === 'mc' && view !== 'mc' && typeof unsubscribeMc === 'function') {
       unsubscribeMc();
     }
+    if (_currentView === 'stats' && view !== 'stats' && typeof UsagersMap !== 'undefined') {
+      UsagersMap.destroy();
+    }
 
     _currentView = view;
     const beachPanel   = document.getElementById('beach-panel');
