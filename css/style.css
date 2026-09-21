@@ -2287,6 +2287,40 @@ dialog.plan-dialog {
 }
 .usagers-globe-tooltip.visible { opacity: 1; }
 
+.usagers-globe-popup {
+  position: absolute;
+  top: 0; left: 0;
+  width: 200px;
+  background: #fff;
+  color: var(--text);
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  padding: 12px 14px 14px;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity .12s, transform .12s;
+}
+.usagers-globe-popup.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.usagers-popup-close {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: none; cursor: pointer;
+  font-size: 18px; line-height: 1; color: var(--text-muted);
+  padding: 2px 4px;
+}
+.usagers-popup-close:hover { color: var(--text); }
+.usagers-popup-name { font-weight: 700; font-size: 14px; margin: 0 22px 8px 0; color: var(--navy); }
+.usagers-popup-row  { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; color: var(--text-muted); }
+.usagers-popup-row strong { color: var(--text); font-weight: 600; }
+.usagers-popup-link {
+  display: block; width: 100%; margin-top: 10px;
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background .15s;
+}
+.usagers-popup-link:hover { background: #00b090; }
+
 @media (max-width: 1100px) {
   .stats-kpis { grid-template-columns: repeat(2, 1fr); }
   .stats-charts-row { grid-template-columns: 1fr; }

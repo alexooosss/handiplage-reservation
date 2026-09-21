@@ -147,6 +147,7 @@ export function create(container, options = {}) {
     dragSpeed = 5,
     detail = 5,
     onMarkerHover = null,
+    onMarkerClick = null,
     onError = null,
   } = options;
 
@@ -280,7 +281,15 @@ export function create(container, options = {}) {
       globeGroup.add(markerMesh);
       markerMeshes.push(markerMesh);
     });
+    applyMarkerScale();
     renderer.render(scene, camera);
+  }
+
+  // Compense le zoom caméra pour que les points gardent une taille à l'écran
+  // à peu près constante au lieu de grossir démesurément en se rapprochant.
+  function applyMarkerScale() {
+    const s = 1 / zoom;
+    markerMeshes.forEach((mesh) => mesh.scale.setScalar(s));
   }
 
   async function loadWorldData() {
@@ -500,6 +509,7 @@ export function create(container, options = {}) {
     velocity.x = 0; velocity.y = 0;
     zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom));
     applyCamera();
+    applyMarkerScale();
     startAnimation();
   }
 
@@ -531,7 +541,10 @@ export function create(container, options = {}) {
       // Clic (pas glissé) sur un marqueur → centre + zoome dessus
       if (moved < 4 && Math.abs(upEvent.clientX - downX) < 4 && Math.abs(upEvent.clientY - downY) < 4) {
         const marker = markerAtClient(upEvent.clientX, upEvent.clientY);
-        if (marker) focusOn(marker, Math.max(zoom, 3.5));
+        if (marker) {
+          focusOn(marker, Math.max(zoom, MAX_ZOOM * 0.9));
+          if (onMarkerClick) onMarkerClick(marker, upEvent.clientX, upEvent.clientY);
+        }
       }
     };
     document.addEventListener('mousemove', handleMouseMoveDrag);
@@ -544,6 +557,7 @@ export function create(container, options = {}) {
     const factor = Math.exp(-event.deltaY * 0.0012);
     zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
     applyCamera();
+    applyMarkerScale();
     renderer.render(scene, camera);
   }
   canvas.addEventListener('wheel', handleWheel, { passive: false });
