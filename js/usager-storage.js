@@ -5,14 +5,15 @@
 
 function _rowToUsagerInscription(row) {
   var obj = {
-    id:              row.id,
-    nom:             row.nom,
-    prenom:          row.prenom,
-    mail:            row.mail,
-    telephone:       row.telephone,
-    statut:          row.statut,
-    passActif:       !!row.pass_actif,
-    passActivatedAt: row.pass_activated_at || null,
+    id:                    row.id,
+    nom:                   row.nom,
+    prenom:                row.prenom,
+    mail:                  row.mail,
+    telephone:             row.telephone,
+    statut:                row.statut,
+    passActif:             !!row.pass_actif,
+    passActivatedAt:       row.pass_activated_at || null,
+    derniereSaisonValidee: row.derniere_saison_validee || null,
   };
   if (row.metadata && typeof row.metadata === 'object') {
     Object.assign(obj, row.metadata);
@@ -67,6 +68,24 @@ function isAbsenceBlocked(inscription, absentsCount) {
   var today    = new Date();
   var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
   return inscription.absenceOverrideMonth !== monthKey;
+}
+
+/**
+ * Dérive l'état d'accès usager à partir du statut d'inscription et de la
+ * saison en cours. 5 états possibles :
+ *   'refuse'                 — demande refusée
+ *   'premiere_demande'       — jamais validé, 1ère demande en attente
+ *   'renouvellement_attente' — déjà validé une saison passée, renouvellement soumis, en attente
+ *   'actif'                  — validé pour la saison en cours, accès normal
+ *   'a_renouveler'           — validé mais pour une saison différente, doit renouveler
+ */
+function computeUsagerAccessState(inscription, saisonCourante) {
+  if (inscription.statut === 'refuse') return 'refuse';
+  if (inscription.statut === 'en_attente') {
+    return inscription.derniereSaisonValidee ? 'renouvellement_attente' : 'premiere_demande';
+  }
+  // statut === 'valide'
+  return inscription.derniereSaisonValidee === saisonCourante ? 'actif' : 'a_renouveler';
 }
 
 async function getUserInscription() {
@@ -218,5 +237,5 @@ async function sendUsagerMessage(inscriptionId, sujet, text) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { _rowToUsagerInscription, _rowToUsagerReservation, computePassBalance, canCancelReservation, getAbsentsThisMonth, isAbsenceBlocked, sendUsagerMessage };
+  module.exports = { _rowToUsagerInscription, _rowToUsagerReservation, computePassBalance, canCancelReservation, getAbsentsThisMonth, isAbsenceBlocked, sendUsagerMessage, computeUsagerAccessState };
 }
