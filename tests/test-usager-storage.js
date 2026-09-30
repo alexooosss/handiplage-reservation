@@ -97,12 +97,15 @@ assert.strictEqual(balance2.remaining, 0, 'remaining = 0 quand quota épuisé');
 console.log('✓ computePassBalance épuisé OK');
 
 // Test 5 : canCancelReservation
+function _toLocalISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 var tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
-var tomorrowISO = tomorrow.toISOString().slice(0, 10);
+var tomorrowISO = _toLocalISO(tomorrow);
 var yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
-var yesterdayISO = yesterday.toISOString().slice(0, 10);
+var yesterdayISO = _toLocalISO(yesterday);
 assert.strictEqual(canCancelReservation(tomorrowISO), true,  'peut annuler pour demain');
 assert.strictEqual(canCancelReservation(yesterdayISO), false, 'ne peut pas annuler pour hier');
 console.log('✓ canCancelReservation OK');
