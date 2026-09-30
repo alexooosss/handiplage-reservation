@@ -62,3 +62,19 @@ CREATE POLICY "public_insert_inscription" ON inscriptions
     statut = 'en_attente'
     AND user_id IS NULL
   );
+
+-- ── Policies table app_config ────────────────────────────────────────────
+
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+
+-- Lecture : tout utilisateur connecté (staff + usager) doit pouvoir lire la
+-- saison en cours pour calculer son état d'accès.
+CREATE POLICY "app_config_read_all" ON app_config
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- Écriture : staff uniquement (bouton "Ouvrir la saison").
+CREATE POLICY "app_config_staff_write" ON app_config
+  FOR UPDATE TO authenticated
+  USING (public.auth_user_role() = 'staff')
+  WITH CHECK (public.auth_user_role() = 'staff');

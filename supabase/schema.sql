@@ -10,6 +10,27 @@ RETURNS text AS $$
   )
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
+-- Demande de renouvellement par l'usager lui-même. SECURITY DEFINER : contourne
+-- RLS pour ne modifier QUE le statut de sa propre ligne (l'usager n'a qu'un accès
+-- RLS en lecture sur inscriptions — voir inscriptions_user_read_own dans rls.sql).
+CREATE OR REPLACE FUNCTION public.request_renewal()
+RETURNS inscriptions AS $$
+DECLARE
+  result inscriptions;
+BEGIN
+  UPDATE inscriptions
+  SET statut = 'en_attente', updated_at = now()
+  WHERE user_id = auth.uid() AND statut = 'valide'
+  RETURNING * INTO result;
+
+  IF result IS NULL THEN
+    RAISE EXCEPTION 'Aucune inscription valide à renouveler pour cet utilisateur';
+  END IF;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Table inscriptions
 CREATE TABLE inscriptions (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,10 +43,19 @@ CREATE TABLE inscriptions (
                      CHECK (statut IN ('en_attente', 'valide', 'refuse')),
   pass_actif       boolean NOT NULL DEFAULT false,
   pass_activated_at date,
+  derniere_saison_validee int,
   metadata         jsonb NOT NULL DEFAULT '{}',
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
+
+-- Table de config (ligne unique) : pilotage de la saison en cours
+CREATE TABLE app_config (
+  id              int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  saison_courante int NOT NULL
+);
+
+INSERT INTO app_config (id, saison_courante) VALUES (1, 2026);
 
 -- Table créneaux (statique, 5 lignes)
 CREATE TABLE creneaux (
