@@ -229,4 +229,41 @@ const {
     '_inscriptionToRow: pass_activated_at=null quand pass=null');
 }
 
+// 10. derniereSaisonValidee mappé depuis derniere_saison_validee
+{
+  const row = {
+    id: 'uuid-10', nom: 'ROUX', prenom: 'Julie', mail: null, telephone: null,
+    statut: 'valide', pass_actif: true, pass_activated_at: '2026-06-01',
+    derniere_saison_validee: 2026,
+    created_at: '2026-06-01T10:00:00Z', updated_at: '2026-06-01T10:00:00Z', metadata: {},
+  };
+  const obj = _rowToInscription(row);
+  assert.strictEqual(obj.derniereSaisonValidee, 2026,
+    '_rowToInscription: derniereSaisonValidee mappé depuis derniere_saison_validee');
+}
+
+// 11. derniereSaisonValidee null quand absent
+{
+  const row = {
+    id: 'uuid-11', nom: 'ROUX', prenom: 'Julie', mail: null, telephone: null,
+    statut: 'en_attente', pass_actif: false, pass_activated_at: null,
+    derniere_saison_validee: null,
+    created_at: '2026-06-01T10:00:00Z', updated_at: '2026-06-01T10:00:00Z', metadata: {},
+  };
+  const obj = _rowToInscription(row);
+  assert.strictEqual(obj.derniereSaisonValidee, null,
+    '_rowToInscription: derniereSaisonValidee null');
+}
+
+// 12. derniere_saison_validee n'est jamais spillé dans metadata
+{
+  const data = {
+    nom: 'ROUX', prenom: 'Julie', mail: null, telephone: null, statut: 'valide', pass: null,
+    derniereSaisonValidee: 2026,
+  };
+  const row = _inscriptionToRow(data);
+  assert.strictEqual(row.metadata.derniereSaisonValidee, undefined,
+    '_inscriptionToRow: derniereSaisonValidee absent de metadata');
+}
+
 console.log('✓ test-supabase-inscriptions.js OK');

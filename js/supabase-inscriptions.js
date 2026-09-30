@@ -6,9 +6,10 @@ var STRUCTURED_COLS = [
   'nom', 'prenom', 'mail', 'telephone',
   'statut',
   'pass_actif', 'pass_activated_at',
+  'derniere_saison_validee',
   'created_at', 'updated_at',
   // champs locaux gérés séparément
-  'pass', 'createdAt', 'updatedAt',
+  'pass', 'createdAt', 'updatedAt', 'derniereSaisonValidee',
 ];
 
 var _inscriptionsCache = null;
@@ -31,6 +32,7 @@ function _rowToInscription(row) {
     pass: row.pass_actif
       ? { actif: true, activatedAt: row.pass_activated_at }
       : null,
+    derniereSaisonValidee: row.derniere_saison_validee !== undefined ? row.derniere_saison_validee : null,
   };
 
   // Étale les champs metadata au top-level
@@ -143,6 +145,7 @@ async function updateInscription(id, partial) {
   if (partial.statut            !== undefined) row.statut            = partial.statut;
   if (partial.pass_actif        !== undefined) row.pass_actif        = partial.pass_actif;
   if (partial.pass_activated_at !== undefined) row.pass_activated_at = partial.pass_activated_at;
+  if (partial.derniere_saison_validee !== undefined) row.derniere_saison_validee = partial.derniere_saison_validee;
   if (partial.nom               !== undefined) row.nom               = partial.nom;
   if (partial.prenom            !== undefined) row.prenom            = partial.prenom;
   if (partial.mail              !== undefined) row.mail              = partial.mail;
