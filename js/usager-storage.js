@@ -187,6 +187,15 @@ async function createUserReservation(inscription, dateISO, creneauId) {
     throw new Error('La Handiplage est fermée pour la saison — aucune réservation possible après le 15 septembre.');
   }
 
+  // Inscription non renouvelée pour la saison en cours : le routeur usager-app.js
+  // bloque déjà l'accès à cette vue, mais on revérifie ici en profondeur — pass_actif
+  // n'est jamais remis à false au changement de saison, donc rien d'autre n'empêcherait
+  // un appel direct à cette fonction de réussir pour un compte non renouvelé.
+  var saisonCourante = await getSaisonCourante();
+  if (inscription.derniereSaisonValidee !== saisonCourante) {
+    throw new Error('Votre inscription doit être renouvelée pour la saison en cours. Contactez l\'équipe Handiplage.');
+  }
+
   // Vérification blocage absences (3 absences non justifiées ce mois)
   var absents = await getAbsentsThisMonth(inscription.id);
   if (isAbsenceBlocked(inscription, absents)) {
