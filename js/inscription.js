@@ -6,7 +6,7 @@ function _escI(s) {
 
 // ── Vue principale ──
 async function renderInscription(container, selectedId) {
-  const inscriptions = await getInscriptions();
+  const [inscriptions, saisonCourante] = await Promise.all([getInscriptions(), getSaisonCourante()]);
 
   container.innerHTML = '<div class="insc-layout">'
     + '<div class="insc-sidebar">'
@@ -14,6 +14,8 @@ async function renderInscription(container, selectedId) {
     +     '<h2 class="insc-sidebar-title">Inscriptions</h2>'
     +     '<input type="search" id="insc-search" class="insc-search-inp" placeholder="Rechercher…">'
     +     '<button class="btn-primary" id="insc-new-btn">＋ Nouvelle inscription</button>'
+    +     '<button class="btn-secondary" id="insc-open-season-btn" style="margin-top:8px">Ouvrir la saison ' + (saisonCourante + 1) + '</button>'
+    +     '<div style="font-size:.8125rem;color:#666;margin-top:6px">Saison en cours : ' + saisonCourante + '</div>'
     +   '</div>'
     +   '<div id="insc-list" class="insc-list">' + _renderListItems(inscriptions, '') + '</div>'
     + '</div>'
@@ -35,6 +37,12 @@ async function renderInscription(container, selectedId) {
 
   document.getElementById('insc-new-btn').addEventListener('click', function() {
     _showForm(container, null);
+  });
+
+  document.getElementById('insc-open-season-btn').addEventListener('click', async function() {
+    if (!confirm('Ouvrir la saison ' + (saisonCourante + 1) + ' ?\n\nTous les comptes usagers validés pour la saison ' + saisonCourante + ' devront renouveler leur inscription pour continuer à réserver.')) return;
+    await ouvrirNouvelleSaison();
+    await renderInscription(container, selectedId);
   });
 
   _bindListItems(container);
@@ -273,7 +281,16 @@ function _showForm(container, insc) {
         // Afficher/masquer bloc refus
         var refusBlock = document.getElementById('refus-block');
         if (refusBlock) refusBlock.style.display = newStatut === 'refuse' ? 'block' : 'none';
-        const updated = await updateInscription(v.id, { statut: newStatut });
+
+        var patch = { statut: newStatut };
+        if (newStatut === 'valide') {
+          const saisonCourante = await getSaisonCourante();
+          patch.pass_actif = true;
+          patch.pass_activated_at = new Date().toISOString().slice(0, 10);
+          patch.derniere_saison_validee = saisonCourante;
+        }
+
+        const updated = await updateInscription(v.id, patch);
         await _refreshSidebar(container);
         if (newStatut !== 'valide') {
           const existingBlock = mainEl.querySelector('.pass-block');
