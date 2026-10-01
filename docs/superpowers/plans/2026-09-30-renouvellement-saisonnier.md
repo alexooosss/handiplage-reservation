@@ -850,6 +850,63 @@ Per project convention, changes are committed locally but **not pushed** to the 
 
 ---
 
+### Task 8: Defense-in-depth — block reservations when the season isn't renewed
+
+**Why:** Task 6's code quality review traced the full renewal loop end-to-end and found that the "must renew" gate only exists in `usager-app.js`'s router. `createUserReservation()` only checks `inscription.passActif` — never `statut` or `derniere_saison_validee` vs `saison_courante`. Nothing in this feature ever clears `pass_actif` on renewal (it stays `true` from the prior season), so a usager routed to the "à renouveler" screen could still successfully reserve if the reservation function were ever reached directly (a stale tab left open on the `reserver` view when staff opens a new season mid-session, a console call, a future routing bug). The UI redirect alone doesn't satisfy the feature's actual goal — the account must not be able to act as active until renewed, not just avoid being shown the button. Confirmed with user: add the guard, scoped to `createUserReservation()` only (no RLS/SQL changes — out of scope for this task).
+
+**Files:**
+- Modify: `js/usager-storage.js`
+
+No TDD: `createUserReservation` is an async Supabase-calling function with no dedicated tests in this codebase (same convention as its existing `SEASON_END` and absence-blocking guards, neither of which is unit tested either).
+
+- [ ] **Step 1: Add the season guard**
+
+In `js/usager-storage.js`, in `createUserReservation`, add a new guard right after the existing `SEASON_END` check and before the absence-blocking check:
+
+```js
+async function createUserReservation(inscription, dateISO, creneauId) {
+  if (!inscription.passActif) throw new Error('Pass non activé. Contactez l\'équipe Handiplage.');
+  if (inscription.isDemo) throw new Error('Compte démo — aucune réservation n\'est enregistrée.');
+
+  // Fermeture saisonnière : aucune réservation au-delà du 15 septembre
+  if (typeof SEASON_END !== 'undefined' && dateISO > SEASON_END) {
+    throw new Error('La Handiplage est fermée pour la saison — aucune réservation possible après le 15 septembre.');
+  }
+
+  // Inscription non renouvelée pour la saison en cours : le routeur usager-app.js
+  // bloque déjà l'accès à cette vue, mais on revérifie ici en profondeur — pass_actif
+  // n'est jamais remis à false au changement de saison, donc rien d'autre n'empêcherait
+  // un appel direct à cette fonction de réussir pour un compte non renouvelé.
+  var saisonCourante = await getSaisonCourante();
+  if (inscription.derniereSaisonValidee !== saisonCourante) {
+    throw new Error('Votre inscription doit être renouvelée pour la saison en cours. Contactez l\'équipe Handiplage.');
+  }
+
+  // Vérification blocage absences (3 absences non justifiées ce mois)
+  var absents = await getAbsentsThisMonth(inscription.id);
+  ...
+```
+
+(Only the new block is added — the `// Vérification blocage absences` line and everything after it in the function is unchanged, shown here only to mark the exact insertion point.)
+
+- [ ] **Step 2: Run the full test suite (sanity check)**
+
+Run: `node tests/run-all.js`
+Expected: `✅ Tous les tests passent.`
+
+- [ ] **Step 3: Static verification**
+
+No live Supabase project available. Confirm by reading the file that `getSaisonCourante` is in scope (global, from `js/supabase-config.js`, loaded in `usager.html` before `js/usager-storage.js`... actually loaded AFTER `usager-storage.js` in the current script order — confirm this is still fine, since `createUserReservation` is only ever CALLED later, in response to a user action, well after all `<script>` tags have executed and registered their global functions; declaration order between sibling `<script>` tags doesn't matter for later function calls, only execution-order side effects would, and neither file has any top-level side effects).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add js/usager-storage.js
+git commit -m "fix(usager): bloquer createUserReservation si la saison n'est pas renouvelée"
+```
+
+---
+
 ## Out of scope (per spec)
 
 - A distinct technical path for "quick renewal" vs "full dossier update" (staff judgment call, no system branch).
