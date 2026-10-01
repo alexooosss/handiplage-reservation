@@ -101,6 +101,16 @@ async function getUserInscription() {
   return _rowToUsagerInscription(result.data);
 }
 
+/**
+ * Demande de renouvellement : appelle la fonction SQL request_renewal(),
+ * qui repasse le statut de l'inscription de l'usager connecté à 'en_attente'.
+ */
+async function requestRenewal() {
+  var result = await supabaseClient.rpc('request_renewal');
+  if (result.error) throw result.error;
+  return _rowToUsagerInscription(result.data);
+}
+
 async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var crRes  = await supabaseClient.from('creneaux').select('id, label, heure_debut, heure_fin, capacite_resa').order('id');
   var resaRes = await supabaseClient.from('reservations')
