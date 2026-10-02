@@ -44,6 +44,67 @@ var UsagersMap = (function () {
           : '');
   }
 
+  function _uniqueSorted(values) {
+    var seen = {};
+    var out = [];
+    values.forEach(function(v) {
+      if (!v || seen[v]) return;
+      seen[v] = true;
+      out.push(v);
+    });
+    out.sort(function(a, b) { return a.localeCompare(b, 'fr'); });
+    return out;
+  }
+
+  // Sépare les usagers validés en géolocalisés (point possible sur le globe)
+  // et non localisés (pas d'adresse, échec de géocodage, ou continent non résolu).
+  function splitLocalisables(valid) {
+    var localized = [];
+    var unlocalized = [];
+    valid.forEach(function(i) {
+      if (typeof i.geoLat === 'number' && typeof i.geoLng === 'number' && i.continent) {
+        localized.push(i);
+      } else {
+        unlocalized.push(i);
+      }
+    });
+    return { localized: localized, unlocalized: unlocalized };
+  }
+
+  // Options disponibles pour chaque niveau de filtre, calculées à partir des
+  // sélections des niveaux parents uniquement (continent → pays → région → ville).
+  function getFilterOptions(localized, filters) {
+    filters = filters || {};
+    var afterContinent = filters.continent
+      ? localized.filter(function(i) { return i.continent === filters.continent; })
+      : localized;
+    var afterPays = filters.pays
+      ? afterContinent.filter(function(i) { return i.pays === filters.pays; })
+      : afterContinent;
+    var afterRegion = filters.region
+      ? afterPays.filter(function(i) { return i.region === filters.region; })
+      : afterPays;
+
+    return {
+      continents: _uniqueSorted(localized.map(function(i) { return i.continent; })),
+      pays:       _uniqueSorted(afterContinent.map(function(i) { return i.pays; })),
+      regions:    _uniqueSorted(afterPays.map(function(i) { return i.region; })),
+      villes:     _uniqueSorted(afterRegion.map(function(i) { return i.ville; })),
+    };
+  }
+
+  // Sous-ensemble des usagers géolocalisés correspondant à tous les filtres actifs.
+  function filterInscriptions(localized, filters) {
+    filters = filters || {};
+    return localized.filter(function(i) {
+      if (filters.continent && i.continent !== filters.continent) return false;
+      if (filters.pays      && i.pays      !== filters.pays)      return false;
+      if (filters.region    && i.region    !== filters.region)    return false;
+      if (filters.ville     && i.ville     !== filters.ville)     return false;
+      return true;
+    });
+  }
+
   function destroy() {
     if (_globe) {
       try { _globe.destroy(); } catch (e) {}
@@ -157,6 +218,14 @@ var UsagersMap = (function () {
     } catch (e) {
       statusEl.textContent = 'Erreur : ' + _esc(e.message || String(e));
     }
+  }
+
+  if (typeof module !== 'undefined') {
+    module.exports = {
+      splitLocalisables: splitLocalisables,
+      getFilterOptions: getFilterOptions,
+      filterInscriptions: filterInscriptions,
+    };
   }
 
   return { render: render, destroy: destroy };
