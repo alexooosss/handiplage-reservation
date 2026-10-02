@@ -907,6 +907,89 @@ git commit -m "fix(usager): bloquer createUserReservation si la saison n'est pas
 
 ---
 
+### Task 9: Staff-side "non renouvelé" mention in the booking autocomplete
+
+**Why:** Confirmed with user: staff can still manually book a reservation for a usager whose account hasn't been renewed for the current season (via `openAddReservationModal` in `js/modal.js`, which lets staff search inscriptions by name when adding a reservation from the planning view) — that's intentional, staff already has full override power elsewhere in this feature (manual validation, manual pass toggle). But staff should at least SEE that the account isn't renewed when picking a name, so the booking is an informed decision rather than a silent gap. This task adds a visible "⚠️ Non renouvelé" mention next to a matching inscription's name in that autocomplete dropdown, when `statut === 'valide'` but `derniereSaisonValidee !== saisonCourante`. No booking behavior changes — purely informational.
+
+**Files:**
+- Modify: `js/modal.js`
+- Modify: `css/style.css`
+
+No TDD: this is DOM-rendering code inside a dropdown-suggestion builder, consistent with the rest of this file (no test coverage exists for `modal.js`).
+
+- [ ] **Step 1: Prefetch the current season when the modal opens**
+
+In `js/modal.js`, inside `openAddReservationModal(onConfirm)`, right after `let _linkedInscriptionId = null;`, add:
+
+```js
+  let _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
+```
+
+This fetches once per modal open, fire-and-forget, into a closure variable `_showSuggestions` can read synchronously. If it hasn't resolved yet by the time the user types, `_saisonCourante` stays `null` and the mention is simply not shown yet (fails safe — no false positive, and the very next keystroke's re-render will have it once the fetch resolves, which is well before a typical 2-character search completes in practice).
+
+- [ ] **Step 2: Show the mention in the suggestion dropdown**
+
+In `js/modal.js`, inside `_showSuggestions`'s `matches.forEach(function(insc) { ... })`, replace:
+
+```js
+      const item = document.createElement('div');
+      item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = insc.nom.toUpperCase() + ' ' + insc.prenom;
+      item.appendChild(nameSpan);
+```
+
+with:
+
+```js
+      const item = document.createElement('div');
+      item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
+      const nameWrap = document.createElement('span');
+      nameWrap.className = 'pass-suggest-name-wrap';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = insc.nom.toUpperCase() + ' ' + insc.prenom;
+      nameWrap.appendChild(nameSpan);
+      if (insc.statut === 'valide' && _saisonCourante !== null && insc.derniereSaisonValidee !== _saisonCourante) {
+        const renewSpan = document.createElement('span');
+        renewSpan.className = 'pass-suggest-renewal-warning';
+        renewSpan.textContent = '⚠️ Non renouvelé';
+        nameWrap.appendChild(renewSpan);
+      }
+      item.appendChild(nameWrap);
+```
+
+(Everything after this point in the `forEach` — the `insc.pass` remaining-count badge block, the `mousedown` click-to-select handler — is unchanged. `nameWrap` simply replaces `nameSpan` as what gets appended to `item`; `nameSpan` itself still exists, just nested one level deeper, inside `nameWrap`.)
+
+- [ ] **Step 3: Add the CSS**
+
+In `css/style.css`, right after the existing `.pass-suggest-remaining.empty { color: var(--red); }` rule, add:
+
+```css
+.pass-suggest-name-wrap { display: flex; flex-direction: column; gap: 2px; }
+.pass-suggest-renewal-warning { font-size: 10px; font-weight: 700; color: var(--red); }
+```
+
+- [ ] **Step 4: Run the full test suite (sanity check)**
+
+Run: `node tests/run-all.js`
+Expected: `✅ Tous les tests passent.`
+
+- [ ] **Step 5: Static verification**
+
+No live browser/Supabase available. Confirm by reading the file that `getSaisonCourante` is in scope (global from `js/supabase-config.js`, loaded in `index.html` before `js/modal.js`) and that `insc.derniereSaisonValidee` is a real field on objects returned by `getCachedInscriptions()` (mapped in `_rowToInscription`, from Task 3). Also confirm the two-flex-child layout still holds: `item` (a `display:flex; justify-content:space-between` row) must end up with exactly the same number of top-level children as before this task (`nameWrap` in place of `nameSpan`, plus the pre-existing optional `remSpan` when `insc.pass` is set) — i.e. this task must not add a THIRD top-level flex child to `item`, or the existing `justify-content: space-between` layout breaks.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add js/modal.js css/style.css
+git commit -m "feat(staff): mention 'Non renouvelé' dans l'autocomplete de réservation"
+```
+
+---
+
 ## Out of scope (per spec)
 
 - A distinct technical path for "quick renewal" vs "full dossier update" (staff judgment call, no system branch).
