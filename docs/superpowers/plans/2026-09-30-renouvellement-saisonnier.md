@@ -990,6 +990,131 @@ git commit -m "feat(staff): mention 'Non renouvelé' dans l'autocomplete de rés
 
 ---
 
+### Task 10: Extend the "non renouvelé" mention to the walk-in and planning-inline autocompletes
+
+**Why:** Task 9's code quality review found that `js/modal.js` has 3 independent, largely-duplicated name-search autocompletes that let staff pick a usager and attach a reservation/arrival to their inscription — Task 9 only covered `openAddReservationModal` (`#nom-wrap`). The other two — `openWalkinEntryModal`'s walk-in arrival form (`#wk-nom-suggest`) and `openSlotPlanningModal`'s inline planning form, non-groupe branch (`#pf-nom-suggest`) — are arguably the higher-volume paths at a beach reception desk (walk-ins without a prior reservation) and currently show nothing. Confirmed with user: extend the same mention to both.
+
+Both target blocks use a different local styling convention than Task 9's (`item.style.cssText` inline strings with raw hex colors, e.g. `color:#c00`, rather than CSS classes) — match THAT local convention in each block rather than introducing CSS classes there, since each autocomplete already has its own established style.
+
+**Files:**
+- Modify: `js/modal.js`
+
+No TDD: same reasoning as Task 9 (DOM-rendering code in a file with no test coverage).
+
+- [ ] **Step 1: Prefetch the season in `openWalkinEntryModal`**
+
+Right after `opts = opts || {};` (the first line of the function body), add:
+
+```js
+  let _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
+```
+
+- [ ] **Step 2: Add the mention in `openWalkinEntryModal`'s autocomplete**
+
+Inside the `(function() { ... })()` IIFE right below, in the `nomEl.addEventListener('input', ...)` handler's `matches.forEach(function(i) { ... })`, find:
+
+```js
+        var nameSpan = document.createElement('span');
+        var _b1 = document.createElement('strong');
+        _b1.textContent = i.nom.toUpperCase();
+        nameSpan.appendChild(_b1);
+        nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
+        item.appendChild(nameSpan);
+        if (i.pass) {
+```
+
+Replace the single `item.appendChild(nameSpan);` line with a wrapping block, so it reads:
+
+```js
+        var nameSpan = document.createElement('span');
+        var _b1 = document.createElement('strong');
+        _b1.textContent = i.nom.toUpperCase();
+        nameSpan.appendChild(_b1);
+        nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
+        var nameWrap = document.createElement('span');
+        nameWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+        nameWrap.appendChild(nameSpan);
+        if (i.statut === 'valide' && _saisonCourante !== null && i.derniereSaisonValidee !== _saisonCourante) {
+          var renewSpan = document.createElement('span');
+          renewSpan.style.cssText = 'font-size:10px;font-weight:700;color:#f57c00';
+          renewSpan.textContent = '⚠️ Non renouvelé';
+          nameWrap.appendChild(renewSpan);
+        }
+        item.appendChild(nameWrap);
+        if (i.pass) {
+```
+
+(Nothing else in this block changes — `if (i.pass) { ... }` and everything after it, including the `mousedown`/`mouseover`/`mouseout` listeners, stay exactly as they are.)
+
+- [ ] **Step 3: Prefetch the season in `openSlotPlanningModal`**
+
+Find `var _linkedPfInscriptionId = null;` / `var _linkedGroupeId = null;` (right before the autocomplete IIFE) and add right after them:
+
+```js
+  var _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
+```
+
+- [ ] **Step 4: Add the mention in `openSlotPlanningModal`'s non-groupe autocomplete branch**
+
+Inside the same IIFE's `nomEl.addEventListener('input', ...)` handler, inside the `else { ... }` branch (the non-groupe one — NOT the `if (currentType === 'groupe') { ... }` branch above it, which handles `gmatches`/groups and must NOT be touched), find:
+
+```js
+          var nameSpan = document.createElement('span');
+          var _b3 = document.createElement('strong');
+          _b3.textContent = i.nom.toUpperCase();
+          nameSpan.appendChild(_b3);
+          nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
+          item.appendChild(nameSpan);
+          if (i.pass) {
+```
+
+Replace the single `item.appendChild(nameSpan);` line with the same wrapping block as Step 2:
+
+```js
+          var nameSpan = document.createElement('span');
+          var _b3 = document.createElement('strong');
+          _b3.textContent = i.nom.toUpperCase();
+          nameSpan.appendChild(_b3);
+          nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
+          var nameWrap = document.createElement('span');
+          nameWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+          nameWrap.appendChild(nameSpan);
+          if (i.statut === 'valide' && _saisonCourante !== null && i.derniereSaisonValidee !== _saisonCourante) {
+            var renewSpan = document.createElement('span');
+            renewSpan.style.cssText = 'font-size:10px;font-weight:700;color:#f57c00';
+            renewSpan.textContent = '⚠️ Non renouvelé';
+            nameWrap.appendChild(renewSpan);
+          }
+          item.appendChild(nameWrap);
+          if (i.pass) {
+```
+
+(Do not touch the `if (currentType === 'groupe') { ... }` branch above — groups have no `statut`/`derniereSaisonValidee`, they're a different entity entirely.)
+
+- [ ] **Step 5: Run the full test suite (sanity check)**
+
+Run: `node tests/run-all.js`
+Expected: `✅ Tous les tests passent.`
+
+- [ ] **Step 6: Static verification**
+
+Confirm by reading the file: both `_saisonCourante` prefetches are placed OUTSIDE their respective `input` event handlers (once per modal-open, not once per keystroke). Confirm the groupe branch in `openSlotPlanningModal` was not touched. Confirm each `item`'s top-level `appendChild` count is unchanged from before this task (same reasoning as Task 9 — `nameWrap` replaces `nameSpan`, `remSpan` stays the other optional child, never a third).
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add js/modal.js
+git commit -m "feat(staff): mention 'Non renouvelé' dans les autocomplete walk-in et planning"
+```
+
+---
+
 ## Out of scope (per spec)
 
 - A distinct technical path for "quick renewal" vs "full dossier update" (staff judgment call, no system branch).
