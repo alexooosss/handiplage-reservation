@@ -127,7 +127,7 @@ Aucune migration SQL nécessaire — ces champs vivent dans la colonne `metadata
 
 ### Synchronisation filtre → globe
 
-Les filtres actifs recalculent le tableau `markers` filtré, puis le globe est **détruit et recréé** (`destroy()` existant + nouvel appel à `window.HandiplageGlobe.create(...)` avec les mêmes options sauf `markerConfig.markers`) à chaque changement de filtre. Pas de mise à jour incrémentale de l'instance existante — l'interaction (changer un menu déroulant) est peu fréquente, la recréation complète reste simple et fiable.
+`js/globe.js` expose déjà `setMarkers(markers)` sur l'instance retournée par `create()` (vu en relisant le fichier à l'implémentation — plus simple que prévu). Les filtres actifs recalculent le tableau `markers` filtré, puis `_globe.setMarkers(filteredMarkers)` est appelé directement : pas de destruction/recréation du globe, la rotation/zoom en cours est conservée.
 
 ---
 
