@@ -4,6 +4,8 @@ const assert = require('assert');
 const {
   needsGeocoding,
   buildGeocodeQuery,
+  buildNominatimQuery,
+  extractRegionFromBanContext,
   jitterOffset,
   _stripToMetadata,
   geocodeInscriptions,
@@ -52,10 +54,10 @@ assert.strictEqual(buildGeocodeQuery('06600', 'Antibes', 'Belgique'), null, 'hor
 // ── geocodeInscriptions ──
 (async () => {
   try {
-  // Déjà géocodé → pas d'appel réseau, pas d'update
+  // Déjà géocodé ET continent déjà renseigné → pas d'appel réseau, pas d'update
   {
     let fetchCalls = 0;
-    const insc = { id: '1', ville: 'Antibes', geoLat: 43.58, geoLng: 7.12 };
+    const insc = { id: '1', ville: 'Antibes', geoLat: 43.58, geoLng: 7.12, continent: 'Europe', countryCode: 'FR' };
     const out = await geocodeInscriptions([insc], {
       delayMs: 0,
       fetchImpl: async () => { fetchCalls++; return { ok: true, json: async () => ({}) }; },
@@ -64,6 +66,25 @@ assert.strictEqual(buildGeocodeQuery('06600', 'Antibes', 'Belgique'), null, 'hor
     assert.strictEqual(fetchCalls, 0);
     assert.strictEqual(out.length, 1);
     assert.strictEqual(out[0].geoLat, 43.58);
+  }
+
+  // Déjà géocodé mais continent ABSENT (ancien format, géocodé avant cette
+  // fonctionnalité — forcément via BAN/France) → backfill silencieux, sans
+  // appel réseau, mais avec un update pour persister continent/countryCode
+  {
+    let fetchCalls = 0;
+    let updateArgs = null;
+    const insc = { id: '7', ville: 'Antibes', geoLat: 43.58, geoLng: 7.12 };
+    const out = await geocodeInscriptions([insc], {
+      delayMs: 0,
+      fetchImpl: async () => { fetchCalls++; return { ok: true, json: async () => ({}) }; },
+      updateFn: async (id, partial) => { updateArgs = [id, partial]; },
+    });
+    assert.strictEqual(fetchCalls, 0, 'backfill = aucun appel réseau');
+    assert.strictEqual(out[0].continent, 'Europe');
+    assert.strictEqual(out[0].countryCode, 'FR');
+    assert.strictEqual(updateArgs[0], '7');
+    assert.strictEqual(updateArgs[1].metadata.continent, 'Europe');
   }
 
   // Géocodage réussi → écrit lat/lng + geocodedAt, appelle updateFn avec metadata fusionnée
@@ -124,6 +145,69 @@ assert.strictEqual(buildGeocodeQuery('06600', 'Antibes', 'Belgique'), null, 'hor
     });
     assert.strictEqual(out.length, 0);
   }
+
+  // Géocodage France (BAN) : region extraite du champ "context" de la réponse
+  {
+    const insc = { id: '10', ville: 'Antibes', codePostal: '06600', pays: 'France' };
+    const out = await geocodeInscriptions([insc], {
+      delayMs: 0,
+      fetchImpl: async () => ({
+        ok: true,
+        json: async () => ({ features: [{
+          geometry: { coordinates: [7.1256, 43.5808] },
+          properties: { context: "06, Alpes-Maritimes, Provence-Alpes-Côte d'Azur" },
+        }] }),
+      }),
+      updateFn: async () => {},
+    });
+    assert.strictEqual(out[0].continent, 'Europe');
+    assert.strictEqual(out[0].countryCode, 'FR');
+    assert.strictEqual(out[0].region, "Provence-Alpes-Côte d'Azur");
+  }
+
+  // Hors France → utilise Nominatim, dérive le continent via countryCodeToContinent injecté
+  {
+    const insc = { id: '8', nom: 'Smith', ville: 'Londres', pays: 'Royaume-Uni' };
+    let calledUrl = null;
+    const out = await geocodeInscriptions([insc], {
+      delayMs: 0,
+      nominatimDelayMs: 0,
+      countryCodeToContinent: (cc) => (cc === 'GB' ? 'Europe' : null),
+      fetchImpl: async (url) => {
+        calledUrl = url;
+        return { ok: true, json: async () => ([{ lat: '51.5074', lon: '-0.1278', address: { country_code: 'gb' } }]) };
+      },
+      updateFn: async () => {},
+    });
+    assert.ok(calledUrl.includes('nominatim.openstreetmap.org'), 'URL Nominatim utilisée');
+    assert.ok(calledUrl.includes('Londres'), 'ville incluse dans la requête');
+    assert.strictEqual(out[0].geoLat, 51.5074);
+    assert.strictEqual(out[0].geoLng, -0.1278);
+    assert.strictEqual(out[0].continent, 'Europe');
+    assert.strictEqual(out[0].countryCode, 'GB', 'country_code normalisé en majuscules');
+    assert.strictEqual(out[0].region, null, 'pas de région hors France');
+  }
+
+  // Nominatim : aucun résultat → ignoré, pas planté
+  {
+    const insc = { id: '9', ville: 'Villeimaginaire', pays: 'Narnia' };
+    const out = await geocodeInscriptions([insc], {
+      delayMs: 0, nominatimDelayMs: 0,
+      fetchImpl: async () => ({ ok: true, json: async () => ([]) }),
+    });
+    assert.strictEqual(out.length, 0);
+  }
+
+  // ── extractRegionFromBanContext ──
+  assert.strictEqual(extractRegionFromBanContext("06, Alpes-Maritimes, Provence-Alpes-Côte d'Azur"), "Provence-Alpes-Côte d'Azur");
+  assert.strictEqual(extractRegionFromBanContext(null), null);
+  assert.strictEqual(extractRegionFromBanContext(''), null);
+  assert.strictEqual(extractRegionFromBanContext('UnSeulSegment'), 'UnSeulSegment');
+
+  // ── buildNominatimQuery ──
+  assert.strictEqual(buildNominatimQuery('', 'Londres', 'Royaume-Uni'), 'Londres Royaume-Uni');
+  assert.strictEqual(buildNominatimQuery('SW1A', 'Londres', 'Royaume-Uni'), 'Londres SW1A Royaume-Uni');
+  assert.strictEqual(buildNominatimQuery('', '', ''), null);
 
     console.log('✓ supabase-geo.js — tous les tests passent');
   } catch (e) {
