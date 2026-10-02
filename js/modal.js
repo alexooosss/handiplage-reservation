@@ -220,6 +220,10 @@ function openAssignSpotModal(resa, freeSpots, onConfirm) {
 // opts : { isLate: bool, nextSlot: { label, end } | null }
 function openWalkinEntryModal(onConfirm, opts) {
   opts = opts || {};
+  let _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
   const showCreneaux = !!(opts.isLate && opts.nextSlot);
   const hintCreneaux = showCreneaux ? `
       <div class="form-group" id="wk-creneaux-row">
@@ -300,7 +304,16 @@ function openWalkinEntryModal(onConfirm, opts) {
         _b1.textContent = i.nom.toUpperCase();
         nameSpan.appendChild(_b1);
         nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
-        item.appendChild(nameSpan);
+        var nameWrap = document.createElement('span');
+        nameWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+        nameWrap.appendChild(nameSpan);
+        if (i.statut === 'valide' && _saisonCourante !== null && i.derniereSaisonValidee !== _saisonCourante) {
+          var renewSpan = document.createElement('span');
+          renewSpan.style.cssText = 'font-size:10px;font-weight:700;color:#f57c00';
+          renewSpan.textContent = '⚠️ Non renouvelé';
+          nameWrap.appendChild(renewSpan);
+        }
+        item.appendChild(nameWrap);
         if (i.pass) {
           var remSpan = document.createElement('span');
           remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
@@ -1049,6 +1062,10 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   // Autocomplete NOM (usagers) ou NOM DU GROUPE selon le type sélectionné
   var _linkedPfInscriptionId = null;
   var _linkedGroupeId        = null;
+  var _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
   (function() {
     var nomEl     = document.getElementById('pf-nom');
     var prenomEl  = document.getElementById('pf-prenom');
@@ -1116,7 +1133,16 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
           _b3.textContent = i.nom.toUpperCase();
           nameSpan.appendChild(_b3);
           nameSpan.appendChild(document.createTextNode(' ' + i.prenom));
-          item.appendChild(nameSpan);
+          var nameWrap = document.createElement('span');
+          nameWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+          nameWrap.appendChild(nameSpan);
+          if (i.statut === 'valide' && _saisonCourante !== null && i.derniereSaisonValidee !== _saisonCourante) {
+            var renewSpan = document.createElement('span');
+            renewSpan.style.cssText = 'font-size:10px;font-weight:700;color:#f57c00';
+            renewSpan.textContent = '⚠️ Non renouvelé';
+            nameWrap.appendChild(renewSpan);
+          }
+          item.appendChild(nameWrap);
           if (i.pass) {
             var remSpan = document.createElement('span');
             remSpan.style.cssText = 'font-size:11px;' + (exhausted ? 'color:#c00' : 'color:#1565c0');
