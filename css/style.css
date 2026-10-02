@@ -1883,7 +1883,7 @@ dialog.plan-dialog {
 .pass-suggest-remaining { font-size: 11px; font-weight: 700; color: var(--accent); }
 .pass-suggest-remaining.empty { color: var(--red); }
 .pass-suggest-name-wrap { display: flex; flex-direction: column; gap: 2px; }
-.pass-suggest-renewal-warning { font-size: 10px; font-weight: 700; color: var(--red); }
+.pass-suggest-renewal-warning { font-size: 10px; font-weight: 700; color: var(--orange); }
 .pass-link-info {
   display: flex;
   align-items: center;
