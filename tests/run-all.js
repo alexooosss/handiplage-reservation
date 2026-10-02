@@ -1,7 +1,7 @@
 // tests/run-all.js
 'use strict';
 const { execSync } = require('child_process');
-const tests = ['test-slots.js', 'test-timer.js', 'test-storage.js', 'test-pass.js', 'test-auth.js', 'test-supabase-inscriptions.js', 'test-supabase-mc.js', 'test-supabase-storage.js', 'test-inscription-publique.js', 'test-supabase-messages.js', 'test-usager-storage.js', 'test-supabase-geo.js', 'test-usager-renewal.js'];
+const tests = ['test-slots.js', 'test-timer.js', 'test-storage.js', 'test-pass.js', 'test-auth.js', 'test-supabase-inscriptions.js', 'test-supabase-mc.js', 'test-supabase-storage.js', 'test-inscription-publique.js', 'test-supabase-messages.js', 'test-usager-storage.js', 'test-supabase-geo.js', 'test-usager-renewal.js', 'test-geo-continents.js'];
 tests.forEach(f => {
   execSync(`node tests/${f}`, { stdio: 'inherit' });
 });
