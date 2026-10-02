@@ -4,7 +4,7 @@
 // sur window.HandiplageGlobe pour être utilisable depuis les scripts classiques
 // (js/usagers-map.js) une fois le module chargé.
 //
-// API : window.HandiplageGlobe.create(container, options) → { destroy(), setMarkers(markers) }
+// API : window.HandiplageGlobe.create(container, options) → { destroy(), setMarkers(markers), focusOnMarker(marker) }
 // `options` reprend les props du composant d'origine (speed, dots, fill, fillColor,
 // scale, stopOnHover, markerConfig, direction, initialLatitude, initialLongitude,
 // oceanColor, outlineColor, showOutline, graticuleColor, showGrid, outlineWidth,
@@ -123,7 +123,7 @@ function pointsToTube(points, radius) {
 
 /**
  * Crée un globe dans `container` et démarre son rendu.
- * Retourne { destroy(), setMarkers(markers) }.
+ * Retourne { destroy(), setMarkers(markers), focusOnMarker(marker) }.
  */
 export function create(container, options = {}) {
   const {
