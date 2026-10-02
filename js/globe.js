@@ -622,7 +622,20 @@ export function create(container, options = {}) {
     updateMarkers();
   }
 
-  return { destroy, setMarkers };
+  // Centre/zoome le globe sur `marker` et déclenche onMarkerClick comme si
+  // l'utilisateur avait cliqué directement sur son point — utilisé par le
+  // panneau de filtres (clic sur une ligne de la liste) pour réutiliser
+  // exactement la même bulle d'info qu'un clic sur le globe.
+  function focusOnMarker(marker) {
+    if (!marker) return;
+    const rect = canvas.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    focusOn(marker, Math.max(zoom, MAX_ZOOM * 0.9));
+    if (onMarkerClick) onMarkerClick(marker, centerX, centerY);
+  }
+
+  return { destroy, setMarkers, focusOnMarker };
 }
 
 if (typeof window !== 'undefined') {
