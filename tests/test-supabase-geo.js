@@ -87,6 +87,24 @@ assert.strictEqual(buildGeocodeQuery('06600', 'Antibes', 'Belgique'), null, 'hor
     assert.strictEqual(updateArgs[1].metadata.continent, 'Europe');
   }
 
+  // Backfill : countryCode déjà renseigné (hors France) mais continent manquant
+  // (ex: code pays non couvert par la table geo-continents.js) → ne doit PAS
+  // être mal étiqueté "Europe" par erreur ; le backfill ne doit pas s'appliquer.
+  {
+    let fetchCalls = 0;
+    let updateCalled = false;
+    const insc = { id: '11', geoLat: 10, geoLng: 20, countryCode: 'CX' };
+    const out = await geocodeInscriptions([insc], {
+      delayMs: 0,
+      fetchImpl: async () => { fetchCalls++; return { ok: true, json: async () => ({}) }; },
+      updateFn: async () => { updateCalled = true; },
+    });
+    assert.strictEqual(fetchCalls, 0);
+    assert.strictEqual(updateCalled, false, 'pas de backfill quand countryCode est déjà renseigné (hors France)');
+    assert.strictEqual(out[0].continent, undefined, 'continent reste non résolu plutôt que mal étiqueté Europe');
+    assert.strictEqual(out[0].countryCode, 'CX', 'countryCode non-FR préservé');
+  }
+
   // Géocodage réussi → écrit lat/lng + geocodedAt, appelle updateFn avec metadata fusionnée
   {
     const insc = { id: '2', nom: 'Martin', codePostal: '06600', ville: 'Antibes', pays: 'France' };

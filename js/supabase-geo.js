@@ -148,9 +148,9 @@ async function geocodeInscriptions(inscriptions, opts) {
       // Backfill silencieux pour les lignes géocodées avant cette fonctionnalité
       // (forcément via BAN/France, seule API utilisée jusqu'ici) : pas d'appel
       // réseau, juste compléter continent/countryCode si absents.
-      if (!insc.continent) {
+      if (!insc.continent && !insc.countryCode) {
         insc.continent   = 'Europe';
-        insc.countryCode = insc.countryCode || 'FR';
+        insc.countryCode = 'FR';
         if (updateFn) {
           await updateFn(insc.id, { metadata: _stripToMetadata(insc) });
         }
