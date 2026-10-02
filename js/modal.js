@@ -12,6 +12,10 @@ function closeModal() {
 // onConfirm({ nom, prenom, accompagnants, inscriptionId })
 function openAddReservationModal(onConfirm) {
   let _linkedInscriptionId = null;
+  let _saisonCourante = null;
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) { _saisonCourante = s; }).catch(function() {});
+  }
 
   _dialog().innerHTML = `
     <div class="modal-header">
@@ -90,9 +94,18 @@ function openAddReservationModal(onConfirm) {
       const exhausted = remaining === 0;
       const item = document.createElement('div');
       item.className = 'pass-suggest-item' + (exhausted ? ' exhausted' : '');
+      const nameWrap = document.createElement('span');
+      nameWrap.className = 'pass-suggest-name-wrap';
       const nameSpan = document.createElement('span');
       nameSpan.textContent = insc.nom.toUpperCase() + ' ' + insc.prenom;
-      item.appendChild(nameSpan);
+      nameWrap.appendChild(nameSpan);
+      if (insc.statut === 'valide' && _saisonCourante !== null && insc.derniereSaisonValidee !== _saisonCourante) {
+        const renewSpan = document.createElement('span');
+        renewSpan.className = 'pass-suggest-renewal-warning';
+        renewSpan.textContent = '⚠️ Non renouvelé';
+        nameWrap.appendChild(renewSpan);
+      }
+      item.appendChild(nameWrap);
       if (insc.pass) {
         const remSpan = document.createElement('span');
         remSpan.className = 'pass-suggest-remaining' + (exhausted ? ' empty' : '');
