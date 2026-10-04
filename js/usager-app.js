@@ -21,6 +21,16 @@ const UsagerApp = (() => {
       return;
     }
 
+    // Amélioration progressive : le texte en dur dans le HTML reste affiché
+    // si cette requête échoue ou n'a pas encore répondu — pas critique.
+    getSaisonDates().then(function(dates) {
+      var seasonEl = document.getElementById('usager-sidebar-season');
+      if (!seasonEl || !dates.debut || !dates.fin) return;
+      var debutLabel = new Date(dates.debut + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+      var finLabel   = new Date(dates.fin   + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+      seasonEl.textContent = debutLabel + ' – ' + finLabel;
+    }).catch(function() { /* repli : texte en dur déjà affiché */ });
+
     var state = computeUsagerAccessState(_inscription, saisonCourante);
 
     if (state === 'refuse' || state === 'premiere_demande') {
