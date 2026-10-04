@@ -194,12 +194,12 @@ var UsagersMap = (function () {
         for (var j = idx + 1; j < levels.length; j++) {
           _filters[levels[j][1]] = '';
         }
-        _applyFilters(panelEl);
+        _applyFilters(panelEl, pair[0]);
       });
     });
   }
 
-  function _applyFilters(panelEl) {
+  function _applyFilters(panelEl, focusSelectId) {
     var filtered = filterInscriptions(_localized, _filters);
     var built = _buildMarkers(filtered);
     _markersById = built.map;
@@ -209,6 +209,11 @@ var UsagersMap = (function () {
     var options = getFilterOptions(_localized, _filters);
     panelEl.innerHTML = _renderPanelHtml(options, _filters);
     _bindPanelSelects(panelEl);
+
+    if (focusSelectId) {
+      var toFocus = panelEl.querySelector('#' + focusSelectId);
+      if (toFocus) toFocus.focus();
+    }
 
     var listEl = panelEl.querySelector('#usagers-filter-list');
     listEl.innerHTML = _renderListHtml(filtered, _unlocalized);
