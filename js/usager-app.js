@@ -29,7 +29,7 @@ const UsagerApp = (() => {
       var debutLabel = new Date(dates.debut + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
       var finLabel   = new Date(dates.fin   + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
       seasonEl.textContent = debutLabel + ' – ' + finLabel;
-    }).catch(function() { /* repli : texte en dur déjà affiché */ });
+    }).catch(function(e) { console.error('getSaisonDates (sidebar):', e); /* repli : texte en dur déjà affiché */ });
 
     var state = computeUsagerAccessState(_inscription, saisonCourante);
 
