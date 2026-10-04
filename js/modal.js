@@ -1277,6 +1277,7 @@ function openOpenSeasonModal(saisonCourante, saisonDates, onConfirm) {
           <input type="date" id="f-saison-fin" value="${saisonDates.fin || ''}">
         </div>
       </div>
+      <p class="modal-hint">Dates pré-remplies avec celles de la saison ${saisonCourante} — à mettre à jour pour la nouvelle saison.</p>
       <p class="modal-hint">Tous les comptes usagers validés pour la saison ${saisonCourante} devront renouveler leur inscription pour continuer à réserver.</p>
       <div id="season-dates-error" style="display:none;color:var(--red);font-size:13px;margin-top:6px"></div>
     </div>
