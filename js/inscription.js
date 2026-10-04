@@ -41,8 +41,12 @@ async function renderInscription(container, selectedId) {
 
   document.getElementById('insc-open-season-btn').addEventListener('click', function() {
     openOpenSeasonModal(saisonCourante, saisonDates, async function(dates) {
-      await ouvrirNouvelleSaison(dates.debut, dates.fin);
-      await renderInscription(container, selectedId);
+      try {
+        await ouvrirNouvelleSaison(dates.debut, dates.fin);
+        await renderInscription(container, selectedId);
+      } catch (e) {
+        alert('Erreur lors de l\'ouverture de la saison : ' + (e.message || e));
+      }
     });
   });
 
