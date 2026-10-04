@@ -34,6 +34,7 @@ async function renderAccueil(container, inscription, showView) {
     var next    = upcoming[0] || null;
 
     var balance = computePassBalance(resas, PASS_QUOTA);
+    var seasonOver = typeof SEASON_END !== 'undefined' && today > SEASON_END;
 
     var nextCard = next
       ? '<div class="usager-summary-card">'
@@ -49,20 +50,31 @@ async function renderAccueil(container, inscription, showView) {
 
     var pct      = balance.quota > 0 ? Math.round((balance.remaining / balance.quota) * 100) : 0;
     var fillCls  = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
-    var passCard = inscription.passActif
-      ? '<div class="usager-summary-card usager-summary-pass">'
-      +   '<div class="usager-summary-label">Pass ce mois</div>'
-      +   '<div class="usager-summary-value">' + balance.remaining + ' / ' + balance.quota + '</div>'
-      +   '<div class="usager-pass-bar-wrap" style="margin-top:8px">'
-      +     '<div class="usager-pass-bar-fill ' + fillCls + '" style="width:' + pct + '%"></div>'
-      +   '</div>'
-      +   '<div class="usager-summary-sub">réservations restantes</div>'
-      + '</div>'
-      : '<div class="usager-summary-card">'
-      +   '<div class="usager-summary-label">Pass</div>'
-      +   '<div class="usager-summary-value" style="font-size:.9rem;color:#aaa">Non activé</div>'
-      +   '<div class="usager-summary-sub">Contactez l\'équipe Handiplage</div>'
-      + '</div>';
+    var passCard;
+    if (seasonOver) {
+      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
+      var seasonYear  = (typeof SEASON_END !== 'undefined' ? SEASON_END : today).slice(0, 4);
+      passCard = '<div class="usager-summary-card">'
+        +   '<div class="usager-summary-label">Saison ' + seasonYear + '</div>'
+        +   '<div class="usager-summary-value">' + seasonCount + '</div>'
+        +   '<div class="usager-summary-sub">réservation' + (seasonCount > 1 ? 's' : '') + ' effectuée' + (seasonCount > 1 ? 's' : '') + ' cette saison</div>'
+        + '</div>';
+    } else if (inscription.passActif) {
+      passCard = '<div class="usager-summary-card usager-summary-pass">'
+        +   '<div class="usager-summary-label">Pass ce mois</div>'
+        +   '<div class="usager-summary-value">' + balance.remaining + ' / ' + balance.quota + '</div>'
+        +   '<div class="usager-pass-bar-wrap" style="margin-top:8px">'
+        +     '<div class="usager-pass-bar-fill ' + fillCls + '" style="width:' + pct + '%"></div>'
+        +   '</div>'
+        +   '<div class="usager-summary-sub">réservations restantes</div>'
+        + '</div>';
+    } else {
+      passCard = '<div class="usager-summary-card">'
+        +   '<div class="usager-summary-label">Pass</div>'
+        +   '<div class="usager-summary-value" style="font-size:.9rem;color:#aaa">Non activé</div>'
+        +   '<div class="usager-summary-sub">Contactez l\'équipe Handiplage</div>'
+        + '</div>';
+    }
 
     var demoBanner = inscription.isDemo
       ? '<div class="usager-demo-banner"><img src="icone%20demo.svg" alt="" style="height:16px;vertical-align:middle;margin-right:7px;filter:brightness(0)invert(1)">Compte démo — vos actions ne seront pas enregistrées</div>'
@@ -72,7 +84,7 @@ async function renderAccueil(container, inscription, showView) {
       + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
-      +   '<div class="usager-tile usager-tile-primary' + (inscription.passActif ? '' : ' usager-tile-pass-off') + '" data-view="reserver"><div class="usager-tile-icon"><img src="icone%20r%C3%A9server.svg" alt="Réserver"></div><div class="usager-tile-label">Réserver</div>' + (inscription.passActif ? '' : '<span class="usager-tile-lock">🔒</span>') + '</div>'
+      +   '<div class="usager-tile usager-tile-primary' + (inscription.passActif && !seasonOver ? '' : ' usager-tile-pass-off') + '" data-view="reserver"><div class="usager-tile-icon"><img src="icone%20r%C3%A9server.svg" alt="Réserver"></div><div class="usager-tile-label">Réserver</div>' + (inscription.passActif && !seasonOver ? '' : '<span class="usager-tile-lock">🔒</span>') + '</div>'
       +   '<div class="usager-tile" data-view="reservations"><div class="usager-tile-icon"><img src="icone%20mes%20r%C3%A9servations.svg" alt="Mes réservations"></div><div class="usager-tile-label">Mes réservations</div></div>'
       +   '<div class="usager-tile" data-view="compte"><div class="usager-tile-icon"><img src="icone%20mon%20compte.svg" alt="Mon compte"></div><div class="usager-tile-label">Mon compte</div></div>'
       +   '<div class="usager-tile" data-view="infos"><div class="usager-tile-icon"><img src="icone%20infos.svg" alt="Infos"></div><div class="usager-tile-label">Infos</div></div>'
