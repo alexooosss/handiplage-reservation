@@ -30,12 +30,13 @@ async function renderReservations(container, inscription, showView) {
     var past     = resas.filter(function(r) { return !_isUpcoming(r); }).sort(function(a,b){ return a.date>b.date?-1:1; });
     var absentsThisMonth = resas.filter(function(r) { return r.statut === 'absent' && r.date && r.date.startsWith(monthKey); }).length;
 
-    var seasonOver = typeof SEASON_END !== 'undefined' && todayISO > SEASON_END;
+    var saisonDates = await getSaisonDates();
+    var seasonOver = todayISO > saisonDates.fin;
 
     var passHtml = '';
     if (seasonOver) {
       var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
-      var seasonYear  = (typeof SEASON_END !== 'undefined' ? SEASON_END : todayISO).slice(0, 4);
+      var seasonYear  = saisonDates.fin.slice(0, 4);
       passHtml = '<div class="usager-card usager-pass-banner">'
         + '<div class="usager-pass-banner-row">'
         +   '<div class="usager-pass-banner-label">Saison ' + seasonYear + '</div>'
