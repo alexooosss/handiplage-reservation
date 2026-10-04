@@ -105,6 +105,116 @@ var UsagersMap = (function () {
     });
   }
 
+  var _filters     = { continent: '', pays: '', region: '', ville: '' };
+  var _localized    = [];
+  var _unlocalized  = [];
+  var _markersById  = {};
+
+  function _buildMarkers(list) {
+    var map = {};
+    var markers = list.map(function(insc) {
+      var j = jitterOffset(insc.id);
+      var marker = {
+        lat:   insc.geoLat + j.dLat,
+        lng:   insc.geoLng + j.dLng,
+        label: ((insc.prenom || '') + ' ' + (insc.nom || '')).trim() || 'Usager',
+        insc:  insc,
+      };
+      map[insc.id] = marker;
+      return marker;
+    });
+    return { markers: markers, map: map };
+  }
+
+  function _selectHtml(id, label, values, selected) {
+    return '<label class="usagers-filter-label" for="' + id + '">' + label + '</label>'
+      + '<select class="usagers-filter-select" id="' + id + '">'
+      +   '<option value="">Tous</option>'
+      +   values.map(function(v) {
+            return '<option value="' + _esc(v) + '"' + (v === selected ? ' selected' : '') + '>' + _esc(v) + '</option>';
+          }).join('')
+      + '</select>';
+  }
+
+  function _renderPanelHtml(options, filters) {
+    return '<div class="usagers-filter-selects">'
+      +   _selectHtml('usagers-filter-continent', 'Continent', options.continents, filters.continent)
+      +   _selectHtml('usagers-filter-pays',      'Pays',      options.pays,       filters.pays)
+      +   _selectHtml('usagers-filter-region',    'Région',    options.regions,    filters.region)
+      +   _selectHtml('usagers-filter-ville',     'Ville',     options.villes,     filters.ville)
+      + '</div>'
+      + '<div class="usagers-filter-list" id="usagers-filter-list"></div>';
+  }
+
+  function _rowHtml(insc, localized) {
+    var name = ((insc.prenom || '') + ' ' + (insc.nom || '')).trim() || 'Usager';
+    var sub  = localized ? (insc.ville || '') : '';
+    return '<div class="usagers-filter-row" data-id="' + _esc(insc.id) + '" data-localized="' + (localized ? '1' : '0') + '">'
+      + '🧍 ' + _esc(name) + (sub ? ' — ' + _esc(sub) : '')
+      + '</div>';
+  }
+
+  function _renderListHtml(filtered, unlocalized) {
+    var html = filtered.length
+      ? filtered.map(function(i) { return _rowHtml(i, true); }).join('')
+      : '<div class="usagers-filter-empty">Aucun usager pour ce filtre.</div>';
+    if (unlocalized.length) {
+      html += '<div class="usagers-filter-group-label">Non localisés</div>'
+        + unlocalized.map(function(i) { return _rowHtml(i, false); }).join('');
+    }
+    return html;
+  }
+
+  function _bindPanelList(listEl) {
+    listEl.querySelectorAll('.usagers-filter-row').forEach(function(rowEl) {
+      rowEl.addEventListener('click', function() {
+        var id = rowEl.dataset.id;
+        if (rowEl.dataset.localized === '1') {
+          var marker = _markersById[id];
+          if (marker && _globe && typeof _globe.focusOnMarker === 'function') _globe.focusOnMarker(marker);
+        } else if (typeof App !== 'undefined' && typeof App.navigateToInscription === 'function') {
+          App.navigateToInscription(id);
+        }
+      });
+    });
+  }
+
+  function _bindPanelSelects(panelEl) {
+    var levels = [
+      ['usagers-filter-continent', 'continent'],
+      ['usagers-filter-pays',      'pays'],
+      ['usagers-filter-region',    'region'],
+      ['usagers-filter-ville',     'ville'],
+    ];
+    levels.forEach(function(pair, idx) {
+      var selectEl = panelEl.querySelector('#' + pair[0]);
+      if (!selectEl) return;
+      selectEl.addEventListener('change', function() {
+        _filters[pair[1]] = selectEl.value;
+        for (var j = idx + 1; j < levels.length; j++) {
+          _filters[levels[j][1]] = '';
+        }
+        _applyFilters(panelEl);
+      });
+    });
+  }
+
+  function _applyFilters(panelEl) {
+    var filtered = filterInscriptions(_localized, _filters);
+    var built = _buildMarkers(filtered);
+    _markersById = built.map;
+
+    if (_globe) _globe.setMarkers(built.markers);
+
+    var options = getFilterOptions(_localized, _filters);
+    panelEl.innerHTML = _renderPanelHtml(options, _filters);
+    _bindPanelSelects(panelEl);
+
+    var listEl = panelEl.querySelector('#usagers-filter-list');
+    listEl.innerHTML = _renderListHtml(filtered, _unlocalized);
+    _bindPanelList(listEl);
+  }
+
   function destroy() {
     if (_globe) {
       try { _globe.destroy(); } catch (e) {}
@@ -117,38 +227,51 @@ var UsagersMap = (function () {
     container.innerHTML = ''
       + '<div class="stats-card usagers-map-card">'
       +   '<div class="stats-card-title">Localisation des usagers</div>'
-      +   '<p class="usagers-map-hint">Position approximative (ville / code postal), pas l\'adresse précise. Glisser pour tourner, molette pour zoomer, cliquer un point pour la fiche usager.</p>'
+      +   '<p class="usagers-map-hint" id="usagers-map-hint">Position approximative (ville / code postal), pas l\'adresse précise. Glisser pour tourner, molette pour zoomer, cliquer un point (ou une ligne de la liste) pour la fiche usager.</p>'
       +   '<div id="usagers-map-status" class="usagers-map-status">Chargement…</div>'
-      +   '<div id="usagers-globe" class="usagers-globe-wrap"></div>'
+      +   '<div class="usagers-map-layout">'
+      +     '<div id="usagers-globe" class="usagers-globe-wrap"></div>'
+      +     '<div class="usagers-filter-panel" id="usagers-filter-panel"></div>'
+      +   '</div>'
       + '</div>';
 
     var statusEl = container.querySelector('#usagers-map-status');
     var globeEl  = container.querySelector('#usagers-globe');
+    var panelEl  = container.querySelector('#usagers-filter-panel');
+    var hintEl   = container.querySelector('#usagers-map-hint');
+
+    _filters = { continent: '', pays: '', region: '', ville: '' };
 
     try {
       var inscriptions = await getInscriptions();
       var valid    = inscriptions.filter(function(i) { return i.statut === 'valide'; });
       var withAddr = valid.filter(function(i) { return i.codePostal || i.ville; });
 
-      if (!withAddr.length) {
-        statusEl.textContent = 'Aucune adresse enregistrée pour le moment.';
+      if (!valid.length) {
+        statusEl.textContent = 'Aucun usager validé pour le moment.';
         return;
       }
 
       var geocoded = await geocodeInscriptions(withAddr);
-      var missing  = withAddr.length - geocoded.length;
+      var hasForeign = geocoded.some(function(i) { return i.countryCode && i.countryCode !== 'FR'; });
+      if (hasForeign) {
+        hintEl.textContent += ' Données pays hors France : © OpenStreetMap contributors.';
+      }
 
-      var markers = geocoded.map(function(insc) {
-        var j = jitterOffset(insc.id);
-        return {
-          lat:   insc.geoLat + j.dLat,
-          lng:   insc.geoLng + j.dLng,
-          label: ((insc.prenom || '') + ' ' + (insc.nom || '')).trim() || 'Usager',
-          insc:  insc,
-        };
-      });
+      var split = splitLocalisables(valid);
+      _localized   = split.localized;
+      _unlocalized = split.unlocalized;
 
-      statusEl.textContent = markers.length + ' usager' + _s(markers.length) + ' localisé' + _s(markers.length)
+      if (!_localized.length) {
+        statusEl.textContent = 'Aucun usager localisé pour le moment.';
+        panelEl.innerHTML = _renderPanelHtml({ continents: [], pays: [], regions: [], villes: [] }, _filters);
+        panelEl.querySelector('#usagers-filter-list').innerHTML = _renderListHtml([], _unlocalized);
+        _bindPanelList(panelEl.querySelector('#usagers-filter-list'));
+        return;
+      }
+
+      var missing = withAddr.length - geocoded.length;
+      statusEl.textContent = _localized.length + ' usager' + _s(_localized.length) + ' localisé' + _s(_localized.length)
         + (missing > 0 ? ' — ' + missing + ' adresse' + _s(missing) + ' non reconnue' + _s(missing) : '');
 
       if (!window.HandiplageGlobe) {
@@ -189,12 +312,15 @@ var UsagersMap = (function () {
         }
       }
 
+      var initial = _buildMarkers(_localized);
+      _markersById = initial.map;
+
       _globe = window.HandiplageGlobe.create(globeEl, {
         speed: 1.1,
         smoothing: 7,
         scale: 7,
         dots: { color: '#00b090', size: 3.5, density: 7, allDots: false },
-        markerConfig: { markers: markers, color: '#f0c93a', size: 55 },
+        markerConfig: { markers: initial.markers, color: '#f0c93a', size: 55 },
         oceanColor: '#f8fafc',
         outlineColor: 'rgba(10,22,40,0.25)',
         graticuleColor: 'rgba(10,22,40,0.06)',
@@ -215,6 +341,8 @@ var UsagersMap = (function () {
           statusEl.textContent = 'Le globe 3D n\'a pas pu être chargé (connexion indisponible ?).';
         },
       });
+
+      _applyFilters(panelEl);
     } catch (e) {
       statusEl.textContent = 'Erreur : ' + _esc(e.message || String(e));
     }
