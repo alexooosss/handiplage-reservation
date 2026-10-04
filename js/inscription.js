@@ -6,7 +6,7 @@ function _escI(s) {
 
 // ── Vue principale ──
 async function renderInscription(container, selectedId) {
-  const [inscriptions, saisonCourante] = await Promise.all([getInscriptions(), getSaisonCourante()]);
+  const [inscriptions, saisonCourante, saisonDates] = await Promise.all([getInscriptions(), getSaisonCourante(), getSaisonDates()]);
 
   container.innerHTML = '<div class="insc-layout">'
     + '<div class="insc-sidebar">'
@@ -39,10 +39,11 @@ async function renderInscription(container, selectedId) {
     _showForm(container, null);
   });
 
-  document.getElementById('insc-open-season-btn').addEventListener('click', async function() {
-    if (!confirm('Ouvrir la saison ' + (saisonCourante + 1) + ' ?\n\nTous les comptes usagers validés pour la saison ' + saisonCourante + ' devront renouveler leur inscription pour continuer à réserver.')) return;
-    await ouvrirNouvelleSaison();
-    await renderInscription(container, selectedId);
+  document.getElementById('insc-open-season-btn').addEventListener('click', function() {
+    openOpenSeasonModal(saisonCourante, saisonDates, async function(dates) {
+      await ouvrirNouvelleSaison(dates.debut, dates.fin);
+      await renderInscription(container, selectedId);
+    });
   });
 
   _bindListItems(container);
