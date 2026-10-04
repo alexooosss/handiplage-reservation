@@ -191,6 +191,18 @@ function initInscriptionPublique() {
   });
 }
 
+// Amélioration progressive : le texte en dur dans le HTML reste affiché si
+// cette requête échoue (page publique, pas de session utilisateur).
+if (typeof getSaisonDates === 'function') {
+  getSaisonDates().then(function(dates) {
+    var seasonEl = document.getElementById('pub-sidebar-season');
+    if (!seasonEl || !dates.debut || !dates.fin) return;
+    var debutLabel = new Date(dates.debut + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    var finLabel   = new Date(dates.fin   + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    seasonEl.textContent = debutLabel + ' – ' + finLabel;
+  }).catch(function() { /* repli : texte en dur déjà affiché */ });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = { validatePublicForm };
 }
