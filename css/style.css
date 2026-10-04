@@ -2189,7 +2189,7 @@ dialog.plan-dialog {
 .profil-msg-err    { color: #c62828; }
 .profil-msg-ok     { color: #2e7d32; }
 
-.stats-wrap { max-width: 1180px; }
+.stats-wrap { width: 100%; }
 
 .stats-subtabs { display: flex; gap: 8px; margin-bottom: 16px; }
 
