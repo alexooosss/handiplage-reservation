@@ -1258,6 +1258,58 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   }, { once: true });
 }
 
+// ── Modale : Ouvrir une nouvelle saison ──
+// onConfirm({ debut, fin }) — dates ISO (YYYY-MM-DD)
+function openOpenSeasonModal(saisonCourante, saisonDates, onConfirm) {
+  _dialog().innerHTML = `
+    <div class="modal-header">
+      <h3>Ouvrir la saison ${saisonCourante + 1}</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date de début</label>
+          <input type="date" id="f-saison-debut" value="${saisonDates.debut || ''}">
+        </div>
+        <div class="form-group">
+          <label>Date de fin</label>
+          <input type="date" id="f-saison-fin" value="${saisonDates.fin || ''}">
+        </div>
+      </div>
+      <p class="modal-hint">Tous les comptes usagers validés pour la saison ${saisonCourante} devront renouveler leur inscription pour continuer à réserver.</p>
+      <div id="season-dates-error" style="display:none;color:var(--red);font-size:13px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modal-cancel">Annuler</button>
+      <button class="btn-primary"   id="modal-confirm">Confirmer</button>
+    </div>
+  `;
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+  document.getElementById('modal-confirm').addEventListener('click', function() {
+    const debut = document.getElementById('f-saison-debut').value;
+    const fin   = document.getElementById('f-saison-fin').value;
+    const errEl = document.getElementById('season-dates-error');
+    if (!debut || !fin) {
+      errEl.textContent = 'Les deux dates sont obligatoires.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (debut >= fin) {
+      errEl.textContent = 'La date de début doit être avant la date de fin.';
+      errEl.style.display = 'block';
+      return;
+    }
+    closeModal();
+    onConfirm({ debut: debut, fin: fin });
+  });
+
+  _dialog().showModal();
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openWalkinEntryModal, openPlacementPickerModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, openGroupCheckinModal, closeModal };
+  module.exports = { openAddReservationModal, openAssignSpotModal, openCheckinModal, openWalkinEntryModal, openPlacementPickerModal, openSpotDetailModal, openDepartedModal, openWaitingDetailModal, openSlotPlanningModal, openGroupCheckinModal, openOpenSeasonModal, closeModal };
 }
