@@ -440,6 +440,10 @@ export function create(container, options = {}) {
   let lastMouseX = 0, lastMouseY = 0;
   let animationFrameId = null;
   let destroyed = false;
+  // Stoppe la rotation automatique après un focusOn (clic sur un point ou sur
+  // une ligne de la liste) — sinon le globe repart tourner et s'éloigne
+  // immédiatement du point qu'on vient de centrer. Repart au prochain drag.
+  let autoRotateStopped = false;
   const lerpFactor = smoothingN === 0 ? 1 : mapLinear(smoothingN, 0, 1, 0.4, 0.03);
   const velocityDecay = mapLinear(smoothingN, 0, 1, 0.7, 0.96);
 
@@ -447,7 +451,7 @@ export function create(container, options = {}) {
     if (destroyed) return;
     let needsRender = false;
     const threshold = 0.01;
-    if (!isDragging && rotationSpeed !== 0 && (!stopOnHover || !isHovering)) {
+    if (!isDragging && !autoRotateStopped && rotationSpeed !== 0 && (!stopOnHover || !isHovering)) {
       targetRotation.x += rotationSpeed * 0.01;
     }
     if (!isDragging && smoothingN > 0) {
@@ -504,6 +508,7 @@ export function create(container, options = {}) {
   // rotations Three.js (ordre Euler XYZ, roll nul) pour amener le point
   // exactement face à la caméra : yaw = -lng, pitch = lat.
   function focusOn(marker, targetZoom) {
+    autoRotateStopped = true;
     targetRotation.x = -(marker.lng * Math.PI / 180);
     targetRotation.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, marker.lat * Math.PI / 180));
     velocity.x = 0; velocity.y = 0;
@@ -515,6 +520,7 @@ export function create(container, options = {}) {
 
   function handleMouseDown(event) {
     isDragging = true;
+    autoRotateStopped = false;
     velocity.x = 0; velocity.y = 0;
     lastMouseX = event.clientX; lastMouseY = event.clientY;
     const downX = event.clientX, downY = event.clientY;
