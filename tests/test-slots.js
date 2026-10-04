@@ -1,7 +1,7 @@
 // tests/test-slots.js
 'use strict';
 const assert = require('assert');
-const { SLOTS, SEASON_START, SEASON_END, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById } = require('../js/slots.js');
+const { SLOTS, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById } = require('../js/slots.js');
 
 // timeToMinutes
 assert.strictEqual(timeToMinutes('08:30'), 510);
@@ -60,22 +60,27 @@ assert.strictEqual(getSlotById(1).label, '8h30 – 10h15');
 assert.strictEqual(getSlotById(5).label, '16h30 – 18h15');
 assert.strictEqual(getSlotById(99), null);
 
-// ── Période de saison ──
-assert.strictEqual(SEASON_END, '2026-09-15');
-assert.strictEqual(SEASON_START, '2026-06-12');
+// ── Période de saison (bornes passées en paramètres — plus de constante figée
+// dans slots.js, elles vivent dans app_config.saison_debut/saison_fin).
+// Bornes volontairement différentes de l'ancienne constante figée de slots.js
+// (2026-06-12/2026-09-15) : si l'implémentation ignorait les paramètres et
+// retombait sur un reliquat interne au module, ces assertions échoueraient —
+// preuve que la fonction utilise bien ce qu'on lui passe.
+const SEASON_START = '2027-05-01';
+const SEASON_END   = '2027-08-31';
 
 // isWithinSeason
-assert.strictEqual(isWithinSeason('2026-06-12'), true,  'borne de début incluse');
-assert.strictEqual(isWithinSeason('2026-09-15'), true,  'borne de fin incluse');
-assert.strictEqual(isWithinSeason('2026-08-01'), true);
-assert.strictEqual(isWithinSeason('2026-09-16'), false, 'lendemain de fermeture exclu');
-assert.strictEqual(isWithinSeason('2026-06-11'), false);
-assert.strictEqual(isWithinSeason(''), false);
-assert.strictEqual(isWithinSeason(null), false);
+assert.strictEqual(isWithinSeason('2027-05-01', SEASON_START, SEASON_END), true,  'borne de début incluse');
+assert.strictEqual(isWithinSeason('2027-08-31', SEASON_START, SEASON_END), true,  'borne de fin incluse');
+assert.strictEqual(isWithinSeason('2027-07-01', SEASON_START, SEASON_END), true);
+assert.strictEqual(isWithinSeason('2027-09-01', SEASON_START, SEASON_END), false, 'lendemain de fermeture exclu');
+assert.strictEqual(isWithinSeason('2027-04-30', SEASON_START, SEASON_END), false);
+assert.strictEqual(isWithinSeason('', SEASON_START, SEASON_END), false);
+assert.strictEqual(isWithinSeason(null, SEASON_START, SEASON_END), false);
 
 // clampToSeasonEnd
-assert.strictEqual(clampToSeasonEnd('2026-09-22'), '2026-09-15', 'date au-delà ramenée à la fin de saison');
-assert.strictEqual(clampToSeasonEnd('2026-09-15'), '2026-09-15', 'fin de saison inchangée');
-assert.strictEqual(clampToSeasonEnd('2026-09-08'), '2026-09-08', 'date en saison inchangée');
+assert.strictEqual(clampToSeasonEnd('2027-09-10', SEASON_END), '2027-08-31', 'date au-delà ramenée à la fin de saison');
+assert.strictEqual(clampToSeasonEnd('2027-08-31', SEASON_END), '2027-08-31', 'fin de saison inchangée');
+assert.strictEqual(clampToSeasonEnd('2027-07-15', SEASON_END), '2027-07-15', 'date en saison inchangée');
 
 console.log('✓ slots.js — tous les tests passent');

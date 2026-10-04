@@ -8,19 +8,19 @@ const SLOTS = [
   { id: 5, label: '16h30 – 18h15', start: '16:30', end: '18:15' },
 ];
 
-// Période d'ouverture de la plage (dates ISO YYYY-MM-DD, comparables lexicalement).
-// Doit rester aligné avec le texte affiché dans usager.html / inscription-publique.html.
-const SEASON_START = '2026-06-12';
-const SEASON_END   = '2026-09-15';
+// Les dates d'ouverture/fermeture de la plage vivent en base
+// (app_config.saison_debut/saison_fin, lues via getSaisonDates() dans
+// js/supabase-config.js) — plus de constante figée ici. Ces deux fonctions
+// restent pures : les bornes sont passées en paramètres.
 
 // true si la date ISO est comprise dans la période d'ouverture (bornes incluses)
-function isWithinSeason(iso) {
-  return !!iso && iso >= SEASON_START && iso <= SEASON_END;
+function isWithinSeason(iso, seasonStart, seasonEnd) {
+  return !!iso && iso >= seasonStart && iso <= seasonEnd;
 }
 
 // Ramène une date ISO à la fin de saison si elle la dépasse (sinon inchangée)
-function clampToSeasonEnd(iso) {
-  return iso > SEASON_END ? SEASON_END : iso;
+function clampToSeasonEnd(iso, seasonEnd) {
+  return iso > seasonEnd ? seasonEnd : iso;
 }
 
 function timeToMinutes(hhmm) {
@@ -62,5 +62,5 @@ function isLastSlot(slotId) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { SLOTS, SEASON_START, SEASON_END, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot };
+  module.exports = { SLOTS, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot };
 }
