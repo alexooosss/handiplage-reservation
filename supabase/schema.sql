@@ -54,10 +54,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 -- Table de config (ligne unique) : pilotage de la saison en cours
 CREATE TABLE app_config (
   id              int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  saison_courante int NOT NULL
+  saison_courante int NOT NULL,
+  saison_debut    date,
+  saison_fin      date
 );
 
-INSERT INTO app_config (id, saison_courante) VALUES (1, 2026);
+INSERT INTO app_config (id, saison_courante, saison_debut, saison_fin) VALUES (1, 2026, '2026-06-12', '2026-09-15');
 
 -- Table créneaux (statique, 5 lignes)
 CREATE TABLE creneaux (

@@ -67,10 +67,12 @@ CREATE POLICY "public_insert_inscription" ON inscriptions
 
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
 
--- Lecture : tout utilisateur connecté (staff + usager) doit pouvoir lire la
--- saison en cours pour calculer son état d'accès.
+-- Lecture : tout le monde, y compris non connecté — nécessaire pour que la
+-- page d'inscription publique affiche les dates de saison. Rien de sensible
+-- (mêmes dates déjà visibles en clair dans le HTML aujourd'hui), même
+-- traitement que creneaux_public_read.
 CREATE POLICY "app_config_read_all" ON app_config
-  FOR SELECT TO authenticated
+  FOR SELECT TO anon, authenticated
   USING (true);
 
 -- Écriture : staff uniquement (bouton "Ouvrir la saison").
