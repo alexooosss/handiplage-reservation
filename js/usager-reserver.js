@@ -24,14 +24,16 @@ async function renderReserver(container, inscription, showView) {
 
   try {
     var todayISO = _localTodayISO();
+    var saisonDates = await getSaisonDates();
     // Saison terminée : plus aucune réservation possible au-delà de la fermeture de la plage
-    if (todayISO > SEASON_END) {
+    if (todayISO > saisonDates.fin) {
+      var finLabel = new Date(saisonDates.fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
       container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
         + '<div class="usager-absence-block">'
         +   '<div class="usager-absence-icon">🏖️</div>'
         +   '<div class="usager-absence-title">Saison terminée</div>'
         +   '<div class="usager-absence-body">'
-        +     '<p>La Handiplage a fermé pour la saison le <strong>15 septembre</strong>.</p>'
+        +     '<p>La Handiplage a fermé pour la saison le <strong>' + finLabel + '</strong>.</p>'
         +     '<p>Les réservations en ligne rouvriront à la prochaine saison estivale.</p>'
         +   '</div>'
         + '</div>';
@@ -69,12 +71,12 @@ async function renderReserver(container, inscription, showView) {
     var toISO   = toDate.getFullYear() + '-'
       + String(toDate.getMonth() + 1).padStart(2, '0') + '-'
       + String(toDate.getDate()).padStart(2, '0');
-    // Ne jamais proposer de créneau après la fermeture de la plage (15 sept.)
-    toISO = clampToSeasonEnd(toISO);
+    // Ne jamais proposer de créneau après la fermeture de la plage
+    toISO = clampToSeasonEnd(toISO, saisonDates.fin);
 
     var days = await getAvailableDays(fromISO, toISO, inscription.id);
     // Éliminer les jours passés ou hors saison (sécurité si l'API en renvoie)
-    var dateKeys = Object.keys(days).sort().filter(function(d) { return d >= fromISO && d <= SEASON_END; });
+    var dateKeys = Object.keys(days).sort().filter(function(d) { return d >= fromISO && d <= saisonDates.fin; });
 
     var selectedDate = dateKeys[0];
     _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate);
