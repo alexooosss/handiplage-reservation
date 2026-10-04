@@ -182,9 +182,11 @@ async function createUserReservation(inscription, dateISO, creneauId) {
   if (!inscription.passActif) throw new Error('Pass non activé. Contactez l\'équipe Handiplage.');
   if (inscription.isDemo) throw new Error('Compte démo — aucune réservation n\'est enregistrée.');
 
-  // Fermeture saisonnière : aucune réservation au-delà du 15 septembre
-  if (typeof SEASON_END !== 'undefined' && dateISO > SEASON_END) {
-    throw new Error('La Handiplage est fermée pour la saison — aucune réservation possible après le 15 septembre.');
+  // Fermeture saisonnière : aucune réservation au-delà de la fin de saison
+  var saisonDates = await getSaisonDates();
+  if (dateISO > saisonDates.fin) {
+    var finLabel = new Date(saisonDates.fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    throw new Error('La Handiplage est fermée pour la saison — aucune réservation possible après le ' + finLabel + '.');
   }
 
   // Inscription non renouvelée pour la saison en cours : le routeur usager-app.js
