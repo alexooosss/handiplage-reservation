@@ -2326,7 +2326,6 @@ dialog.plan-dialog {
 .usagers-map-layout {
   display: flex;
   gap: 16px;
-  align-items: flex-start;
 }
 .usagers-map-layout .usagers-globe-wrap { flex: 1; min-width: 0; }
 
