@@ -85,6 +85,8 @@ Ce bloc n'est pas exécutable depuis ce plan — ouvrir le Dashboard Supabase �
 ```sql
 ALTER TABLE app_config ADD COLUMN saison_debut date;
 ALTER TABLE app_config ADD COLUMN saison_fin date;
+ALTER TABLE app_config ADD CONSTRAINT app_config_saison_dates_check
+  CHECK (saison_debut IS NULL OR saison_fin IS NULL OR saison_debut <= saison_fin);
 
 UPDATE app_config SET saison_debut = '2026-06-12', saison_fin = '2026-09-15' WHERE id = 1;
 

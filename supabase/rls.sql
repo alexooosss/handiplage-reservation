@@ -68,9 +68,12 @@ CREATE POLICY "public_insert_inscription" ON inscriptions
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
 
 -- Lecture : tout le monde, y compris non connecté — nécessaire pour que la
--- page d'inscription publique affiche les dates de saison. Rien de sensible
--- (mêmes dates déjà visibles en clair dans le HTML aujourd'hui), même
--- traitement que creneaux_public_read.
+-- page d'inscription publique affiche les dates de saison. RLS est au niveau
+-- de la ligne, pas de la colonne : ça rend aussi saison_courante lisible en
+-- anon (sans conséquence, c'est juste l'année de saison en cours, déjà
+-- visible ailleurs dans le HTML public). Rien de sensible dans cette table —
+-- même traitement que creneaux_public_read. Toute future colonne ajoutée à
+-- app_config hérite automatiquement de cette lecture publique.
 CREATE POLICY "app_config_read_all" ON app_config
   FOR SELECT TO anon, authenticated
   USING (true);
