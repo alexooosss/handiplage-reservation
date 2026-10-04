@@ -105,6 +105,65 @@ var UsagersMap = (function () {
     });
   }
 
+  // Statistiques géographiques globales (pays/continents représentés, part
+  // internationale, pays le plus représenté) — calculées une fois sur
+  // l'ensemble des usagers géolocalisés, indépendamment des filtres actifs.
+  function computeGeoStats(localized, totalValid) {
+    var paysSet      = {};
+    var continentSet = {};
+    var paysCounts    = {};
+    var foreignCount  = 0;
+
+    localized.forEach(function(i) {
+      if (i.pays) {
+        paysSet[i.pays] = true;
+        paysCounts[i.pays] = (paysCounts[i.pays] || 0) + 1;
+      }
+      if (i.continent) continentSet[i.continent] = true;
+      if (i.countryCode && i.countryCode !== 'FR') foreignCount++;
+    });
+
+    var topPays      = null;
+    var topPaysCount = 0;
+    Object.keys(paysCounts).sort(function(a, b) { return a.localeCompare(b, 'fr'); }).forEach(function(p) {
+      if (paysCounts[p] > topPaysCount) { topPays = p; topPaysCount = paysCounts[p]; }
+    });
+
+    return {
+      localizedCount:   localized.length,
+      localizedPercent: totalValid > 0 ? Math.round((localized.length / totalValid) * 100) : 0,
+      paysCount:        Object.keys(paysSet).length,
+      continentCount:   Object.keys(continentSet).length,
+      foreignPercent:   localized.length > 0 ? Math.round((foreignCount / localized.length) * 100) : 0,
+      topPays:          topPays,
+      topPaysCount:     topPaysCount,
+    };
+  }
+
+  function _geoStatTile(badge, value, label) {
+    return '<div class="usagers-geo-tile">'
+      + '<span class="usagers-geo-badge">' + _esc(badge) + '</span>'
+      + '<div class="usagers-geo-value">' + value + '</div>'
+      + '<div class="usagers-geo-label">' + label + '</div>'
+      + '</div>';
+  }
+
+  function _geoStatsHtml(stats) {
+    return '<div class="usagers-geo-stats-title">Répartition géographique</div>'
+      + '<div class="usagers-geo-stats">'
+      +   _geoStatTile('Localisation', stats.localizedCount,
+            'usager' + _s(stats.localizedCount) + ' localisé' + _s(stats.localizedCount) + ' (' + stats.localizedPercent + '%)')
+      +   _geoStatTile('Pays', stats.paysCount,
+            'pays représenté' + _s(stats.paysCount))
+      +   _geoStatTile('Continents', stats.continentCount,
+            'continent' + _s(stats.continentCount) + ' représenté' + _s(stats.continentCount))
+      +   _geoStatTile('International', stats.foreignPercent + '%',
+            'hors France')
+      +   _geoStatTile('Top pays', stats.topPays ? _esc(stats.topPays) : '—',
+            stats.topPays ? (stats.topPaysCount + ' usager' + _s(stats.topPaysCount)) : 'Aucune donnée')
+      + '</div>';
+  }
+
   var _filters     = { continent: '', pays: '', region: '', ville: '' };
   var _localized    = [];
   var _unlocalized  = [];
@@ -238,12 +297,14 @@ var UsagersMap = (function () {
       +     '<div id="usagers-globe" class="usagers-globe-wrap"></div>'
       +     '<div class="usagers-filter-panel" id="usagers-filter-panel"></div>'
       +   '</div>'
+      +   '<div id="usagers-geo-stats-wrap"></div>'
       + '</div>';
 
-    var statusEl = container.querySelector('#usagers-map-status');
-    var globeEl  = container.querySelector('#usagers-globe');
-    var panelEl  = container.querySelector('#usagers-filter-panel');
-    var hintEl   = container.querySelector('#usagers-map-hint');
+    var statusEl   = container.querySelector('#usagers-map-status');
+    var globeEl    = container.querySelector('#usagers-globe');
+    var panelEl    = container.querySelector('#usagers-filter-panel');
+    var hintEl     = container.querySelector('#usagers-map-hint');
+    var geoStatsEl = container.querySelector('#usagers-geo-stats-wrap');
 
     _filters = { continent: '', pays: '', region: '', ville: '' };
 
@@ -266,6 +327,8 @@ var UsagersMap = (function () {
       var split = splitLocalisables(valid);
       _localized   = split.localized;
       _unlocalized = split.unlocalized;
+
+      geoStatsEl.innerHTML = _geoStatsHtml(computeGeoStats(_localized, valid.length));
 
       if (!_localized.length) {
         statusEl.textContent = 'Aucun usager localisé pour le moment.';
@@ -358,6 +421,7 @@ var UsagersMap = (function () {
       splitLocalisables: splitLocalisables,
       getFilterOptions: getFilterOptions,
       filterInscriptions: filterInscriptions,
+      computeGeoStats: computeGeoStats,
     };
   }
 

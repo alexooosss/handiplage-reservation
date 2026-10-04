@@ -2395,6 +2395,54 @@ dialog.plan-dialog {
   .usagers-filter-panel { width: 100%; max-height: 280px; }
 }
 
+.usagers-geo-stats-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin: 24px 0 14px;
+}
+.usagers-geo-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 20px 16px;
+}
+.usagers-geo-tile {
+  position: relative;
+  background: var(--accent);
+  border-radius: 14px;
+  padding: 26px 14px 16px;
+  text-align: center;
+  color: #fff;
+}
+.usagers-geo-badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.14);
+  white-space: nowrap;
+}
+.usagers-geo-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 8px;
+  overflow-wrap: break-word;
+}
+.usagers-geo-label {
+  font-size: 12px;
+  margin-top: 6px;
+  color: rgba(255,255,255,.92);
+}
+
 @media (max-width: 1100px) {
   .stats-kpis { grid-template-columns: repeat(2, 1fr); }
   .stats-charts-row { grid-template-columns: 1fr; }

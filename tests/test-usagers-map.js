@@ -1,7 +1,7 @@
 // tests/test-usagers-map.js
 'use strict';
 const assert = require('assert');
-const { splitLocalisables, getFilterOptions, filterInscriptions } = require('../js/usagers-map.js');
+const { splitLocalisables, getFilterOptions, filterInscriptions, computeGeoStats } = require('../js/usagers-map.js');
 
 // ── splitLocalisables ──
 {
@@ -57,6 +57,49 @@ const { splitLocalisables, getFilterOptions, filterInscriptions } = require('../
     0,
     'filtre sur une valeur absente des données → liste vide'
   );
+}
+
+// ── computeGeoStats ──
+{
+  const localized = [
+    { id: '1', pays: 'France',     continent: 'Europe',   countryCode: 'FR' },
+    { id: '2', pays: 'France',     continent: 'Europe',   countryCode: 'FR' },
+    { id: '3', pays: 'France',     continent: 'Europe',   countryCode: 'FR' },
+    { id: '4', pays: 'Italie',     continent: 'Europe',   countryCode: 'IT' },
+    { id: '5', pays: 'États-Unis', continent: 'Amérique', countryCode: 'US' },
+  ];
+  const stats = computeGeoStats(localized, 8); // 8 usagers validés dont 5 localisés
+
+  assert.strictEqual(stats.localizedCount, 5);
+  assert.strictEqual(stats.localizedPercent, 63, 'round(5/8*100) = 63');
+  assert.strictEqual(stats.paysCount, 3, 'France, Italie, États-Unis');
+  assert.strictEqual(stats.continentCount, 2, 'Europe, Amérique');
+  assert.strictEqual(stats.foreignPercent, 40, 'round(2/5*100) = 40 (Italie + États-Unis)');
+  assert.strictEqual(stats.topPays, 'France', 'pays le plus représenté');
+  assert.strictEqual(stats.topPaysCount, 3);
+}
+
+// computeGeoStats : aucun usager localisé → tout à zéro, pas de division par zéro
+{
+  const stats = computeGeoStats([], 0);
+  assert.strictEqual(stats.localizedCount, 0);
+  assert.strictEqual(stats.localizedPercent, 0);
+  assert.strictEqual(stats.paysCount, 0);
+  assert.strictEqual(stats.continentCount, 0);
+  assert.strictEqual(stats.foreignPercent, 0);
+  assert.strictEqual(stats.topPays, null);
+  assert.strictEqual(stats.topPaysCount, 0);
+}
+
+// computeGeoStats : égalité entre deux pays → tie-break alphabétique (ordre fr)
+{
+  const localized = [
+    { id: '1', pays: 'Italie', continent: 'Europe', countryCode: 'IT' },
+    { id: '2', pays: 'France', continent: 'Europe', countryCode: 'FR' },
+  ];
+  const stats = computeGeoStats(localized, 2);
+  assert.strictEqual(stats.topPays, 'France', 'à égalité (1 chacun), France < Italie alphabétiquement');
+  assert.strictEqual(stats.topPaysCount, 1);
 }
 
 console.log('✓ test-usagers-map.js OK');
