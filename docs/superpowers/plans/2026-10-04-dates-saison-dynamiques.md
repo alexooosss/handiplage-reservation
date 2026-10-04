@@ -48,7 +48,8 @@ CREATE TABLE app_config (
   id              int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   saison_courante int NOT NULL,
   saison_debut    date,
-  saison_fin      date
+  saison_fin      date,
+  CHECK (saison_debut IS NULL OR saison_fin IS NULL OR saison_debut <= saison_fin)
 );
 
 INSERT INTO app_config (id, saison_courante, saison_debut, saison_fin) VALUES (1, 2026, '2026-06-12', '2026-09-15');
