@@ -34,7 +34,8 @@ async function renderAccueil(container, inscription, showView) {
     var next    = upcoming[0] || null;
 
     var balance = computePassBalance(resas, PASS_QUOTA);
-    var seasonOver = typeof SEASON_END !== 'undefined' && today > SEASON_END;
+    var saisonDates = await getSaisonDates();
+    var seasonOver = today > saisonDates.fin;
 
     var nextCard = next
       ? '<div class="usager-summary-card">'
@@ -53,7 +54,7 @@ async function renderAccueil(container, inscription, showView) {
     var passCard;
     if (seasonOver) {
       var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
-      var seasonYear  = (typeof SEASON_END !== 'undefined' ? SEASON_END : today).slice(0, 4);
+      var seasonYear  = saisonDates.fin.slice(0, 4);
       passCard = '<div class="usager-summary-card">'
         +   '<div class="usager-summary-label">Saison ' + seasonYear + '</div>'
         +   '<div class="usager-summary-value">' + seasonCount + '</div>'
