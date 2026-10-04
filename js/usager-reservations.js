@@ -30,8 +30,20 @@ async function renderReservations(container, inscription, showView) {
     var past     = resas.filter(function(r) { return !_isUpcoming(r); }).sort(function(a,b){ return a.date>b.date?-1:1; });
     var absentsThisMonth = resas.filter(function(r) { return r.statut === 'absent' && r.date && r.date.startsWith(monthKey); }).length;
 
+    var seasonOver = typeof SEASON_END !== 'undefined' && todayISO > SEASON_END;
+
     var passHtml = '';
-    if (inscription.passActif) {
+    if (seasonOver) {
+      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
+      var seasonYear  = (typeof SEASON_END !== 'undefined' ? SEASON_END : todayISO).slice(0, 4);
+      passHtml = '<div class="usager-card usager-pass-banner">'
+        + '<div class="usager-pass-banner-row">'
+        +   '<div class="usager-pass-banner-label">Saison ' + seasonYear + '</div>'
+        +   '<div class="usager-pass-banner-count"><span class="usager-pass-banner-num">' + seasonCount + '</span></div>'
+        + '</div>'
+        + '<div class="usager-pass-meta">réservation' + (seasonCount > 1 ? 's' : '') + ' effectuée' + (seasonCount > 1 ? 's' : '') + ' cette saison</div>'
+        + '</div>';
+    } else if (inscription.passActif) {
       var balance  = computePassBalance(resas, PASS_QUOTA);
       var pct      = balance.quota > 0 ? Math.round((balance.remaining / balance.quota) * 100) : 0;
       var fillCls  = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
@@ -62,7 +74,7 @@ async function renderReservations(container, inscription, showView) {
         +   '<div id="usager-contact-status"></div>'
         + '</div>'
       : '';
-    var absenceInfoHtml = '<div class="usager-absence-info">'
+    var absenceInfoHtml = seasonOver ? '' : '<div class="usager-absence-info">'
       + '<div class="usager-absence-info-rule">'
       +   '⚠️ Règle absences : après <strong>3 absences non justifiées</strong> dans le mois, les réservations sont suspendues jusqu\'au mois suivant.'
       + '</div>'
