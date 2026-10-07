@@ -1939,6 +1939,12 @@ dialog.plan-dialog {
   margin-bottom: 10px;
 }
 
+#msg-body-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .msg-list-panel {
   width: 320px;
   flex-shrink: 0;

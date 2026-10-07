@@ -13,7 +13,7 @@ function _formatDate(iso) {
 
 async function renderMessages(container) {
   container.innerHTML = '<div id="annonce-staff-container"></div><div id="msg-body-container"></div>';
-  renderAnnonceStaffBlock(document.getElementById('annonce-staff-container'));
+  renderAnnonceStaffBlock(document.getElementById('annonce-staff-container')).catch(console.error);
   await _renderMessagesBody(document.getElementById('msg-body-container'));
 }
 
