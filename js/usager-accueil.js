@@ -10,6 +10,13 @@ async function renderAccueil(container, inscription, showView) {
 
   try {
     var resas   = await getUserReservations(inscription.id);
+
+    var annonce = null;
+    try {
+      annonce = await getActiveAnnonce();
+    } catch (e) {
+      console.error('Erreur chargement annonce:', e);
+    }
     var now     = new Date();
     var today   = now.getFullYear() + '-'
       + String(now.getMonth() + 1).padStart(2, '0') + '-'
@@ -81,7 +88,12 @@ async function renderAccueil(container, inscription, showView) {
       ? '<div class="usager-demo-banner"><img src="icone%20demo.svg" alt="" style="height:16px;vertical-align:middle;margin-right:7px;filter:brightness(0)invert(1)">Compte démo — vos actions ne seront pas enregistrées</div>'
       : '';
 
+    var annonceHtml = annonce
+      ? '<div class="usager-annonce-banner">' + _escA(annonce.contenu).replace(/\n/g, '<br>') + '</div>'
+      : '';
+
     container.innerHTML = demoBanner
+      + annonceHtml
       + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
