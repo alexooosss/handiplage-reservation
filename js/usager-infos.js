@@ -9,6 +9,13 @@ function renderInfos(container, inscription, showView) {
 
   container.innerHTML = ''
     + '<button class="usager-back" id="infos-back">← Accueil</button>'
+    + '<button type="button" class="usager-card usager-equip-link" id="infos-equipements">'
+    +   '<span class="usager-equip-link-text">'
+    +     '<span class="usager-card-title">Équipements de la plage</span>'
+    +     '<span class="usager-equip-link-sub">Tiralo, Hippocampe, Audioplage, lève-personne… voir tout le matériel disponible</span>'
+    +   '</span>'
+    +   '<svg class="usager-equip-link-arrow" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>'
+    + '</button>'
     + '<div class="usager-card">'
     +   '<div class="usager-infos-slogan">2 plages horaires max / jour &nbsp;·&nbsp; 40 plages horaires max / mois</div>'
     + '</div>'
@@ -37,6 +44,10 @@ function renderInfos(container, inscription, showView) {
     +   '<p class="usager-infos-text">Pour toute demande de réactivation anticipée, contactez le staff depuis la section <strong>Mes réservations</strong>.</p>'
     + '</div>'
     ;
+
+  document.getElementById('infos-equipements').addEventListener('click', function() {
+    showView('equipements');
+  });
 
   document.getElementById('infos-back').addEventListener('click', function() {
     showView('accueil');
