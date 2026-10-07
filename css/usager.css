@@ -649,15 +649,116 @@ body {
   letter-spacing: .01em;
 }
 
-/* ── Bandeau annonce staff ── */
-.usager-annonce-banner {
-  background: #1565c0;
+/* ── Annonce de l'équipe (accueil) ── */
+.usager-annonce {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 2px solid var(--blue-dark);
+  border-radius: 14px;
+  background: #fbfaf6;
+  box-shadow: 0 1px 4px rgba(90, 60, 10, .08);
+  animation: usager-annonce-in .32s cubic-bezier(.22, 1, .36, 1) both;
+}
+.usager-annonce-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--blue-light);
+  color: var(--blue);
+}
+.usager-annonce-body { min-width: 0; flex: 1; }
+.usager-annonce-hd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.usager-annonce-title {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--blue-dark);
+}
+.usager-annonce-new {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--blue);
   color: #fff;
-  padding: 12px 16px;
-  font-size: .875rem;
-  line-height: 1.4;
-  border-radius: 10px;
-  margin-bottom: 16px;
+  font-size: .6875rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.usager-annonce-text {
+  max-width: 65ch;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #2b2418;
+  overflow-wrap: anywhere;
+}
+.usager-annonce-aside {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.usager-annonce-date {
+  font-size: .8125rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+  white-space: nowrap;
+}
+
+.usager-annonce-toggle {
+  position: relative;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--blue-dark);
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+/* Zone tactile élargie à ~44px sans grossir le bouton visible */
+.usager-annonce-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -10px -6px;
+}
+.usager-annonce-toggle:hover { background: var(--blue-light); }
+.usager-annonce-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.usager-annonce-toggle svg { transition: transform .2s cubic-bezier(.22, 1, .36, 1); }
+
+/* État réduit : une seule ligne, titre + badge */
+.usager-annonce.is-collapsed { padding-top: 10px; padding-bottom: 10px; }
+.usager-annonce.is-collapsed .usager-annonce-text,
+.usager-annonce.is-collapsed .usager-annonce-date { display: none; }
+.usager-annonce.is-collapsed .usager-annonce-hd { margin-bottom: 0; }
+.usager-annonce.is-collapsed .usager-annonce-icon { width: 36px; height: 36px; border-radius: 10px; }
+.usager-annonce.is-collapsed .usager-annonce-icon svg { width: 20px; height: 20px; }
+.usager-annonce.is-collapsed .usager-annonce-toggle svg { transform: rotate(180deg); }
+
+@keyframes usager-annonce-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .usager-annonce { animation: none; }
 }
 
 .usager-demo-notice {

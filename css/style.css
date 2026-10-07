@@ -1919,25 +1919,162 @@ dialog.plan-dialog {
   background: white;
 }
 
-.annonce-staff-block {
-  padding: 14px 16px;
-  background: #fff8e1;
-  border-bottom: 1px solid #e0e0e0;
-  flex-shrink: 0;
+/* Annonce aux usagers (haut de la vue Messages) */
+#annonce-staff-container { flex-shrink: 0; }
+
+.annonce-staff {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
 }
-.annonce-staff-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #f57f17;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  margin-bottom: 8px;
+
+.annonce-staff-hd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 36px;
 }
-.annonce-staff-text {
+
+.annonce-staff-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  color: #333;
-  margin-bottom: 10px;
+  font-weight: 700;
+  color: var(--text);
 }
+
+.annonce-staff-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #e6f0fa;
+  color: var(--blue);
+}
+
+.annonce-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.annonce-chip-live  { background: #e8f5e9; border-color: #c8e6c9; color: var(--green-dark); }
+.annonce-chip-error { background: #fdecec; border-color: #f8cfcf; color: var(--red-dark); }
+.annonce-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(67, 160, 71, .18);
+}
+
+.annonce-staff-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Les boutons partagés ont flex:1 / margin-right:auto pour les modales : on les neutralise ici */
+.annonce-staff .annonce-btn {
+  flex: none;
+  margin-right: 0;
+  padding: 8px 14px;
+  transition: filter .15s, background .15s, opacity .15s;
+}
+.annonce-staff .btn-primary:hover { transform: none; }
+.annonce-staff .btn-secondary:hover { background: #d7dee8; color: var(--text); }
+.annonce-staff .btn-danger:hover    { background: #fecaca; }
+/* Turquoise assombri : #00d4aa sur blanc ne passe pas le contraste AA pour du texte */
+.annonce-staff .btn-ghost           { color: #00806a; border-color: #00b896; }
+.annonce-staff .btn-ghost:hover     { background: rgba(0, 212, 170, .1); }
+.annonce-staff .annonce-btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+.annonce-staff .annonce-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.annonce-preview {
+  margin-top: 10px;
+  max-width: 75ch;
+  padding: 10px 14px;
+  border: 1px solid #eadcbd;
+  border-radius: 10px;
+  background: #fbf6ec;
+}
+.annonce-preview-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.annonce-preview-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.annonce-composer {
+  margin-top: 10px;
+  max-width: 720px;
+}
+.annonce-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.annonce-textarea {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color .15s, box-shadow .15s;
+}
+.annonce-textarea::placeholder { color: #94a3b8; }
+.annonce-textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 85, 164, .15);
+}
+.annonce-composer-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.annonce-count { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.annonce-count.is-near { color: #b45309; font-weight: 600; }
+.annonce-composer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.annonce-status {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--red-dark);
+}
+.annonce-status:empty { display: none; }
 
 #msg-body-container {
   flex: 1;
