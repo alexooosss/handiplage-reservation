@@ -12,6 +12,12 @@ function _formatDate(iso) {
 }
 
 async function renderMessages(container) {
+  container.innerHTML = '<div id="annonce-staff-container"></div><div id="msg-body-container"></div>';
+  renderAnnonceStaffBlock(document.getElementById('annonce-staff-container'));
+  await _renderMessagesBody(document.getElementById('msg-body-container'));
+}
+
+async function _renderMessagesBody(container) {
   container.innerHTML = '<div class="msg-loading">Chargement…</div>';
 
   var messages;

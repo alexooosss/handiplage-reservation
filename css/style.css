@@ -1919,6 +1919,26 @@ dialog.plan-dialog {
   background: white;
 }
 
+.annonce-staff-block {
+  padding: 14px 16px;
+  background: #fff8e1;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+.annonce-staff-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f57f17;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 8px;
+}
+.annonce-staff-text {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
 .msg-list-panel {
   width: 320px;
   flex-shrink: 0;
