@@ -53,6 +53,22 @@ CREATE POLICY "staff_full_messages" ON messages
   USING (auth_user_role() = 'staff')
   WITH CHECK (auth_user_role() = 'staff');
 
+-- ── Policies table annonces ──────────────────────────────────────────────
+
+ALTER TABLE annonces ENABLE ROW LEVEL SECURITY;
+
+-- Staff : lecture/écriture totale (création, désactivation, historique).
+CREATE POLICY "staff_full_annonces" ON annonces
+  FOR ALL
+  USING (auth_user_role() = 'staff')
+  WITH CHECK (auth_user_role() = 'staff');
+
+-- Usagers (et anon) : lecture de l'annonce active uniquement — nécessaire
+-- pour l'afficher sur l'écran d'accueil usager.
+CREATE POLICY "annonces_select_active" ON annonces
+  FOR SELECT TO anon, authenticated
+  USING (actif = true);
+
 -- ── Policy anon INSERT sur inscriptions ─────────────────────────────────
 
 -- Permet aux personnes non connectées de déposer une demande d'inscription

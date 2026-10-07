@@ -62,6 +62,18 @@ CREATE TABLE app_config (
 
 INSERT INTO app_config (id, saison_courante, saison_debut, saison_fin) VALUES (1, 2026, '2026-06-12', '2026-09-15');
 
+-- Table annonces : message staff diffusé à tous les usagers. Une seule
+-- ligne actif=true à la fois (imposé côté appli dans createAnnonce(), pas
+-- de contrainte DB). L'historique (lignes désactivées) est conservé.
+CREATE TABLE annonces (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contenu    text NOT NULL,
+  actif      boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_annonces_actif ON annonces(actif) WHERE actif;
+
 -- Table créneaux (statique, 5 lignes)
 CREATE TABLE creneaux (
   id               int PRIMARY KEY,
