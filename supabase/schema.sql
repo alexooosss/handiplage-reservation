@@ -72,7 +72,7 @@ CREATE TABLE annonces (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_annonces_actif ON annonces(actif) WHERE actif;
+CREATE UNIQUE INDEX idx_annonces_actif ON annonces(actif) WHERE actif;
 
 -- Table créneaux (statique, 5 lignes)
 CREATE TABLE creneaux (
