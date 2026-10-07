@@ -6,7 +6,7 @@
   <!-- Capturer le hash avant que Supabase ne le consomme -->
   <script>window._initialHash = window.location.hash;</script>
   <link rel="icon" type="image/svg+xml" href="icone%20logo.svg">
-  <link rel="apple-touch-icon" href="logo%20handiplage%20antibes%20alexis.png">
+  <link rel="apple-touch-icon" href="icone%20logo.svg">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0772b8">
   <title>Connexion - Handiplage</title>
@@ -27,10 +27,14 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 52px 56px;
+      padding: clamp(24px, 4vh, 44px) 56px clamp(16px, 2.5vh, 24px);
       flex-shrink: 0;
       position: relative;
       overflow: hidden;
+      /* Le panneau chevauche la photo pour que ses coins arrondis laissent voir l'image derrière */
+      border-radius: 0 120px 120px 0;
+      margin-right: -120px;
+      z-index: 2;
     }
 
     /* Halos décoratifs subtils */
@@ -71,15 +75,16 @@
     /* ── Bloc identité ── */
     .login-brand-block {
       text-align: center;
-      margin-bottom: 24px;
+      margin-top: auto;
+      margin-bottom: clamp(24px, 5vh, 48px);
     }
 
     .login-logo {
       height: auto;
-      width: 220px;
-      max-width: 80%;
+      width: 380px;
+      max-width: 100%;
       display: block;
-      margin: 0 auto 18px;
+      margin: 0 auto 14px;
       filter: drop-shadow(0 6px 18px rgba(7,114,184,.35));
     }
 
@@ -112,19 +117,12 @@
     }
 
     /* ── Séparateur ── */
-    .login-divider {
-      width: 44px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(209,200,37,.6), transparent);
-      margin: 20px auto;
-    }
-
     /* ── Formulaire ── */
     .login-title {
       font-size: .9375rem;
       font-weight: 700;
       color: rgba(255,255,255,.85);
-      margin-bottom: 28px;
+      margin-bottom: clamp(18px, 3vh, 28px);
       text-align: center;
       letter-spacing: .01em;
     }
@@ -148,7 +146,7 @@
       border-radius: 10px;
       font-size: .9375rem;
       color: #fff;
-      margin-bottom: 18px;
+      margin-bottom: clamp(14px, 2.2vh, 20px);
       transition: border-color .18s, background .18s, box-shadow .18s;
     }
 
@@ -165,8 +163,8 @@
     button[type="submit"] {
       width: 100%;
       padding: .875rem;
-      background: #0772b8;
-      color: #fff;
+      background: #48b59b;
+      color: #0f1b2e;
       border: none;
       border-radius: 10px;
       font-size: .9375rem;
@@ -174,12 +172,12 @@
       cursor: pointer;
       transition: background .15s, transform .12s, box-shadow .15s;
       margin-top: 6px;
-      box-shadow: 0 4px 20px rgba(7,114,184,.4);
+      box-shadow: 0 4px 20px rgba(72,181,155,.35);
       letter-spacing: .02em;
     }
     button[type="submit"]:hover {
-      background: #0863a2;
-      box-shadow: 0 6px 24px rgba(7,114,184,.5);
+      background: #55c2a8;
+      box-shadow: 0 6px 24px rgba(72,181,155,.45);
       transform: translateY(-1px);
     }
     button[type="submit"]:active { transform: translateY(0); }
@@ -192,11 +190,13 @@
 
     #error-msg   { color: #ef9a9a; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
     #success-msg { color: #a5d6a7; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
+    /* Zones de message repliées tant qu'elles sont vides (restent dans le DOM pour aria-live) */
+    #error-msg:empty, #success-msg:empty { margin-top: 0; min-height: 0; }
 
     .forgot-link {
       display: block;
       text-align: center;
-      margin-top: 18px;
+      margin-top: clamp(14px, 2.4vh, 22px);
       font-size: .8125rem;
       color: rgba(255,255,255,.35);
       background: none;
@@ -208,7 +208,7 @@
 
     .login-signup-sep {
       display: flex; align-items: center; gap: 12px;
-      margin: 28px 0 16px;
+      margin: clamp(22px, 4vh, 36px) 0 clamp(12px, 2vh, 18px);
     }
     .login-signup-sep::before, .login-signup-sep::after {
       content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1);
@@ -227,14 +227,14 @@
       transition: border-color .15s, background .15s, color .15s;
     }
     .login-signup-link:hover {
-      border-color: #c9bc24;
-      color: #c9bc24;
-      background: rgba(201,188,36,.06);
+      border-color: #48b59b;
+      color: #48b59b;
+      background: rgba(72,181,155,.08);
     }
 
     .login-footer {
       margin-top: auto;
-      padding-top: 40px;
+      padding-top: 24px;
       font-size: .6875rem;
       color: rgba(255,255,255,.25);
       display: flex;
@@ -248,64 +248,20 @@
     /* ── Panneau droit (photo) ── */
     .login-photo {
       flex: 1;
-      background: url('handiplage.jpg') center / cover no-repeat;
+      background: url('handiplage.jpg') 68% 50% / cover no-repeat;
       position: relative;
     }
     .login-photo::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(to right, rgba(12,20,34,.25) 0%, transparent 25%);
-    }
-
-    /* ── Compte démo ── */
-    .login-demo-sep {
-      display: flex; align-items: center; gap: 12px;
-      margin: 22px 0 14px;
-    }
-    .login-demo-sep::before, .login-demo-sep::after {
-      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.07);
-    }
-    .login-demo-sep span {
-      font-size: .6875rem; color: rgba(255,255,255,.2);
-      letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
-    }
-    .login-demo-card {
-      background: rgba(255,255,255,.045);
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 12px;
-      padding: 14px 18px;
-    }
-    .login-demo-title {
-      font-size: .6875rem; font-weight: 700; color: rgba(255,255,255,.3);
-      text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px;
-    }
-    .login-demo-creds {
-      font-size: .8125rem; color: rgba(255,255,255,.5);
-      margin-bottom: 12px; line-height: 1.9;
-    }
-    .login-demo-creds strong {
-      font-family: monospace; color: rgba(255,255,255,.75);
-    }
-    .login-demo-btn {
-      width: 100%; padding: .65rem;
-      background: rgba(255,255,255,.07);
-      color: rgba(255,255,255,.6);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 8px;
-      font-size: .8125rem; font-weight: 600;
-      cursor: pointer;
-      transition: background .15s, color .15s;
-    }
-    .login-demo-btn:hover {
-      background: rgba(255,255,255,.12);
-      color: rgba(255,255,255,.88);
+      background: linear-gradient(to right, rgba(72,181,155,1) 120px, rgba(72,181,155,0) 40%);
     }
 
     /* ── Mobile ── */
     @media (max-width: 680px) {
       .login-photo { display: none; }
-      .login-panel { width: 100%; padding: 44px 28px; }
+      .login-panel { width: 100%; padding: 44px 28px; border-radius: 0; margin-right: 0; }
       .login-inner { max-width: 100%; }
     }
   </style>
@@ -315,11 +271,9 @@
     <div class="login-inner">
 
       <div class="login-brand-block">
-        <img src="logo%20handiplage%20antibes%20alexis.svg" alt="Handiplage" class="login-logo">
+        <img src="logo-handiplage-réservation-2.svg" alt="Handiplage" class="login-logo">
         <div class="login-brand-sub"><span class="login-brand-rule"></span>Antibes<span class="login-brand-rule"></span></div>
       </div>
-
-      <div class="login-divider"></div>
 
       <div class="login-title">Connexion à votre espace</div>
 
@@ -340,16 +294,6 @@
 
       <div class="login-signup-sep"><span>Pas encore inscrit ?</span></div>
       <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
-
-      <div class="login-demo-sep"><span>Ou explorer sans créer de compte</span></div>
-      <div class="login-demo-card">
-        <div class="login-demo-title">Compte démonstration</div>
-        <div class="login-demo-creds">
-          <div>Email : <strong>utilisateur.handiplage@gmail.com</strong></div>
-          <div>Mot de passe : <strong>Utilisateur</strong></div>
-        </div>
-        <button type="button" class="login-demo-btn" id="btn-demo">Essayer la démo →</button>
-      </div>
 
       <!-- Formulaire création mot de passe (visible après invitation) -->
       <form id="set-password-form" style="display:none" novalidate>
@@ -490,12 +434,6 @@
           submitBtn.disabled = false;
           submitBtn.textContent = 'Se connecter';
         }
-      });
-
-      document.getElementById('btn-demo').addEventListener('click', function() {
-        emailInput.value = 'utilisateur.handiplage@gmail.com';
-        passwordInput.value = 'Utilisateur';
-        submitBtn.click();
       });
 
       forgotBtn.addEventListener('click', async function () {
