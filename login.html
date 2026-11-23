@@ -236,6 +236,22 @@
       background: #05559b;
     }
 
+    /* Lien discret vers le compte de démonstration */
+    .login-demo-link {
+      display: block;
+      margin: clamp(12px, 2vh, 18px) auto 0;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .8125rem;
+      color: #5a6478;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+      transition: color .15s;
+    }
+    .login-demo-link:hover { color: #05559b; }
+
     .login-footer {
       margin-top: auto;
       padding-top: 24px;
@@ -298,6 +314,10 @@
 
       <div class="login-signup-sep"><span>Pas encore inscrit ?</span></div>
       <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
+
+      <!-- Compte démonstration : connexion à l'espace usager avec un compte fictif,
+           les réservations y sont simulées (voir isDemo dans js/usager-*.js) -->
+      <button type="button" class="login-demo-link" id="btn-demo">Essayer l'espace usager en démo →</button>
 
       <!-- Formulaire création mot de passe (visible après invitation) -->
       <form id="set-password-form" style="display:none" novalidate>
@@ -366,6 +386,7 @@
         if (event === 'SIGNED_IN' && session && isInvite) {
           document.getElementById('login-form').style.display = 'none';
           document.getElementById('forgot-btn').style.display = 'none';
+          document.getElementById('btn-demo').style.display = 'none';
           document.getElementById('set-password-form').style.display = 'block';
           history.replaceState(null, '', window.location.pathname);
         } else if (event === 'SIGNED_IN' && session && !isInvite) {
@@ -438,6 +459,13 @@
           submitBtn.disabled = false;
           submitBtn.textContent = 'Se connecter';
         }
+      });
+
+      // Démo : remplit le compte de démonstration et lance la connexion normale
+      document.getElementById('btn-demo').addEventListener('click', function () {
+        emailInput.value = 'utilisateur.handiplage@gmail.com';
+        passwordInput.value = 'Utilisateur';
+        form.requestSubmit();
       });
 
       forgotBtn.addEventListener('click', async function () {

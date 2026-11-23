@@ -9,6 +9,18 @@ function renderInfos(container, inscription, showView) {
 
   container.innerHTML = ''
     + '<button class="usager-back" id="infos-back">← Accueil</button>'
+    // Vidéo de présentation : sous-titres incrustés dans l'image. preload="none" : rien n'est
+    // téléchargé (17 Mo) tant que la personne n'appuie pas sur lecture ; pas de lecture automatique.
+    + '<section class="usager-card usager-video-card" aria-labelledby="infos-video-titre">'
+    +   '<h2 class="usager-card-title" id="infos-video-titre">Découvrir la Handiplage</h2>'
+    +   '<video class="usager-video" controls preload="none" playsinline'
+    +     ' poster="images/handiplage-presentation-apercu.jpg"'
+    +     ' aria-label="Vidéo de présentation de la Handiplage d\'Antibes, sous-titrée">'
+    +     '<source src="images/handiplage-presentation.mp4" type="video/mp4">'
+    +     'Votre navigateur ne peut pas lire cette vidéo.'
+    +   '</video>'
+    +   '<p class="usager-video-meta">Vidéo sous-titrée · 2 min · Ville d\'Antibes Juan-les-Pins</p>'
+    + '</section>'
     + '<button type="button" class="usager-card usager-equip-link" id="infos-equipements">'
     +   '<span class="usager-equip-link-text">'
     +     '<span class="usager-card-title">Équipements de la plage</span>'

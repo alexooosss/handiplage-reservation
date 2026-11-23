@@ -3,6 +3,20 @@
 
 const DEMO_EMAIL = 'utilisateur.handiplage@gmail.com';
 
+// Démo uniquement : remplace getSaisonDates() (js/supabase-config.js) par une saison
+// fictive allant de J-7 à J+60. Toutes les vérifications de l'espace usager (accueil,
+// réserver, mes réservations) passent par cette fonction : elles voient la saison ouverte.
+// Sans effet sur la base : la démo ne fait que lire, ses réservations sont simulées.
+function activerSaisonDemo() {
+  function iso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  var debut = new Date(); debut.setDate(debut.getDate() - 7);
+  var fin   = new Date(); fin.setDate(fin.getDate() + 60);
+  var dates = { debut: iso(debut), fin: iso(fin) };
+  window.getSaisonDates = function() { return Promise.resolve(dates); };
+}
+
 const UsagerApp = (() => {
   var _inscription = null;
 
@@ -31,7 +45,11 @@ const UsagerApp = (() => {
       seasonEl.textContent = debutLabel + ' – ' + finLabel;
     }).catch(function(e) { console.error('getSaisonDates (sidebar):', e); /* repli : texte en dur déjà affiché */ });
 
-    var state = computeUsagerAccessState(_inscription, saisonCourante);
+    // Compte démo : on montre toujours le site « saison ouverte », quelle que soit la date
+    // réelle, et sans étape de renouvellement. Activé APRÈS l'appel du bandeau gauche,
+    // qui garde donc les vraies dates de saison.
+    if (_inscription.isDemo) activerSaisonDemo();
+    var state = _inscription.isDemo ? 'actif' : computeUsagerAccessState(_inscription, saisonCourante);
 
     if (state === 'refuse' || state === 'premiere_demande') {
       container.innerHTML = '<div class="usager-card" style="text-align:center;padding:32px">'

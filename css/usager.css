@@ -468,6 +468,32 @@ body {
 .usager-infos-table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
 .usager-infos-jour { color: var(--text); padding: 6px 0; text-transform: capitalize; }
 .usager-infos-heure { color: var(--text-muted); text-align: right; }
+
+/* Vidéo de présentation (page Infos) — format vertical 4:5, largeur limitée pour
+   qu'elle ne prenne pas tout l'écran en hauteur sur ordinateur */
+.usager-video-card h2 { margin-top: 0; }
+.usager-video {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 4 / 5;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: #0a1628;
+  /* contain : l'image entière est toujours visible (sous-titres et bandeaux compris) */
+  object-fit: contain;
+}
+/* Plein écran : aucune contrainte de taille ni de recadrage, bandes noires sur les côtés */
+/* Deux règles séparées : un navigateur qui ne connaît pas l'un des sélecteurs ignorerait sinon tout le bloc */
+.usager-video:fullscreen {
+  max-width: none; width: 100%; height: 100%; aspect-ratio: auto;
+  border-radius: 0; object-fit: contain; background: #000;
+}
+.usager-video:-webkit-full-screen {
+  max-width: none; width: 100%; height: 100%; aspect-ratio: auto;
+  border-radius: 0; object-fit: contain; background: #000;
+}
+.usager-video-meta { margin-top: 8px; text-align: center; font-size: .8125rem; color: var(--text-muted); }
 .usager-infos-contact { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: .9375rem; border-bottom: 1px solid var(--border); }
 .usager-infos-contact:last-child { border-bottom: none; }
 .usager-infos-contact a { color: var(--blue); text-decoration: none; font-weight: 600; }

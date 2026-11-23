@@ -1,3 +1,6 @@
 .superpowers/
 .worktrees/
 js/env.js
+# Vidéo source (216 Mo, au-delà de la limite GitHub de 100 Mo) : le site utilise
+# la version compressée images/handiplage-presentation.mp4
+images/handiplage 2025.MP4
