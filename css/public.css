@@ -57,7 +57,7 @@ body {
 /* ── Sidebar (desktop) ───────────────────────────────────────────── */
 .pub-sidebar-inner {
   padding: 28px 24px 20px;
-  flex: 1;
+  flex-shrink: 0;
 }
 .pub-sidebar-tagline {
   font-size: .9rem;
@@ -80,8 +80,19 @@ body {
   flex-shrink: 0;
 }
 .pub-sidebar-info-icon img { width: 18px; height: 18px; object-fit: contain; }
-.pub-sidebar-deco { flex-shrink: 0; }
-.pub-sidebar-deco svg { display: block; width: 100%; height: 60px; }
+/* Photo de la plage (même que la page de connexion) : remplit le bas du bandeau.
+   Le masque rend le haut de la photo transparent : elle se fond dans le dégradé
+   du bandeau, sans cassure de couleur. Vagues décoratives en bas. */
+.pub-sidebar-photo {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: url('../images/connexion-plage.jpg') 62% 70% / cover no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+}
+.pub-sidebar-waves { position: absolute; bottom: 0; left: 0; right: 0; display: block; width: 100%; height: 60px; }
 
 /* ── Desktop ≥1024px ─────────────────────────────────────────────── */
 @media (min-width: 1024px) {

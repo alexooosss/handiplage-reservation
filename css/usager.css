@@ -44,16 +44,26 @@ body {
   white-space: nowrap;
 }
 .usager-brand-rule { flex: 1; height: 1px; background: rgba(255,255,255,.35); display: block; min-width: 18px; }
+/* Même style que le bouton « ← Connexion » de la page d'inscription (.pub-header-back) */
 #btn-logout-usager {
-  background: rgba(255,255,255,.15);
-  color: white;
-  border: 1px solid rgba(255,255,255,.3);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: .8125rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  color: #1565c0;
+  border: none;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 50px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
   cursor: pointer;
+  transition: background .15s, transform .1s;
 }
-#btn-logout-usager:hover { background: rgba(255,255,255,.25); }
+#btn-logout-usager:hover  { background: #e3f2fd; }
+#btn-logout-usager:active { transform: scale(0.97); }
 
 /* ── Contenu principal ─────────────────────────────────────────── */
 #usager-content {
@@ -591,18 +601,11 @@ body {
     min-height: 0;
     position: relative;
     overflow: hidden;
-    /* Gradient placeholder — quand la photo est prête, ajouter :
-       background-image: url(nom-photo.jpg);
-       background-size: cover;
-       background-position: center;
-    */
-    background: linear-gradient(
-      180deg,
-      rgba(8,15,48,.12)   0%,
-      rgba(21,101,192,.2) 25%,
-      rgba(13,71,161,.48) 62%,
-      rgba(8,15,48,.90)   100%
-    );
+    /* Photo de la plage (même que la page de connexion). Le masque rend le haut de la photo
+       transparent : elle se fond dans le dégradé du bandeau, sans cassure de couleur. */
+    background: url('../images/connexion-plage.jpg') 62% 70% / cover no-repeat;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+            mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
   }
 
   .usager-sidebar-waves {

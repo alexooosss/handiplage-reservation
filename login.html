@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Capturer le hash avant que Supabase ne le consomme -->
   <script>window._initialHash = window.location.hash;</script>
-  <link rel="icon" type="image/svg+xml" href="icone%20logo.svg">
+  <link rel="icon" type="image/png" href="icons/favicon-palmier.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0772b8">
@@ -23,7 +23,8 @@
     .login-panel {
       width: 50%;
       min-height: 100vh;
-      background: linear-gradient(160deg, #1a2340 0%, #111b33 100%);
+      /* Sable : repris du sable du logo (#ead9c4) et de la photo de plage */
+      background: linear-gradient(160deg, #f4ecdd 0%, #eadcc6 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -46,7 +47,7 @@
       width: 480px;
       height: 480px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(7,114,184,.09) 0%, transparent 65%);
+      background: radial-gradient(circle, rgba(255,255,255,.35) 0%, transparent 65%);
       pointer-events: none;
     }
     .login-panel::after {
@@ -57,7 +58,7 @@
       width: 360px;
       height: 360px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(209,200,37,.05) 0%, transparent 60%);
+      background: radial-gradient(circle, rgba(238,117,29,.07) 0%, transparent 60%);
       pointer-events: none;
     }
 
@@ -85,13 +86,13 @@
       max-width: 100%;
       display: block;
       margin: 0 auto 14px;
-      filter: drop-shadow(0 6px 18px rgba(7,114,184,.35));
+      filter: none;
     }
 
     .login-brand {
       font-size: 1.875rem;
       font-weight: 800;
-      color: #fff;
+      color: #1a2340;
       letter-spacing: -.4px;
       line-height: 1;
       margin-bottom: 6px;
@@ -102,7 +103,7 @@
       align-items: center;
       gap: 10px;
       font-size: .85rem;
-      color: rgba(255,255,255,.9);
+      color: #05559b;
       letter-spacing: .18em;
       text-transform: uppercase;
       font-weight: 600;
@@ -111,7 +112,7 @@
     .login-brand-rule {
       flex: 1;
       height: 1px;
-      background: rgba(255,255,255,.35);
+      background: rgba(5,85,155,.3);
       display: block;
       min-width: 28px;
     }
@@ -121,7 +122,7 @@
     .login-title {
       font-size: .9375rem;
       font-weight: 700;
-      color: rgba(255,255,255,.85);
+      color: #1a2340;
       margin-bottom: clamp(18px, 3vh, 28px);
       text-align: center;
       letter-spacing: .01em;
@@ -130,7 +131,7 @@
     label {
       display: block;
       font-size: .6875rem;
-      color: rgba(255,255,255,.4);
+      color: #5a6478;
       margin-bottom: 7px;
       letter-spacing: .1em;
       text-transform: uppercase;
@@ -141,29 +142,29 @@
     input[type="password"] {
       width: 100%;
       padding: .8rem 1rem;
-      background: rgba(255,255,255,.055);
-      border: 1px solid rgba(255,255,255,.1);
+      background: #fbf7f0;
+      border: 1px solid #d9c8ad;
       border-radius: 10px;
       font-size: .9375rem;
-      color: #fff;
+      color: #1a2340;
       margin-bottom: clamp(14px, 2.2vh, 20px);
       transition: border-color .18s, background .18s, box-shadow .18s;
     }
 
     input[type="email"]::placeholder,
-    input[type="password"]::placeholder { color: rgba(255,255,255,.2); }
+    input[type="password"]::placeholder { color: #8a94a6; }
 
     input:focus {
       outline: none;
       border-color: rgba(7,114,184,.75);
-      background: rgba(255,255,255,.08);
+      background: #fdfbf7;
       box-shadow: 0 0 0 3px rgba(7,114,184,.18);
     }
 
     button[type="submit"] {
       width: 100%;
       padding: .875rem;
-      background: #48b59b;
+      background: #ee751d;
       color: #0f1b2e;
       border: none;
       border-radius: 10px;
@@ -172,24 +173,25 @@
       cursor: pointer;
       transition: background .15s, transform .12s, box-shadow .15s;
       margin-top: 6px;
-      box-shadow: 0 4px 20px rgba(72,181,155,.35);
+      box-shadow: 0 4px 20px rgba(238,117,29,.35);
       letter-spacing: .02em;
     }
     button[type="submit"]:hover {
-      background: #55c2a8;
-      box-shadow: 0 6px 24px rgba(72,181,155,.45);
+      background: #f28a3d;
+      box-shadow: 0 6px 24px rgba(238,117,29,.45);
       transform: translateY(-1px);
     }
     button[type="submit"]:active { transform: translateY(0); }
     button[type="submit"]:disabled {
-      background: rgba(255,255,255,.15);
+      background: #d9ccb6;
+      color: #5a6478;
       box-shadow: none;
       cursor: not-allowed;
       transform: none;
     }
 
-    #error-msg   { color: #ef9a9a; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
-    #success-msg { color: #a5d6a7; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
+    #error-msg   { color: #c62828; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
+    #success-msg { color: #2e7d32; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
     /* Zones de message repliées tant qu'elles sont vides (restent dans le DOM pour aria-live) */
     #error-msg:empty, #success-msg:empty { margin-top: 0; min-height: 0; }
 
@@ -198,64 +200,66 @@
       text-align: center;
       margin-top: clamp(14px, 2.4vh, 22px);
       font-size: .8125rem;
-      color: rgba(255,255,255,.35);
+      color: #5a6478;
       background: none;
       border: none;
       cursor: pointer;
       transition: color .15s;
     }
-    .forgot-link:hover { color: rgba(255,255,255,.7); }
+    .forgot-link:hover { color: #1a2340; text-decoration: underline; }
 
     .login-signup-sep {
       display: flex; align-items: center; gap: 12px;
       margin: clamp(22px, 4vh, 36px) 0 clamp(12px, 2vh, 18px);
     }
     .login-signup-sep::before, .login-signup-sep::after {
-      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1);
+      content: ''; flex: 1; height: 1px; background: rgba(26,35,64,.15);
     }
     .login-signup-sep span {
-      font-size: .6875rem; color: rgba(255,255,255,.25);
+      font-size: .6875rem; color: #6b7280;
       letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
     }
     .login-signup-link {
       display: block; text-align: center;
       font-size: .875rem; font-weight: 700;
-      color: rgba(255,255,255,.85); text-decoration: none;
+      /* Contour bleu du logo, fond transparent */
+      color: #05559b; text-decoration: none;
+      background: transparent;
       padding: .75rem 1rem;
-      border: 1.5px solid rgba(255,255,255,.28);
+      border: 1.5px solid #05559b;
       border-radius: 10px;
       transition: border-color .15s, background .15s, color .15s;
     }
     .login-signup-link:hover {
-      border-color: #48b59b;
-      color: #48b59b;
-      background: rgba(72,181,155,.08);
+      border-color: #05559b;
+      color: #ffffff;
+      background: #05559b;
     }
 
     .login-footer {
       margin-top: auto;
       padding-top: 24px;
       font-size: .6875rem;
-      color: rgba(255,255,255,.25);
+      color: #6b7280;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 6px 16px;
     }
-    .login-footer a { color: rgba(255,255,255,.32); text-decoration: none; }
-    .login-footer a:hover { color: rgba(255,255,255,.6); }
+    .login-footer a { color: #5a6478; text-decoration: none; }
+    .login-footer a:hover { color: #1a2340; text-decoration: underline; }
 
     /* ── Panneau droit (photo) ── */
     .login-photo {
       flex: 1;
-      background: url('handiplage.jpg') 68% 50% / cover no-repeat;
+      background: url('images/connexion-plage.jpg') 62% 60% / cover no-repeat;
       position: relative;
     }
     .login-photo::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(to right, rgba(72,181,155,1) 120px, rgba(72,181,155,0) 40%);
+      background: linear-gradient(to right, rgba(238,117,29,1) 120px, rgba(238,117,29,0) 40%);
     }
 
     /* ── Mobile ── */
@@ -271,7 +275,7 @@
     <div class="login-inner">
 
       <div class="login-brand-block">
-        <img src="logo-handiplage-réservation-2.svg" alt="Handiplage" class="login-logo">
+        <img src="logo-handiplage-reservation.svg" alt="Handiplage Réservation" class="login-logo">
         <div class="login-brand-sub"><span class="login-brand-rule"></span>Antibes<span class="login-brand-rule"></span></div>
       </div>
 
@@ -297,7 +301,7 @@
 
       <!-- Formulaire création mot de passe (visible après invitation) -->
       <form id="set-password-form" style="display:none" novalidate>
-        <p style="font-size:.875rem;color:rgba(255,255,255,.55);margin-bottom:1.25rem;line-height:1.6;text-align:center">
+        <p style="font-size:.875rem;color:#5a6478;margin-bottom:1.25rem;line-height:1.6;text-align:center">
           Bienvenue sur votre espace Handiplage.<br>Choisissez un mot de passe pour accéder à votre compte.
         </p>
         <label for="new-password">Nouveau mot de passe</label>

@@ -21,9 +21,9 @@
       "purpose": "any maskable"
     },
     {
-      "src": "icone%20logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icons/favicon-palmier.png",
+      "sizes": "128x128",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

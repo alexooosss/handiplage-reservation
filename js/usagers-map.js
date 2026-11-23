@@ -387,7 +387,7 @@ var UsagersMap = (function () {
         speed: 1.1,
         smoothing: 7,
         scale: 7,
-        dots: { color: '#00b090', size: 3.5, density: 7, allDots: false },
+        dots: { color: '#c2560a', size: 3.5, density: 7, allDots: false },
         markerConfig: { markers: initial.markers, color: '#f0c93a', size: 55 },
         oceanColor: '#f8fafc',
         outlineColor: 'rgba(10,22,40,0.25)',

@@ -4,6 +4,52 @@ function _escI(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ── Justificatifs : aperçu dans la fiche staff ──
+// Les fichiers viennent du formulaire public (contenu non fiable) : on n'affiche/ouvre que
+// des images bitmap et des PDF en base64 strict. Pas de SVG ni de HTML, qui pourraient
+// exécuter du script une fois ouverts dans un onglet du site.
+var _DOC_IMG_RE = /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/;
+var _DOC_PDF_RE = /^data:application\/pdf;base64,[A-Za-z0-9+/=]+$/;
+
+function _docKind(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  if (_DOC_IMG_RE.test(dataUrl)) return 'image';
+  if (_DOC_PDF_RE.test(dataUrl)) return 'pdf';
+  return null;
+}
+
+function _renderDocPreview(dataUrl, name, key) {
+  if (!name) return '';
+  var kind  = _docKind(dataUrl);
+  var thumb = kind === 'image'
+    ? '<img src="' + dataUrl + '" alt="Aperçu : ' + _escI(name) + '" class="insc-doc-thumb">'
+    : '<span class="insc-doc-thumb insc-doc-thumb-file">' + (kind === 'pdf' ? 'PDF' : '?') + '</span>';
+  return '<div class="insc-file-existing insc-doc-card" id="' + key + '-existing">'
+    +   (kind ? '<button type="button" class="insc-doc-open insc-doc-thumb-btn" data-doc="' + key + '" title="Ouvrir en grand">' + thumb + '</button>' : thumb)
+    +   '<div class="insc-doc-meta">'
+    +     '<span class="insc-doc-name">' + _escI(name) + '</span>'
+    +     (kind
+          ? '<button type="button" class="insc-doc-open insc-doc-open-link" data-doc="' + key + '">Ouvrir en grand ↗</button>'
+          : '<span class="insc-doc-unavailable">Aperçu indisponible (format non pris en charge)</span>')
+    +   '</div>'
+    +   '<button type="button" class="insc-file-del" id="del-' + key + '" title="Supprimer ce document">✕</button>'
+    + '</div>';
+}
+
+// Ouvre le document dans un nouvel onglet via une URL blob (les URL data: en navigation
+// directe sont bloquées par les navigateurs).
+function _openDoc(dataUrl) {
+  if (!_docKind(dataUrl)) return;
+  var comma = dataUrl.indexOf(',');
+  var mime  = dataUrl.slice(5, dataUrl.indexOf(';'));
+  var bin   = atob(dataUrl.slice(comma + 1));
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  var url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+}
+
 // ── Vue principale ──
 async function renderInscription(container, selectedId) {
   const [inscriptions, saisonCourante, saisonDates] = await Promise.all([getInscriptions(), getSaisonCourante(), getSaisonDates()]);
@@ -226,10 +272,10 @@ function _showForm(container, insc) {
     +   '<div class="insc-section-title">Documents justificatifs</div>'
     +   '<p class="insc-doc-info">Joindre le justificatif du handicap RECTO-VERSO, avec identité et date de validité lisible <span class="req">*</span><br><em>Carte Mobilité Inclusion (CMI) — les documents de l\'assurance maladie ne sont pas valables.</em></p>'
     +   '<div class="insc-field" style="margin-top:12px"><label>Document principal (recto-verso) <span class="req">*</span></label>'
-    +     (v.justificatif1Name ? '<div class="insc-file-existing" id="doc1-existing">📄 ' + _escI(v.justificatif1Name) + ' <button type="button" class="insc-file-del" id="del-doc1">✕</button></div>' : '')
+    +     _renderDocPreview(v.justificatif1, v.justificatif1Name, 'doc1')
     +     '<input type="file" id="f-doc1" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:8px"><label>Deuxième document <span class="insc-optional">(verso si le premier n\'est pas recto-verso)</span></label>'
-    +     (v.justificatif2Name ? '<div class="insc-file-existing" id="doc2-existing">📄 ' + _escI(v.justificatif2Name) + ' <button type="button" class="insc-file-del" id="del-doc2">✕</button></div>' : '')
+    +     _renderDocPreview(v.justificatif2, v.justificatif2Name, 'doc2')
     +     '<input type="file" id="f-doc2" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:16px"><label>Signature <span class="req">*</span> — <span class="insc-hint">La saisie de vos nom et prénom vaut signature</span></label><input type="text" id="f-signature" value="' + _escI(v.signature) + '" placeholder="Prénom NOM"></div>'
     + '</div>'
@@ -361,6 +407,12 @@ function _showForm(container, insc) {
         if (ex) ex.remove();
       });
     }
+    // Ouvrir un justificatif en grand
+    document.querySelectorAll('.insc-doc-open').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        _openDoc(btn.dataset.doc === 'doc1' ? v.justificatif1 : v.justificatif2);
+      });
+    });
   }
 
   // ── Pass ──

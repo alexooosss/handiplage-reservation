@@ -32,7 +32,6 @@ var EQUIPEMENTS = [
     groupe: 'Confort et services',
     items: [
       { id: 'transats',   nom: 'Transats et chaises',  description: 'Chaque réservation comprend 1 transat pour la personne en situation de handicap et 2 chaises pour ses accompagnants.' },
-      { id: 'sanitaires', nom: 'Sanitaires adaptés',   description: 'Sanitaires accessibles, équipés de barres d\'appui.' },
     ],
   },
 ];
