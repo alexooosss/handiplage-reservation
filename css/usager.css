@@ -117,7 +117,7 @@ body > header + * { flex: 1 0 auto; width: 100%; }
   margin: 4px 0 16px;
 }
 .usager-hello-name { color: #05559b; }
-@media (min-width: 1024px) { .usager-hello { font-size: 1.85rem; margin: 6px 0 20px; } }
+@media (min-width: 720px) { .usager-hello { font-size: 1.85rem; margin: 6px 0 20px; } }
 
 /* ── Contenu principal ─────────────────────────────────────────── */
 #usager-content {
@@ -569,16 +569,24 @@ body > header + * { flex: 1 0 auto; width: 100%; }
 .usager-shell  { display: block; }
 .usager-sidebar { display: none; }
 
-/* ── Tablette (640 – 1023 px) ───────────────────────────────────── */
+/* Aucun débordement horizontal possible (clip ne casse pas l'en-tête sticky, contrairement à hidden) */
+html, body { overflow-x: clip; }
+
+/* ── Tablette (640 – 1199 px : iPad, Surface, grands pliables…) ── */
 @media (min-width: 640px) {
   #usager-content {
-    max-width: 700px;
-    padding: 22px 28px 40px;
+    max-width: 900px;
+    padding: 24px 32px 40px;
   }
 }
+/* Dès 720 px : les 4 tuiles sur une seule ligne, « Réserver » en pleine largeur */
+@media (min-width: 720px) {
+  .usager-tiles { grid-template-columns: repeat(4, 1fr); }
+  .usager-tile-primary { grid-column: 1 / -1; }
+}
 
-/* ── Desktop (1024 px +) ────────────────────────────────────────── */
-@media (min-width: 1024px) {
+/* ── Ordinateur / tablette en paysage (1200 px +) ───────────────── */
+@media (min-width: 1200px) {
   /* Bandeau photo fixé à gauche sur toute la hauteur de l'écran. L'en-tête en verre
      reste sur toute la largeur et passe PAR-DESSUS le haut bleu du bandeau. */
   :root { --sidebar-w: 25%; --header-h: 62px; }
