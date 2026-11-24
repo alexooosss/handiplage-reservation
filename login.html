@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icone-handiplage.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0772b8">
+  <meta name="theme-color" content="#6a9bd8">
   <title>Connexion - Handiplage</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,7 +19,11 @@
       font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
       min-height: 100vh;
       color: #1a2340;
-      background: #2b4a6b url('images/connexion-plage.jpg') 60% 55% / cover no-repeat;
+      /* Couleur de fond = bleu du ciel en haut de la photo (#6a9bd8) : Safari l'étend sous
+         l'heure et la barre d'adresse. Le haut de la photo se fond dans ce bleu, sans cassure. */
+      background:
+        linear-gradient(180deg, #6a9bd8 0, rgba(106,155,216,.85) 40px, rgba(106,155,216,0) 180px),
+        url('images/connexion-plage.jpg') 60% 55% / cover no-repeat #6a9bd8;
       display: flex;
       align-items: center;
       padding: 4vh 6vw;
@@ -31,6 +35,9 @@
       inset: 0;
       background: linear-gradient(100deg, rgba(10,22,40,.35) 0%, rgba(10,22,40,.05) 55%);
       pointer-events: none;
+      /* le voile s'efface en haut pour ne pas recréer de marche avec le bleu du ciel */
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 180px);
+              mask-image: linear-gradient(to bottom, transparent 0, #000 180px);
     }
 
     /* ── Carte en verre sablé (blanc dépoli + grain fin) ── */
@@ -408,6 +415,13 @@
       .login-card { padding: 26px 20px 20px; border-radius: 24px; }
       .login-logo { width: 270px; }
       .login-footer { position: static; order: 2; justify-content: center; margin-top: 14px; }
+    }
+
+    /* iPhone / tablette : un champ dont le texte fait moins de 16 px déclenche un zoom
+       automatique au toucher. On force 16 px minimum sur les écrans tactiles
+       (sans bloquer le zoom à deux doigts, indispensable aux personnes malvoyantes). */
+    @media (pointer: coarse) {
+      input, select, textarea { font-size: max(16px, 1em) !important; }
     }
   </style>
 </head>

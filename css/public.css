@@ -292,3 +292,10 @@ body > header + * { flex: 1 0 auto; width: 100%; }
 .legal-table th { background: #e3f2fd; color: #1565c0; font-weight: 700; padding: 8px 12px; text-align: left; }
 .legal-table td { padding: 8px 12px; border-bottom: 1px solid #e3f2fd; color: #333; vertical-align: top; }
 .legal-table tr:last-child td { border-bottom: none; }
+
+/* iPhone / tablette : un champ dont le texte fait moins de 16 px déclenche un zoom
+   automatique au toucher. On force 16 px minimum sur les écrans tactiles
+   (sans bloquer le zoom à deux doigts, indispensable aux personnes malvoyantes). */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: max(16px, 1em) !important; }
+}
