@@ -13,335 +13,399 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Page : photo de la plage en plein écran ── */
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
       min-height: 100vh;
-    }
-
-    /* ── Panneau gauche ── */
-    .login-panel {
-      width: 50%;
-      min-height: 100vh;
-      /* Sable : repris du sable du logo (#ead9c4) et de la photo de plage */
-      background: linear-gradient(160deg, #f4ecdd 0%, #eadcc6 100%);
+      color: #1a2340;
+      background: #2b4a6b url('images/connexion-plage.jpg') 60% 55% / cover no-repeat;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      padding: clamp(24px, 4vh, 44px) 56px clamp(16px, 2.5vh, 24px);
-      flex-shrink: 0;
-      position: relative;
-      overflow: hidden;
-      /* Le panneau chevauche la photo pour que ses coins arrondis laissent voir l'image derrière */
-      border-radius: 0 120px 120px 0;
-      margin-right: -120px;
-      z-index: 2;
+      padding: 4vh 6vw;
     }
-
-    /* Halos décoratifs subtils */
-    .login-panel::before {
+    /* Léger voile côté carte pour homogénéiser la photo */
+    body::before {
       content: '';
-      position: absolute;
-      bottom: -120px;
-      left: -120px;
-      width: 480px;
-      height: 480px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,.35) 0%, transparent 65%);
-      pointer-events: none;
-    }
-    .login-panel::after {
-      content: '';
-      position: absolute;
-      top: -80px;
-      right: -80px;
-      width: 360px;
-      height: 360px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(238,117,29,.07) 0%, transparent 60%);
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(100deg, rgba(10,22,40,.35) 0%, rgba(10,22,40,.05) 55%);
       pointer-events: none;
     }
 
-    .login-inner {
-      width: 100%;
-      max-width: 380px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      flex: 1;
+    /* ── Carte en verre sablé (blanc dépoli + grain fin) ── */
+    .login-card {
       position: relative;
-      z-index: 1;
+      isolation: isolate;
+      width: 450px;
+      max-width: 100%;
+      padding: 36px 36px 28px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,.68) 0%, rgba(255,255,255,.58) 100%);
+      backdrop-filter: blur(22px) saturate(165%);
+      -webkit-backdrop-filter: blur(22px) saturate(165%);
+      border: 1px solid rgba(255,255,255,.55);
+      box-shadow:
+        0 24px 60px -12px rgba(10,22,40,.35),   /* ombre portée douce */
+        inset 0 1px 0 rgba(255,255,255,.95),     /* reflet sur le bord haut */
+        inset 1px 0 0 rgba(255,255,255,.45),     /* reflet bord gauche */
+        inset 0 -1px 0 rgba(255,255,255,.18);    /* bord bas discret */
     }
-
-    /* ── Bloc identité ── */
-    .login-brand-block {
-      text-align: center;
-      margin-top: auto;
-      margin-bottom: clamp(24px, 5vh, 48px);
+    /* Reflet spéculaire diagonal, en haut à gauche */
+    .login-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: -1;
+      background: linear-gradient(125deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 32%);
+    }
+    /* Grain « verre sablé » : bruit fin en SVG, très léger */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: -1;
+      opacity: .22;
+      mix-blend-mode: soft-light;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+    /* Navigateur sans flou : verre plus opaque */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .login-card { background: rgba(255,255,255,.95); }
+    }
+    /* Personne ayant demandé moins de transparence : carte blanche pleine */
+    @media (prefers-reduced-transparency: reduce) {
+      .login-card { background: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+      .login-card::before, .login-card::after { display: none; }
     }
 
     .login-logo {
-      height: auto;
-      width: 380px;
+      display: block;
+      width: 330px;
       max-width: 100%;
-      display: block;
-      margin: 0 auto 14px;
-      filter: none;
+      height: auto;
+      margin: 0 auto 26px;
     }
-
-    .login-brand {
-      font-size: 1.875rem;
-      font-weight: 800;
-      color: #1a2340;
-      letter-spacing: -.4px;
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-
-    .login-brand-sub {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: .85rem;
-      color: #05559b;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      font-weight: 600;
-      margin-top: 2px;
-    }
-    .login-brand-rule {
-      flex: 1;
-      height: 1px;
-      background: rgba(5,85,155,.3);
-      display: block;
-      min-width: 28px;
-    }
-
-    /* ── Séparateur ── */
-    /* ── Formulaire ── */
     .login-title {
-      font-size: .9375rem;
-      font-weight: 700;
-      color: #1a2340;
-      margin-bottom: clamp(18px, 3vh, 28px);
-      text-align: center;
-      letter-spacing: .01em;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: #05559b;
+    }
+    .login-sub {
+      font-size: .9rem;
+      color: #2f3b52;
+      margin: 6px 0 24px;
     }
 
+    /* ── Champs ── */
     label {
       display: block;
-      font-size: .6875rem;
-      color: #5a6478;
-      margin-bottom: 7px;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    input[type="email"],
-    input[type="password"] {
-      width: 100%;
-      padding: .8rem 1rem;
-      background: #fbf7f0;
-      border: 1px solid #d9c8ad;
-      border-radius: 10px;
-      font-size: .9375rem;
+      font-size: .8rem;
+      font-weight: 600;
       color: #1a2340;
-      margin-bottom: clamp(14px, 2.2vh, 20px);
-      transition: border-color .18s, background .18s, box-shadow .18s;
+      margin-bottom: 6px;
     }
-
-    input[type="email"]::placeholder,
-    input[type="password"]::placeholder { color: #8a94a6; }
-
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: .85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.9);
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 1px 2px rgba(10,22,40,.06);
+      font-size: .95rem;
+      color: #1a2340;
+      margin-bottom: 16px;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    input::placeholder { color: #6b7385; }
     input:focus {
       outline: none;
-      border-color: rgba(7,114,184,.75);
-      background: #fdfbf7;
-      box-shadow: 0 0 0 3px rgba(7,114,184,.18);
+      border-color: #05559b;
+      box-shadow: 0 0 0 4px rgba(5,85,155,.15);
+    }
+    /* Remplissage automatique du navigateur : on force le fond blanc (sinon bleuté) */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover {
+      -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+              box-shadow: 0 0 0 1000px #ffffff inset;
+      -webkit-text-fill-color: #1a2340;
+      caret-color: #1a2340;
+      transition: background-color 9999s ease-out 0s;
+    }
+    input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 4px rgba(5,85,155,.15);
+              box-shadow: 0 0 0 1000px #ffffff inset, 0 0 0 4px rgba(5,85,155,.15);
+      -webkit-text-fill-color: #1a2340;
     }
 
-    button[type="submit"] {
-      width: 100%;
-      padding: .875rem;
-      background: #ee751d;
-      color: #0f1b2e;
+    /* ── Afficher / masquer le mot de passe ── */
+    .pwd-wrap { position: relative; }
+    .pwd-wrap input { padding-right: 3.2rem; }
+    .pwd-toggle {
+      position: absolute;
+      top: 0;
+      right: 4px;
+      height: calc(100% - 16px);   /* hauteur du champ (hors marge basse) */
+      width: 44px;                 /* cible tactile confortable */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
       border: none;
       border-radius: 10px;
-      font-size: .9375rem;
+      color: #4a5568;
+      cursor: pointer;
+    }
+    .pwd-toggle:hover { color: #05559b; }
+    .pwd-toggle:focus-visible { outline: 3px solid #05559b; outline-offset: -3px; }
+    .pwd-toggle svg { width: 20px; height: 20px; }
+
+    .login-row { display: flex; justify-content: flex-end; margin: -6px 0 18px; }
+    .forgot-link {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #03437a;
+      cursor: pointer;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
+    /* ── Boutons ── */
+    button[type="submit"] {
+      width: 100%;
+      padding: .95rem;
+      border: none;
+      border-radius: 14px;
+      background: #ee751d;
+      color: #0f1b2e;
+      font-family: inherit;
+      font-size: .95rem;
       font-weight: 700;
       cursor: pointer;
       transition: background .15s, transform .12s, box-shadow .15s;
-      margin-top: 6px;
-      box-shadow: 0 4px 20px rgba(238,117,29,.35);
-      letter-spacing: .02em;
+      box-shadow: 0 4px 14px rgba(238,117,29,.3);
     }
-    button[type="submit"]:hover {
-      background: #f28a3d;
-      box-shadow: 0 6px 24px rgba(238,117,29,.45);
-      transform: translateY(-1px);
-    }
+    button[type="submit"]:hover { background: #f28a3d; transform: translateY(-1px); }
     button[type="submit"]:active { transform: translateY(0); }
+    button[type="submit"]:focus-visible { outline: 3px solid #05559b; outline-offset: 2px; }
     button[type="submit"]:disabled {
-      background: #d9ccb6;
-      color: #5a6478;
+      background: rgba(26,35,64,.14);
+      color: #4a5568;
       box-shadow: none;
       cursor: not-allowed;
       transform: none;
     }
 
-    #error-msg   { color: #c62828; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
-    #success-msg { color: #2e7d32; font-size: .8125rem; margin-top: 14px; min-height: 1.2em; line-height: 1.5; text-align: center; }
-    /* Zones de message repliées tant qu'elles sont vides (restent dans le DOM pour aria-live) */
-    #error-msg:empty, #success-msg:empty { margin-top: 0; min-height: 0; }
+    /* Messages (sur verre clair) */
+    #error-msg   { color: #b3261e; font-weight: 600; font-size: .82rem; margin-top: 14px; line-height: 1.5; text-align: center; }
+    #success-msg { color: #1b5e20; font-weight: 600; font-size: .82rem; margin-top: 14px; line-height: 1.5; text-align: center; }
+    /* Repliées tant qu'elles sont vides (restent dans le DOM pour aria-live) */
+    #error-msg:empty, #success-msg:empty { margin-top: 0; }
 
-    .forgot-link {
-      display: block;
-      text-align: center;
-      margin-top: clamp(14px, 2.4vh, 22px);
-      font-size: .8125rem;
-      color: #5a6478;
-      background: none;
-      border: none;
-      cursor: pointer;
-      transition: color .15s;
-    }
-    .forgot-link:hover { color: #1a2340; text-decoration: underline; }
+    .login-card-intro { font-size: .9rem; color: #2f3b52; margin-bottom: 18px; line-height: 1.6; }
 
     .login-signup-sep {
-      display: flex; align-items: center; gap: 12px;
-      margin: clamp(22px, 4vh, 36px) 0 clamp(12px, 2vh, 18px);
+      display: flex; align-items: center; gap: 10px;
+      margin: 22px 0 14px;
+      font-size: .75rem; color: #1f2a40;
     }
     .login-signup-sep::before, .login-signup-sep::after {
-      content: ''; flex: 1; height: 1px; background: rgba(26,35,64,.15);
-    }
-    .login-signup-sep span {
-      font-size: .6875rem; color: #6b7280;
-      letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+      content: ''; flex: 1; height: 1px; background: rgba(26,35,64,.2);
     }
     .login-signup-link {
-      display: block; text-align: center;
-      font-size: .875rem; font-weight: 700;
-      /* Contour bleu du logo, fond transparent */
-      color: #05559b; text-decoration: none;
-      background: transparent;
-      padding: .75rem 1rem;
-      border: 1.5px solid #05559b;
-      border-radius: 10px;
-      transition: border-color .15s, background .15s, color .15s;
+      display: block;
+      text-align: center;
+      padding: .8rem;
+      border-radius: 14px;
+      border: 1px solid rgba(5,85,155,.4);
+      background: rgba(255,255,255,.4);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+      color: #05559b;
+      font-weight: 700;
+      font-size: .9rem;
+      text-decoration: none;
+      transition: background .15s, color .15s, border-color .15s;
     }
-    .login-signup-link:hover {
-      border-color: #05559b;
-      color: #ffffff;
-      background: #05559b;
-    }
+    .login-signup-link:hover { background: #05559b; border-color: #05559b; color: #ffffff; }
 
     /* Lien discret vers le compte de démonstration */
     .login-demo-link {
       display: block;
-      margin: clamp(12px, 2vh, 18px) auto 0;
+      margin: 14px auto 0;
       background: none;
       border: none;
       font-family: inherit;
-      font-size: .8125rem;
-      color: #5a6478;
+      font-size: .8rem;
+      color: #1f2a40;
       text-decoration: underline;
       text-underline-offset: 3px;
       cursor: pointer;
-      transition: color .15s;
     }
     .login-demo-link:hover { color: #05559b; }
 
+    /* ── Étiquette adresse : ouvre le plan ── */
+    .login-place {
+      position: fixed;
+      right: 24px;
+      top: 20px;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 14px rgba(10,22,40,.15);
+      font-size: .78rem;
+      font-weight: 600;
+      color: #1a2340;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .login-place:hover { background: #ffffff; color: #05559b; }
+    .login-place:focus-visible { outline: 3px solid #05559b; outline-offset: 2px; }
+    .login-place-arrow { opacity: .6; }
+
+    /* ── Pied de page ── */
     .login-footer {
-      margin-top: auto;
-      padding-top: 24px;
-      font-size: .6875rem;
-      color: #6b7280;
+      position: fixed;
+      right: 24px;
+      bottom: 16px;
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
-      gap: 6px 16px;
+      gap: 4px 12px;
+      font-size: .72rem;
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 1px 3px rgba(0,0,0,.45);
     }
-    .login-footer a { color: #5a6478; text-decoration: none; }
-    .login-footer a:hover { color: #1a2340; text-decoration: underline; }
+    .login-footer a { color: inherit; text-decoration: none; }
+    .login-footer a:hover { text-decoration: underline; }
 
-    /* ── Panneau droit (photo) ── */
-    .login-photo {
-      flex: 1;
-      background: url('images/connexion-plage.jpg') 62% 60% / cover no-repeat;
-      position: relative;
+    /* ── Écrans peu hauts. La carte non resserrée mesure ~743 px de haut :
+          • ≥ 809 px de fenêtre : aucun changement ;
+          • 761–808 px : seules les marges autour de la carte diminuent (carte intacte) ;
+          • ≤ 760 px : la carte ne tiendrait plus, on la resserre. ── */
+    @media (min-width: 681px) and (min-height: 761px) and (max-height: 808px) {
+      body { padding-top: 16px; padding-bottom: 16px; }
     }
-    .login-photo::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right, rgba(238,117,29,1) 120px, rgba(238,117,29,0) 40%);
+    @media (min-width: 681px) and (max-height: 760px) {
+      body { padding-top: 2.5vh; padding-bottom: 2.5vh; }
+      .login-card { padding: 26px 32px 20px; }
+      .login-logo { width: 270px; margin-bottom: 16px; }
+      .login-sub { margin-bottom: 16px; }
+      input[type="email"], input[type="password"], input[type="text"] { padding: .7rem 1rem; margin-bottom: 12px; }
+      .pwd-toggle { height: calc(100% - 12px); }
+      .login-row { margin: -4px 0 12px; }
+      button[type="submit"] { padding: .8rem; }
+      .login-signup-sep { margin: 16px 0 10px; }
+      .login-signup-link { padding: .65rem; }
+      .login-demo-link { margin-top: 10px; }
+    }
+    @media (min-width: 681px) and (max-height: 680px) {
+      body { align-items: flex-start; }   /* très petits écrans : la page défile normalement */
     }
 
-    /* ── Mobile ── */
+    /* ── Téléphone : carte pleine largeur, photo visible autour ── */
     @media (max-width: 680px) {
-      .login-photo { display: none; }
-      .login-panel { width: 100%; padding: 44px 28px; border-radius: 0; margin-right: 0; }
-      .login-inner { max-width: 100%; }
+      body { flex-direction: column; align-items: stretch; padding: 14px 14px 18px; }
+      .login-place { position: static; align-self: center; margin-bottom: 12px; }
+      .login-card { padding: 26px 20px 20px; border-radius: 24px; }
+      .login-logo { width: 270px; }
+      .login-footer { position: static; justify-content: center; margin-top: 14px; }
     }
   </style>
 </head>
 <body>
-  <div class="login-panel">
-    <div class="login-inner">
+  <!-- Adresse : ouvre le plan dans un nouvel onglet -->
+  <a class="login-place" href="https://www.google.com/maps/search/?api=1&amp;query=Boulevard+James+Wyllie+Antibes"
+     target="_blank" rel="noopener" aria-label="Bd James Wyllie, Antibes : ouvrir le plan dans un nouvel onglet">
+    <span aria-hidden="true">📍</span> Bd James Wyllie · Antibes <span class="login-place-arrow" aria-hidden="true">↗</span>
+  </a>
 
-      <div class="login-brand-block">
-        <img src="logo-handiplage-reservation.svg" alt="Handiplage Réservation" class="login-logo">
-        <div class="login-brand-sub"><span class="login-brand-rule"></span>Antibes<span class="login-brand-rule"></span></div>
-      </div>
+  <main class="login-card">
+    <img src="logo-handiplage-reservation.svg" alt="Handiplage Réservation — Antibes" class="login-logo">
+    <h1 class="login-title">Connexion à votre espace</h1>
+    <p class="login-sub">Réservez votre place à la Handiplage d'Antibes.</p>
 
-      <div class="login-title">Connexion à votre espace</div>
+    <form id="login-form" novalidate>
+      <label for="email">Adresse e-mail</label>
+      <input type="email" id="email" name="email" autocomplete="email" placeholder="votre@email.fr" required />
 
-      <form id="login-form" novalidate>
-        <label for="email">Adresse e-mail</label>
-        <input type="email" id="email" name="email" autocomplete="email" placeholder="votre@email.fr" required />
-
-        <label for="password">Mot de passe</label>
+      <label for="password">Mot de passe</label>
+      <div class="pwd-wrap">
         <input type="password" id="password" name="password" autocomplete="current-password" placeholder="••••••••" required />
-
-        <button type="submit" id="submit-btn">Se connecter</button>
-      </form>
-
-      <p id="error-msg" role="alert" aria-live="polite"></p>
-      <p id="success-msg" aria-live="polite"></p>
-
-      <button class="forgot-link" id="forgot-btn" type="button">Mot de passe oublié ?</button>
-
-      <div class="login-signup-sep"><span>Pas encore inscrit ?</span></div>
-      <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
-
-      <!-- Compte démonstration : connexion à l'espace usager avec un compte fictif,
-           les réservations y sont simulées (voir isDemo dans js/usager-*.js) -->
-      <button type="button" class="login-demo-link" id="btn-demo">Essayer l'espace usager en démo →</button>
-
-      <!-- Formulaire création mot de passe (visible après invitation) -->
-      <form id="set-password-form" style="display:none" novalidate>
-        <p style="font-size:.875rem;color:#5a6478;margin-bottom:1.25rem;line-height:1.6;text-align:center">
-          Bienvenue sur votre espace Handiplage.<br>Choisissez un mot de passe pour accéder à votre compte.
-        </p>
-        <label for="new-password">Nouveau mot de passe</label>
-        <input type="password" id="new-password" name="new-password" autocomplete="new-password"
-          placeholder="8 caractères minimum" required />
-        <label for="new-password2">Confirmer le mot de passe</label>
-        <input type="password" id="new-password2" name="new-password2" autocomplete="new-password"
-          placeholder="Répétez le mot de passe" required />
-        <button type="submit" id="set-pwd-btn">Créer mon mot de passe</button>
-      </form>
-
-      <div class="login-footer">
-        <span>© 2026 CCAS d'Antibes</span>
-        <a href="mentions-legales.html">Mentions légales</a>
-        <a href="politique-confidentialite.html">Confidentialité</a>
+        <button type="button" class="pwd-toggle" data-target="password" aria-controls="password" aria-pressed="false" aria-label="Afficher le mot de passe"></button>
       </div>
-    </div>
-  </div>
 
-  <div class="login-photo"></div>
+      <div class="login-row">
+        <button class="forgot-link" id="forgot-btn" type="button">Mot de passe oublié ?</button>
+      </div>
+
+      <button type="submit" id="submit-btn">Se connecter</button>
+    </form>
+
+    <!-- Formulaire création mot de passe (visible après invitation, à la place du précédent) -->
+    <form id="set-password-form" style="display:none" novalidate>
+      <p class="login-card-intro">Bienvenue sur votre espace Handiplage.<br>Choisissez un mot de passe pour accéder à votre compte.</p>
+      <label for="new-password">Nouveau mot de passe</label>
+      <div class="pwd-wrap">
+        <input type="password" id="new-password" name="new-password" autocomplete="new-password" placeholder="8 caractères minimum" required />
+        <button type="button" class="pwd-toggle" data-target="new-password" aria-controls="new-password" aria-pressed="false" aria-label="Afficher le mot de passe"></button>
+      </div>
+      <label for="new-password2">Confirmer le mot de passe</label>
+      <div class="pwd-wrap">
+        <input type="password" id="new-password2" name="new-password2" autocomplete="new-password" placeholder="Répétez le mot de passe" required />
+        <button type="button" class="pwd-toggle" data-target="new-password2" aria-controls="new-password2" aria-pressed="false" aria-label="Afficher le mot de passe"></button>
+      </div>
+      <button type="submit" id="set-pwd-btn">Créer mon mot de passe</button>
+    </form>
+
+    <p id="error-msg" role="alert" aria-live="polite"></p>
+    <p id="success-msg" aria-live="polite"></p>
+
+    <div class="login-signup-sep">Pas encore inscrit ?</div>
+    <a href="inscription-publique.html" class="login-signup-link">S'inscrire à la Handiplage d'Antibes →</a>
+
+    <!-- Compte démonstration : connexion à l'espace usager avec un compte fictif,
+         les réservations y sont simulées (voir isDemo dans js/usager-*.js) -->
+    <button type="button" class="login-demo-link" id="btn-demo">Essayer l'espace usager en démo →</button>
+  </main>
+
+  <footer class="login-footer">
+    <span>© 2026 CCAS d'Antibes</span>
+    <a href="mentions-legales.html">Mentions légales</a>
+    <a href="politique-confidentialite.html">Confidentialité</a>
+  </footer>
+
+  <!-- Afficher / masquer le mot de passe (œil) -->
+  <script>
+    (function () {
+      var OEIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+      var OEIL_BARRE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a17 17 0 0 1-2.16 3.19"/><path d="M6.6 6.6A16.7 16.7 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="m2 2 20 20"/></svg>';
+      document.querySelectorAll('.pwd-toggle').forEach(function (btn) {
+        btn.innerHTML = OEIL;
+        btn.addEventListener('click', function () {
+          var input = document.getElementById(btn.dataset.target);
+          var montrer = input.type === 'password';
+          input.type = montrer ? 'text' : 'password';
+          btn.innerHTML = montrer ? OEIL_BARRE : OEIL;
+          btn.setAttribute('aria-pressed', String(montrer));
+          btn.setAttribute('aria-label', montrer ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+          input.focus();
+        });
+      });
+    })();
+  </script>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
