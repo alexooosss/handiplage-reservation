@@ -29,13 +29,19 @@ const App = (() => {
     if (typeof subscribeInscriptions === 'function') {
       subscribeInscriptions(function() {
         getInscriptions().catch(function() {});
-        if (_currentView === 'inscription') _renderInscription();
+        // Rafraîchit la liste sans fermer la fiche éventuellement ouverte
+        if (_currentView === 'inscription' && typeof refreshInscriptionListe === 'function') {
+          refreshInscriptionListe(document.getElementById('insc-view')).catch(console.error);
+        }
       });
     }
     // Realtime : s'abonner aux groupes
     if (typeof subscribeGroupes === 'function') {
       subscribeGroupes(function() {
-        if (_currentView === 'groupes') _renderGroupesView();
+        // Garde le groupe ouvert ; ne pas redessiner pendant une modification en cours
+        if (_currentView === 'groupes' && (typeof _gpMode === 'undefined' || _gpMode === 'view')) {
+          _renderGroupesView(typeof _gpSelectedId !== 'undefined' ? _gpSelectedId : null);
+        }
       });
     }
 
@@ -195,7 +201,7 @@ const App = (() => {
       if (btnMc)  btnMc.classList.add('active');
       _renderMc().catch(console.error);
       if (typeof subscribeMc === 'function') {
-        subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+        subscribeMc(_mcDate, _onMcRealtime);
       }
     } else if (view === 'groupes') {
       if (groupesView) groupesView.style.display = 'flex';
@@ -244,31 +250,49 @@ const App = (() => {
     await renderInscription(container, selectedId);
   }
 
+  // Temps réel main courante : ignorer nos propres enregistrements (ils sont déjà affichés)
+  // et ne pas redessiner pendant une saisie (texte en cours perdu sinon)
+  let _mcPending = null;
+  function _onMcRealtime(force) {
+    if (force !== true && Date.now() - (window._mcLocalSaveAt || 0) < 2500) return;
+    const view = document.getElementById('mc-view');
+    const ae   = document.activeElement;
+    if (view && ae && view.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) {
+      // Réessayer quand le champ est quitté
+      if (!_mcPending) {
+        _mcPending = () => { ae.removeEventListener('blur', _mcPending); _mcPending = null; setTimeout(() => _onMcRealtime(true), 300); };
+        ae.addEventListener('blur', _mcPending);
+      }
+      return;
+    }
+    if (_currentView === 'mc') _renderMc().catch(console.error);
+  }
+
   async function _renderMc() {
     const container = document.getElementById('mc-view');
     if (!container) return;
     if (!_mcDate) _mcDate = _date;
     container._onMcPrev  = () => {
       _mcDate = _mcDateOffset(_mcDate, -1);
-      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, _onMcRealtime);
       _renderMc().catch(console.error);
     };
     container._onMcNext  = () => {
       const next = _mcDateOffset(_mcDate, +1);
       if (next <= _date) {
         _mcDate = next;
-        if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+        if (typeof subscribeMc === 'function') subscribeMc(_mcDate, _onMcRealtime);
         _renderMc().catch(console.error);
       }
     };
     container._onMcToday = () => {
       _mcDate = _date;
-      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, _onMcRealtime);
       _renderMc().catch(console.error);
     };
     container._onMcGoto  = d  => {
       _mcDate = d;
-      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, function() { _renderMc().catch(console.error); });
+      if (typeof subscribeMc === 'function') subscribeMc(_mcDate, _onMcRealtime);
       _renderMc().catch(console.error);
     };
     await renderMc(container, _mcDate);

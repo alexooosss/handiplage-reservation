@@ -64,13 +64,25 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   const weekEndISO   = _isoDate(days[6]);
   const counts       = await getWeekReservationCounts(weekStartISO, weekEndISO);
 
+  // Bandeau : réservation en cours pour un groupe (lancée depuis l'onglet Groupes)
+  const gp = window._hpGroupePreselect;
+  const bannerHtml = gp
+    ? '<div class="plan-groupe-banner" id="plan-groupe-banner" role="status">'
+      + '<span>Réservation pour le groupe <b>' + String(gp.nom).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</b> : choisissez un créneau dans le planning.</span>'
+      + '<button type="button" id="plan-groupe-cancel">Annuler</button></div>'
+    : '';
+
   // Nav bar
-  const navHtml = `
-    <div class="planning-nav">
-      <button id="btn-plan-prev" class="plan-nav-arrow" title="Semaine précédente">&#8592;</button>
-      <span class="planning-nav-label">${_formatWeekLabel(days)}</span>
-      <button id="btn-plan-today" class="plan-nav-today"${weekOffset === 0 ? ' disabled' : ''}>Aujourd'hui</button>
-      <button id="btn-plan-next" class="plan-nav-arrow" title="Semaine suivante">&#8594;</button>
+  const navHtml = bannerHtml + `
+    <div class="nb planning-nav">
+      <button type="button" id="btn-plan-prev" class="nb-arrow" title="Semaine précédente" aria-label="Semaine précédente">&#8592;</button>
+      <div class="nb-centre">
+        <span class="nb-date">${_formatWeekLabel(days)}</span>
+        ${weekOffset === 0
+          ? '<span class="nb-today">Cette semaine</span>'
+          : '<button type="button" id="btn-plan-today" class="nb-back">↩ Revenir à cette semaine</button>'}
+      </div>
+      <button type="button" id="btn-plan-next" class="nb-arrow" title="Semaine suivante" aria-label="Semaine suivante">&#8594;</button>
     </div>
   `;
 
@@ -176,7 +188,15 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   document.getElementById('btn-plan-next').addEventListener('click', () => {
     if (container._onNext) container._onNext();
   });
-  document.getElementById('btn-plan-today').addEventListener('click', () => {
+  const gpCancel = document.getElementById('plan-groupe-cancel');
+  if (gpCancel) gpCancel.addEventListener('click', () => {
+    window._hpGroupePreselect = null;
+    const b = document.getElementById('plan-groupe-banner');
+    if (b) b.remove();
+  });
+
+  const planTodayBtn = document.getElementById('btn-plan-today');
+  if (planTodayBtn) planTodayBtn.addEventListener('click', () => {
     if (container._onToday) container._onToday();
   });
 

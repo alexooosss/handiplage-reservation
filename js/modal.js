@@ -1172,6 +1172,17 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
     nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
   })();
 
+  // Réservation lancée depuis la fiche d'un groupe (onglet Groupes → « Réserver un créneau ») :
+  // type « Groupe » et groupe présélectionnés
+  if (window._hpGroupePreselect) {
+    const gp = window._hpGroupePreselect;
+    const gBtn = document.querySelector('#pf-type .radio-btn[data-value="groupe"]');
+    if (gBtn) gBtn.click();
+    document.getElementById('pf-nom').value = gp.nom;
+    _linkedGroupeId = gp.id;
+    setTimeout(function() { const e = document.getElementById('pf-empl'); if (e) e.focus(); }, 50);
+  }
+
   document.getElementById('pf-add').addEventListener('click', async () => {
     const nom           = document.getElementById('pf-nom').value.trim().toUpperCase();
     const resaType      = document.querySelector('#pf-type .radio-btn.selected').dataset.value;
@@ -1214,6 +1225,12 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
         : { nom, prenom, accompagnants, resaType, inscriptionId: _linkedPfInscriptionId, groupeId: null };
       _linkedGroupeId = null;
       await callbacks.onAdd(addData);
+      // Réservation du groupe présélectionné faite : on sort de ce mode
+      if (window._hpGroupePreselect && resaType === 'groupe') {
+        window._hpGroupePreselect = null;
+        const ban = document.getElementById('plan-groupe-banner');
+        if (ban) ban.remove();
+      }
       _linkedPfInscriptionId = null;
       document.getElementById('pf-prenom').value = '';
       document.getElementById('pf-nom').value    = '';

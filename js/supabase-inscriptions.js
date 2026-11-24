@@ -91,6 +91,31 @@ async function getInscriptions() {
 }
 
 /**
+ * Version légère pour la liste / le tableau de bord de l'onglet Inscription :
+ * uniquement les champs affichés, SANS les justificatifs (base64 lourds).
+ * La fiche complète se charge à part avec getInscriptionById().
+ */
+async function getInscriptionsListe() {
+  var result = await supabaseClient
+    .from('inscriptions')
+    .select('id,nom,prenom,mail,telephone,statut,created_at,updated_at,pass_actif,pass_activated_at,derniere_saison_validee,'
+      + 'dateNaissance:metadata->dateNaissance,'
+      + 'justificatif1Name:metadata->>justificatif1Name,'
+      + 'justificatif2Name:metadata->>justificatif2Name,'
+      + 'justificatifStatut:metadata->>justificatifStatut')
+    .order('nom');
+  if (result.error) throw result.error;
+  return (result.data || []).map(function(row) {
+    var obj = _rowToInscription(row);
+    obj.dateNaissance      = row.dateNaissance || null;
+    obj.justificatif1Name  = row.justificatif1Name || '';
+    obj.justificatif2Name  = row.justificatif2Name || '';
+    obj.justificatifStatut = row.justificatifStatut || null;
+    return obj;
+  });
+}
+
+/**
  * Retourne le cache synchrone (jamais null : [] si vide).
  */
 function getCachedInscriptions() {

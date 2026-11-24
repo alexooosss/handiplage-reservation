@@ -18,7 +18,7 @@ function _docKind(dataUrl) {
   return null;
 }
 
-function _renderDocPreview(dataUrl, name, key) {
+function _renderDocPreview(dataUrl, name, key, aVerifier) {
   if (!name) return '';
   var kind  = _docKind(dataUrl);
   var thumb = kind === 'image'
@@ -29,35 +29,226 @@ function _renderDocPreview(dataUrl, name, key) {
     +   '<div class="insc-doc-meta">'
     +     '<span class="insc-doc-name">' + _escI(name) + '</span>'
     +     (kind
-          ? '<button type="button" class="insc-doc-open insc-doc-open-link" data-doc="' + key + '">Ouvrir en grand ↗</button>'
+          ? (aVerifier
+              ? '<button type="button" class="insc-doc-open insc-doc-verify" data-doc="' + key + '">Vérifier le justificatif</button>'
+              : '<button type="button" class="insc-doc-open insc-doc-open-link" data-doc="' + key + '">Ouvrir en grand</button>')
           : '<span class="insc-doc-unavailable">Aperçu indisponible (format non pris en charge)</span>')
     +   '</div>'
     +   '<button type="button" class="insc-file-del" id="del-' + key + '" title="Supprimer ce document">✕</button>'
     + '</div>';
 }
 
-// Ouvre le document dans un nouvel onglet via une URL blob (les URL data: en navigation
-// directe sont bloquées par les navigateurs).
-function _openDoc(dataUrl) {
-  if (!_docKind(dataUrl)) return;
+// ── Statut du justificatif (stocké dans metadata.justificatifStatut) ──
+// 'valide' | 'refuse' | absent (= à vérifier).
+// Les inscriptions déjà validées avant cette règle sont considérées comme vérifiées.
+function _justifStatut(v) {
+  if (v.justificatifStatut === 'valide' || v.justificatifStatut === 'refuse') return v.justificatifStatut;
+  if (!v.justificatifStatut && v.statut === 'valide' && (v.justificatif1Name || v.justificatif2Name)) return 'valide';
+  return 'a_verifier';
+}
+function _hasJustif(v) { return !!(v.justificatif1Name || v.justificatif2Name); }
+
+async function _saveJustifStatut(v, statut) {
+  const newMeta = Object.assign({}, v);
+  ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
+  newMeta.justificatifStatut = statut;
+  await updateInscription(v.id, { metadata: newMeta });
+  v.justificatifStatut = statut;
+  const light = (typeof _inscListe !== 'undefined' ? _inscListe : []).find(function(i) { return i.id === v.id; });
+  if (light) light.justificatifStatut = statut;
+}
+
+// Temps réel : met à jour la liste (et le tableau de bord s'il est affiché) sans fermer la fiche ouverte
+async function refreshInscriptionListe(container) {
+  if (!container || !document.getElementById('insc-list')) return;
+  await _refreshSidebar(container);
+  const mainEl = document.getElementById('insc-main');
+  if (mainEl && mainEl.querySelector('.idb')) {
+    _showInscDashboard(container, _inscListe, await getSaisonCourante());
+  }
+}
+
+// Données binaires d'un data: URL déjà vérifié → URL blob (pour le PDF dans la visionneuse)
+function _docBlobUrl(dataUrl) {
   var comma = dataUrl.indexOf(',');
   var mime  = dataUrl.slice(5, dataUrl.indexOf(';'));
   var bin   = atob(dataUrl.slice(comma + 1));
   var bytes = new Uint8Array(bin.length);
   for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  var url = URL.createObjectURL(new Blob([bytes], { type: mime }));
-  window.open(url, '_blank', 'noopener');
-  setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}
+
+// ── Visionneuse plein écran : lire le justificatif puis valider / refuser l'inscription ──
+// opts : { v, key: 'doc1'|'doc2', onDecision(statut) }
+function _openDocViewer(opts) {
+  var v = opts.v;
+  var docs = [
+    { key: 'doc1', label: 'Document principal', data: v.justificatif1, name: v.justificatif1Name },
+    { key: 'doc2', label: 'Deuxième document',  data: v.justificatif2, name: v.justificatif2Name },
+  ].filter(function(d) { return d.name && _docKind(d.data); });
+  if (!docs.length) return;
+  var idx = Math.max(0, docs.findIndex(function(d) { return d.key === opts.key; }));
+  var rot = 0, zoom = false, blobUrl = null;
+
+  var js        = _justifStatut(v);
+  var statutLbl = { valide: 'Valable', refuse: 'Refusé' }[js] || 'À vérifier';
+  var statutCls = js === 'valide' ? 'ok' : js === 'refuse' ? 'ko' : 'wait';
+  var personne  = ((v.nom || '').toUpperCase() + ' ' + (v.prenom || '')).trim();
+
+  var dlg = document.createElement('dialog');
+  dlg.className = 'doc-viewer';
+  dlg.setAttribute('aria-label', 'Justificatif de ' + personne);
+  dlg.innerHTML =
+      '<div class="dv-bar">'
+    +   '<div class="dv-titre">'
+    +     '<b>' + _escI(personne) + '</b>'
+    +     '<span class="dv-statut dv-statut-' + statutCls + '">Justificatif : ' + statutLbl + '</span>'
+    +   '</div>'
+    +   (docs.length > 1
+          ? '<div class="dv-tabs" role="tablist">' + docs.map(function(d, i) {
+              return '<button type="button" role="tab" class="dv-tab" data-i="' + i + '">' + d.label + '</button>';
+            }).join('') + '</div>'
+          : '')
+    +   '<div class="dv-tools">'
+    +     '<button type="button" class="dv-tool" id="dv-rot" title="Pivoter de 90°" aria-label="Pivoter de 90 degrés">⟳</button>'
+    +     '<button type="button" class="dv-tool" id="dv-zoom" title="Taille réelle / ajuster" aria-label="Zoom">⤢</button>'
+    +   '</div>'
+    +   '<button type="button" class="dv-close" id="dv-close" aria-label="Fermer">✕</button>'
+    + '</div>'
+    + '<div class="dv-stage" id="dv-stage"></div>'
+    + '<div class="dv-foot">'
+    +   '<span class="dv-nom" id="dv-nom"></span>'
+    +   '<div class="dv-actions">'
+    +     '<button type="button" class="dv-btn dv-refuser" id="dv-refuser"' + (js === 'refuse' ? ' disabled' : '') + '>✗ Refuser le justificatif</button>'
+    +     '<button type="button" class="dv-btn dv-valider" id="dv-valider"' + (js === 'valide' ? ' disabled' : '') + '>✓ Justificatif valable</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(dlg);
+
+  var stage = dlg.querySelector('#dv-stage');
+  function show() {
+    var d = docs[idx];
+    if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+    rot = 0; zoom = false;
+    var kind = _docKind(d.data);
+    dlg.querySelector('#dv-rot').hidden  = kind !== 'image';
+    dlg.querySelector('#dv-zoom').hidden = kind !== 'image';
+    if (kind === 'image') {
+      stage.innerHTML = '<img class="dv-img" alt="' + _escI(d.label + ' — ' + d.name) + '">';
+      var img = stage.querySelector('img');
+      img.src = d.data;
+      img.draggable = false;
+      // Vue ajustée : un clic zoome sur le point cliqué. Vue zoomée : glisser déplace,
+      // double-clic revient à la vue ajustée.
+      img.addEventListener('click', function(e) { if (!zoom) zoomAt(e); });
+    } else {
+      blobUrl = _docBlobUrl(d.data);
+      stage.innerHTML = '<iframe class="dv-pdf" title="' + _escI(d.label) + '"></iframe>';
+      stage.querySelector('iframe').src = blobUrl;
+    }
+    applyView();
+    dlg.querySelector('#dv-nom').textContent = d.label + ' · ' + d.name;
+    dlg.querySelectorAll('.dv-tab').forEach(function(t) {
+      var on = parseInt(t.dataset.i) === idx;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on);
+    });
+  }
+  function applyView() {
+    var img = stage.querySelector('.dv-img');
+    if (!img) return;
+    stage.classList.toggle('zoom', zoom);
+    img.style.transform = rot ? 'rotate(' + rot + 'deg)' : '';
+    img.classList.toggle('quart', rot % 180 !== 0);
+  }
+  function toggleZoom() { zoom = !zoom; applyView(); }
+
+  // Zoom centré sur le point cliqué
+  function zoomAt(e) {
+    var img = stage.querySelector('.dv-img');
+    var r = img.getBoundingClientRect();
+    var fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    zoom = true; applyView();
+    stage.scrollLeft = fx * stage.scrollWidth  - stage.clientWidth  / 2;
+    stage.scrollTop  = fy * stage.scrollHeight - stage.clientHeight / 2;
+  }
+
+  // Outil « main » : glisser pour se déplacer dans l'image zoomée (souris, doigt, stylet)
+  var drag = null;
+  stage.addEventListener('pointerdown', function(e) {
+    if (!zoom || e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, sl: stage.scrollLeft, st: stage.scrollTop };
+    stage.setPointerCapture(e.pointerId);
+    stage.classList.add('grabbing');
+    e.preventDefault();
+  });
+  stage.addEventListener('pointermove', function(e) {
+    if (!drag) return;
+    stage.scrollLeft = drag.sl - (e.clientX - drag.x);
+    stage.scrollTop  = drag.st - (e.clientY - drag.y);
+  });
+  function endDrag() { drag = null; stage.classList.remove('grabbing'); }
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('dblclick', function() { if (zoom) toggleZoom(); });
+  function close() {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    if (dlg.open) dlg.close();
+    dlg.remove();
+  }
+
+  dlg.querySelectorAll('.dv-tab').forEach(function(t) {
+    t.addEventListener('click', function() { idx = parseInt(t.dataset.i); show(); });
+  });
+  dlg.querySelector('#dv-rot').addEventListener('click', function() { rot = (rot + 90) % 360; applyView(); });
+  dlg.querySelector('#dv-zoom').addEventListener('click', toggleZoom);
+  dlg.querySelector('#dv-close').addEventListener('click', close);
+  dlg.addEventListener('cancel', function(e) { e.preventDefault(); close(); });   // Échap
+  dlg.addEventListener('click', function(e) { if (e.target === dlg) close(); });  // clic sur le fond
+  dlg.querySelector('#dv-valider').addEventListener('click', function() {
+    close();
+    if (opts.onDecision) opts.onDecision('valide');
+  });
+  dlg.querySelector('#dv-refuser').addEventListener('click', function() {
+    close();
+    if (opts.onDecision) opts.onDecision('refuse');
+  });
+
+  show();
+  dlg.showModal();
+  dlg.querySelector('#dv-close').focus();
+}
+
+// Liste légère (sans les justificatifs) partagée par la liste, la recherche et le tableau de bord
+var _inscListe = [];
+
+async function _loadInscListe() {
+  _inscListe = (typeof getInscriptionsListe === 'function') ? await getInscriptionsListe() : await getInscriptions();
+  return _inscListe;
+}
+
+// Ouvre la fiche : ne télécharge que CETTE inscription (avec ses justificatifs)
+async function _openInscFiche(container, id) {
+  const mainEl = document.getElementById('insc-main');
+  if (mainEl) mainEl.innerHTML = '<div class="insc-loading" role="status">Chargement de la fiche…</div>';
+  _openInscFiche._req = id;
+  const insc = (typeof getInscriptionById === 'function')
+    ? await getInscriptionById(id)
+    : (await getInscriptions()).find(function(i) { return i.id === id; });
+  if (_openInscFiche._req !== id) return null;   // un autre clic a eu lieu entre-temps
+  if (insc) _showForm(container, insc);
+  return insc;
 }
 
 // ── Vue principale ──
 async function renderInscription(container, selectedId) {
-  const [inscriptions, saisonCourante, saisonDates] = await Promise.all([getInscriptions(), getSaisonCourante(), getSaisonDates()]);
+  const [inscriptions, saisonCourante, saisonDates] = await Promise.all([_loadInscListe(), getSaisonCourante(), getSaisonDates()]);
 
   container.innerHTML = '<div class="insc-layout">'
     + '<div class="insc-sidebar">'
     +   '<div class="insc-sidebar-hd">'
-    +     '<h2 class="insc-sidebar-title">Inscriptions</h2>'
+    +     '<div class="insc-sidebar-top"><h2 class="insc-sidebar-title">Inscriptions</h2>'
+    +       '<button type="button" class="insc-dash-link" id="insc-dash-btn" hidden>Vue d\'ensemble</button></div>'
     +     '<input type="search" id="insc-search" class="insc-search-inp" placeholder="Rechercher…">'
     +     '<button class="btn-primary" id="insc-new-btn">＋ Nouvelle inscription</button>'
     +     '<button class="btn-secondary" id="insc-open-season-btn" style="margin-top:8px">Ouvrir la saison ' + (saisonCourante + 1) + '</button>'
@@ -65,20 +256,21 @@ async function renderInscription(container, selectedId) {
     +   '</div>'
     +   '<div id="insc-list" class="insc-list">' + _renderListItems(inscriptions, '') + '</div>'
     + '</div>'
-    + '<div class="insc-main" id="insc-main">'
-    +   '<div class="insc-empty">'
-    +     ''
-    +     '<p>Sélectionnez une inscription ou créez-en une nouvelle.</p>'
-    +     '<p class="insc-count">' + inscriptions.length + ' inscription' + (inscriptions.length !== 1 ? 's' : '') + ' enregistrée' + (inscriptions.length !== 1 ? 's' : '') + '</p>'
-    +   '</div>'
-    + '</div>'
+    + '<div class="insc-main" id="insc-main"></div>'
     + '</div>';
+
+  // Partie droite : tableau de bord tant qu'aucune inscription n'est ouverte
+  _showInscDashboard(container, inscriptions, saisonCourante);
 
   document.getElementById('insc-search').addEventListener('input', async function() {
     const q = this.value.toLowerCase();
-    const list = getCachedInscriptions() || await getInscriptions();
-    document.getElementById('insc-list').innerHTML = _renderListItems(list, q);
+    document.getElementById('insc-list').innerHTML = _renderListItems(_inscListe, q);
     _bindListItems(container);
+  });
+
+  document.getElementById('insc-dash-btn').addEventListener('click', function() {
+    _openInscFiche._req = null;
+    _showInscDashboard(container, _inscListe, saisonCourante);
   });
 
   document.getElementById('insc-new-btn').addEventListener('click', function() {
@@ -102,6 +294,143 @@ async function renderInscription(container, selectedId) {
     var target = container.querySelector('.insc-list-item[data-id="' + selectedId + '"]');
     if (target) { target.click(); target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   }
+}
+
+// ── Tableau de bord (partie droite quand aucune fiche n'est ouverte) ──
+function _fmtJM(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+async function _showInscDashboard(container, inscriptions, saison) {
+  const mainEl = document.getElementById('insc-main');
+  if (!mainEl) return;
+  const dashBtn = document.getElementById('insc-dash-btn');
+  if (dashBtn) dashBtn.hidden = true;
+  container.querySelectorAll('.insc-list-item').forEach(function(e) { e.classList.remove('active'); });
+
+  const nom   = i => _escI((i.nom || '').toUpperCase()) + ' ' + _escI(i.prenom || '');
+  const nbDoc = i => (i.justificatif1Name ? 1 : 0) + (i.justificatif2Name ? 1 : 0);
+
+  const attente  = inscriptions.filter(i => !i.statut || i.statut === 'en_attente');
+  const valides  = inscriptions.filter(i => i.statut === 'valide');
+  const refuses  = inscriptions.filter(i => i.statut === 'refuse');
+  const aVerif   = attente.filter(i => _hasJustif(i) && _justifStatut(i) === 'a_verifier');
+  const aValider = attente.filter(i => _justifStatut(i) === 'valide');
+  const sansDoc  = attente.filter(i => !_hasJustif(i));
+  const il7j     = Date.now() - 7 * 86400000;
+  const nouvelles = inscriptions.filter(i => i.createdAt && new Date(i.createdAt).getTime() >= il7j);
+  const recentes = inscriptions.slice()
+    .filter(i => i.createdAt)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+
+  // Réponses d'usagers reçues après un refus (non lues), depuis Messages
+  let reponses = [];
+  if (typeof getMessages === 'function') {
+    try {
+      reponses = (await getMessages()).filter(m => m.contenu && !m.lu && !m.sujet);
+    } catch (e) { reponses = []; }
+  }
+
+  const tagStatut = i => i.statut === 'valide' ? '<span class="insc-status insc-status-ok">Validé</span>'
+                     : i.statut === 'refuse' ? '<span class="insc-status insc-status-ko">Refusé</span>'
+                     : '<span class="insc-status insc-status-wait">En attente</span>';
+
+  const ligne = (who, sub, btn) =>
+      '<li class="idb-row">'
+    +   '<div class="idb-who"><b>' + who + '</b><small>' + sub + '</small></div>'
+    +   btn
+    + '</li>';
+
+  let groupes = '';
+  if (aVerif.length) {
+    groupes += '<h3 class="idb-grp">Justificatif à vérifier</h3><ul class="idb-list">'
+      + aVerif.map(i => ligne(nom(i), 'Demande reçue le ' + _fmtJM(i.createdAt) + ' · ' + nbDoc(i) + ' document' + (nbDoc(i) > 1 ? 's' : ''),
+          '<button type="button" class="idb-act idb-act-verif" data-id="' + i.id + '" data-verif="1">Vérifier le justificatif</button>')).join('')
+      + '</ul>';
+  }
+  if (aValider.length) {
+    groupes += '<h3 class="idb-grp">Justificatif valable — inscription à valider</h3><ul class="idb-list">'
+      + aValider.map(i => ligne(nom(i), 'Demande reçue le ' + _fmtJM(i.createdAt),
+          '<button type="button" class="idb-act idb-act-open" data-id="' + i.id + '">Ouvrir la fiche</button>')).join('')
+      + '</ul>';
+  }
+  if (sansDoc.length) {
+    groupes += '<h3 class="idb-grp">En attente sans justificatif</h3><ul class="idb-list">'
+      + sansDoc.map(i => ligne(nom(i), 'Demande reçue le ' + _fmtJM(i.createdAt) + ' · aucun document joint',
+          '<button type="button" class="idb-act idb-act-open" data-id="' + i.id + '">Ouvrir la fiche</button>')).join('')
+      + '</ul>';
+  }
+  if (reponses.length) {
+    groupes += '<h3 class="idb-grp">Réponse reçue après un refus</h3><ul class="idb-list">'
+      + reponses.map(m => {
+          const extrait = (m.contenu || '').replace(/\s+/g, ' ').slice(0, 60);
+          return ligne(_escI((m.nom || '').toUpperCase()) + ' ' + _escI(m.prenom || ''),
+            '« ' + _escI(extrait) + ((m.contenu || '').length > 60 ? '…' : '') + ' » · ' + _fmtJM(m.createdAt),
+            '<button type="button" class="idb-act idb-act-msg" data-msg="1">Lire la réponse</button>');
+        }).join('')
+      + '</ul>';
+  }
+  const nbTraiter = aVerif.length + aValider.length + sansDoc.length + reponses.length;
+
+  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  mainEl.innerHTML = '<div class="idb">'
+    + '<div class="idb-hd"><h2>Inscriptions — saison ' + saison + '</h2><p>' + today + ' · ce qu\'il reste à faire</p></div>'
+
+    + '<div class="idb-kpis">'
+    +   '<div class="idb-kpi k-wait"><span class="idb-kpi-n">' + attente.length + '</span><span class="idb-kpi-l">En attente</span>'
+    +     '<span class="idb-kpi-s">' + (aVerif.length ? 'dont ' + aVerif.length + ' justificatif' + (aVerif.length > 1 ? 's' : '') + ' à vérifier' : 'aucun justificatif à vérifier') + '</span></div>'
+    +   '<div class="idb-kpi k-ok"><span class="idb-kpi-n">' + valides.length + '</span><span class="idb-kpi-l">Validées</span>'
+    +     '<span class="idb-kpi-s">pass actifs</span></div>'
+    +   '<div class="idb-kpi k-ko"><span class="idb-kpi-n">' + refuses.length + '</span><span class="idb-kpi-l">Refusées</span>'
+    +     '<span class="idb-kpi-s">' + (reponses.length ? reponses.length + ' réponse' + (reponses.length > 1 ? 's' : '') + ' reçue' + (reponses.length > 1 ? 's' : '') : 'aucune réponse en attente') + '</span></div>'
+    +   '<div class="idb-kpi k-new"><span class="idb-kpi-n">' + nouvelles.length + '</span><span class="idb-kpi-l">Nouvelles demandes</span>'
+    +     '<span class="idb-kpi-s">ces 7 derniers jours</span></div>'
+    + '</div>'
+
+    + '<div class="idb-cols">'
+    +   '<section class="idb-card"><h2 class="idb-card-t">À traiter <span class="idb-count' + (nbTraiter ? '' : ' zero') + '">' + nbTraiter + '</span></h2>'
+    +     (groupes || '<p class="idb-empty">Rien à traiter pour l\'instant. ✓</p>')
+    +   '</section>'
+    +   '<section class="idb-card"><h2 class="idb-card-t">Dernières demandes reçues</h2>'
+    +     (recentes.length
+            ? '<ul class="idb-list">' + recentes.map(i =>
+                '<li class="idb-row idb-row-click" data-id="' + i.id + '" tabindex="0" role="button">'
+              +   '<div class="idb-who"><b>' + nom(i) + '</b><small>' + nbDoc(i) + ' document' + (nbDoc(i) > 1 ? 's' : '') + ' joint' + (nbDoc(i) > 1 ? 's' : '') + '</small></div>'
+              +   tagStatut(i) + '<span class="idb-when">' + _fmtJM(i.createdAt) + '</span>'
+              + '</li>').join('') + '</ul>'
+            : '<p class="idb-empty">Aucune demande pour l\'instant.</p>')
+    +     '<button type="button" class="idb-maplink" id="idb-map">Voir la carte des usagers →</button>'
+    +   '</section>'
+    + '</div>'
+    + '</div>';
+
+  // Ouvrir une fiche (et éventuellement directement la visionneuse du justificatif)
+  async function ouvrir(id, verif) {
+    const item = container.querySelector('.insc-list-item[data-id="' + id + '"]');
+    container.querySelectorAll('.insc-list-item').forEach(function(e) { e.classList.remove('active'); });
+    if (item) { item.classList.add('active'); item.scrollIntoView({ block: 'nearest' }); }
+    try {
+      const insc = await _openInscFiche(container, id);
+      if (insc && verif) {
+        const b = document.querySelector('#insc-main .insc-doc-verify');
+        if (b) b.click();
+      }
+    } catch (err) {
+      mainEl.innerHTML = '<div class="insc-loading">Impossible d\'ouvrir la fiche : ' + _escI(err.message || String(err)) + '</div>';
+    }
+  }
+  mainEl.querySelectorAll('.idb-act[data-id]').forEach(b => b.addEventListener('click', () => ouvrir(b.dataset.id, b.dataset.verif === '1')));
+  mainEl.querySelectorAll('.idb-row-click').forEach(r => {
+    r.addEventListener('click', () => ouvrir(r.dataset.id, false));
+    r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(r.dataset.id, false); } });
+  });
+  mainEl.querySelectorAll('.idb-act-msg').forEach(b => b.addEventListener('click', () => { if (typeof App !== 'undefined') App.showView('messages'); }));
+  const mapBtn = document.getElementById('idb-map');
+  if (mapBtn) mapBtn.addEventListener('click', () => { if (typeof App !== 'undefined') App.showView('stats'); });
 }
 
 function _renderListItems(list, query) {
@@ -132,9 +461,12 @@ function _bindListItems(container) {
     el.addEventListener('click', async function() {
       container.querySelectorAll('.insc-list-item').forEach(function(e) { e.classList.remove('active'); });
       el.classList.add('active');
-      const list = await getInscriptions();
-      const insc = list.find(function(i) { return i.id === el.dataset.id; });
-      if (insc) _showForm(container, insc);
+      try {
+        await _openInscFiche(container, el.dataset.id);
+      } catch (err) {
+        const mainEl = document.getElementById('insc-main');
+        if (mainEl) mainEl.innerHTML = '<div class="insc-loading">Impossible d\'ouvrir la fiche : ' + _escI(err.message || String(err)) + '</div>';
+      }
     });
   });
 }
@@ -147,6 +479,9 @@ function _showForm(container, insc) {
   const aides = v.aidesTechniques || [];
   const mainEl = document.getElementById('insc-main');
   if (!mainEl) return;
+  // Une fiche est ouverte : proposer le retour à la vue d'ensemble
+  const dashBtn = document.getElementById('insc-dash-btn');
+  if (dashBtn) dashBtn.hidden = false;
 
   const currentYear = new Date().getFullYear();
   let yearOpts  = '<option value="">Année</option>';
@@ -169,7 +504,12 @@ function _showForm(container, insc) {
   mainEl.innerHTML = '<div class="insc-form-wrap">'
     + '<div class="insc-form-header">'
     +   '<h2>' + (isNew ? 'Nouvelle inscription' : 'Inscription — ' + _escI(v.nom) + ' ' + _escI(v.prenom)) + '</h2>'
-    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + sel(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + sel(v.statut,'refuse') + '>Refusé ✗</option></select></div>'
+    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + sel(v.statut,'valide') + ((_justifStatut(v) !== 'valide' && v.statut !== 'valide') ? ' disabled' : '') + '>Validé ✓</option><option value="refuse"' + sel(v.statut,'refuse') + '>Refusé ✗</option></select>'
+    +   '<span class="insc-statut-hint" id="insc-statut-hint"' + ((_justifStatut(v) === 'valide' || v.statut === 'valide') ? ' hidden' : '') + '>'
+    +     (_hasJustif(v)
+            ? 'Validation possible après vérification du justificatif. <button type="button" class="insc-hint-link" id="insc-hint-verify">Vérifier maintenant</button>'
+            : 'Aucun justificatif joint : validation impossible.')
+    +   '</span></div>'
     + '<div id="refus-block" style="' + (v.statut === 'refuse' ? '' : 'display:none') + ';margin-top:10px"><textarea id="refus-motif" placeholder="Motif du refus (justificatif non valable, etc.)" rows="3" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;resize:vertical"></textarea><button type="button" id="btn-send-refusal" style="margin-top:6px;padding:7px 14px;background:#e53935;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✉ Ouvrir le modèle d\'email de refus</button></div>'
     : '')
     +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'
@@ -272,13 +612,18 @@ function _showForm(container, insc) {
 
     // DOCUMENTS
     + '<div class="insc-section">'
-    +   '<div class="insc-section-title">Documents justificatifs</div>'
+    +   '<div class="insc-section-title">Documents justificatifs'
+    +     (!isNew && _hasJustif(v)
+            ? ' <span class="insc-justif-statut js-' + _justifStatut(v) + '" id="insc-justif-statut">'
+              + ({ valide: 'Justificatif valable ✓', refuse: 'Justificatif refusé ✗' }[_justifStatut(v)] || 'À vérifier') + '</span>'
+            : '')
+    +   '</div>'
     +   '<p class="insc-doc-info">Joindre le justificatif du handicap RECTO-VERSO, avec identité et date de validité lisible <span class="req">*</span><br><em>Carte Mobilité Inclusion (CMI) — les documents de l\'assurance maladie ne sont pas valables.</em></p>'
     +   '<div class="insc-field" style="margin-top:12px"><label>Document principal (recto-verso) <span class="req">*</span></label>'
-    +     _renderDocPreview(v.justificatif1, v.justificatif1Name, 'doc1')
+    +     _renderDocPreview(v.justificatif1, v.justificatif1Name, 'doc1', !isNew && _justifStatut(v) !== 'valide')
     +     '<input type="file" id="f-doc1" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:8px"><label>Deuxième document <span class="insc-optional">(verso si le premier n\'est pas recto-verso)</span></label>'
-    +     _renderDocPreview(v.justificatif2, v.justificatif2Name, 'doc2')
+    +     _renderDocPreview(v.justificatif2, v.justificatif2Name, 'doc2', !isNew && _justifStatut(v) !== 'valide')
     +     '<input type="file" id="f-doc2" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:16px"><label>Signature <span class="req">*</span> — <span class="insc-hint">La saisie de vos nom et prénom vaut signature</span></label><input type="text" id="f-signature" value="' + _escI(v.signature) + '" placeholder="Prénom NOM"></div>'
     + '</div>'
@@ -389,11 +734,13 @@ function _showForm(container, insc) {
         ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
         newMeta.justificatif1 = null;
         newMeta.justificatif1Name = '';
+        newMeta.justificatifStatut = null;   // nouveau contrôle nécessaire
         await updateInscription(v.id, { metadata: newMeta });
         v.justificatif1 = null;
         v.justificatif1Name = '';
+        v.justificatifStatut = null;
         const ex = document.getElementById('doc1-existing');
-        if (ex) ex.remove();
+        if (ex) ex.remove(); _syncJustifUI();
       });
     }
     const del2 = document.getElementById('del-doc2');
@@ -403,19 +750,83 @@ function _showForm(container, insc) {
         ['id','nom','prenom','mail','telephone','statut','pass','createdAt','updatedAt'].forEach(function(k) { delete newMeta[k]; });
         newMeta.justificatif2 = null;
         newMeta.justificatif2Name = '';
+        newMeta.justificatifStatut = null;   // nouveau contrôle nécessaire
         await updateInscription(v.id, { metadata: newMeta });
         v.justificatif2 = null;
         v.justificatif2Name = '';
+        v.justificatifStatut = null;
         const ex = document.getElementById('doc2-existing');
-        if (ex) ex.remove();
+        if (ex) ex.remove(); _syncJustifUI();
       });
     }
-    // Ouvrir un justificatif en grand
-    document.querySelectorAll('.insc-doc-open').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        _openDoc(btn.dataset.doc === 'doc1' ? v.justificatif1 : v.justificatif2);
+    // ── Justificatif : visionneuse plein écran → « valable » / « refusé » ──
+    // Tant que le justificatif n'est pas valable, « Validé » est indisponible dans le menu Statut.
+    function _syncJustifUI() {
+      const js     = _justifStatut(v);
+      const sEl    = document.getElementById('insc-statut');
+      const hint   = document.getElementById('insc-statut-hint');
+      const badge  = document.getElementById('insc-justif-statut');
+      const optVal = sEl && sEl.querySelector('option[value="valide"]');
+      if (optVal) optVal.disabled = js !== 'valide' && sEl.value !== 'valide';
+      if (hint)   hint.hidden = js === 'valide' || (sEl && sEl.value === 'valide');
+      if (badge) {
+        badge.className = 'insc-justif-statut js-' + js;
+        badge.textContent = { valide: 'Justificatif valable ✓', refuse: 'Justificatif refusé ✗' }[js] || 'À vérifier';
+      }
+      document.querySelectorAll('.insc-doc-verify, .insc-doc-open-link').forEach(function(b) {
+        const aVerifier = js !== 'valide';
+        b.className = 'insc-doc-open ' + (aVerifier ? 'insc-doc-verify' : 'insc-doc-open-link');
+        b.textContent = aVerifier ? 'Vérifier le justificatif' : 'Ouvrir en grand';
       });
+    }
+
+    function _openViewer(key) {
+      _openDocViewer({
+        v: v,
+        key: key,
+        onDecision: async function(decision) {
+          try {
+            await _saveJustifStatut(v, decision);
+          } catch (err) {
+            alert('Erreur lors de l\'enregistrement : ' + (err.message || err));
+            return;
+          }
+          _syncJustifUI();
+          const sEl  = document.getElementById('insc-statut');
+          const wrap = sEl ? (sEl.closest('.insc-form-status-sel') || sEl) : null;
+          if (decision === 'valide') {
+            // Justificatif valable : on amène l'utilisateur au menu Statut, désormais débloqué
+            if (wrap) {
+              wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              wrap.classList.remove('insc-statut-pret'); void wrap.offsetWidth;
+              wrap.classList.add('insc-statut-pret');
+              setTimeout(function() { sEl.focus({ preventScroll: true }); }, 400);
+            }
+          } else if (sEl && sEl.value !== 'refuse') {
+            // Justificatif refusé : l'inscription passe en « Refusé » et on propose le motif
+            v.statut = 'refuse';
+            sEl.value = 'refuse';
+            sEl.dispatchEvent(new Event('change'));
+            setTimeout(function() {
+              const motif = document.getElementById('refus-motif');
+              if (motif) { motif.scrollIntoView({ behavior: 'smooth', block: 'center' }); motif.focus({ preventScroll: true }); }
+            }, 350);
+          }
+        },
+      });
+    }
+
+    document.querySelectorAll('.insc-doc-open').forEach(function(btn) {
+      btn.addEventListener('click', function() { _openViewer(btn.dataset.doc); });
     });
+    const hintVerify = document.getElementById('insc-hint-verify');
+    if (hintVerify) hintVerify.addEventListener('click', function() { _openViewer(v.justificatif1Name ? 'doc1' : 'doc2'); });
+
+    // Garde-fou : « Validé » refusé si le justificatif n'est pas valable
+    const statutGuard = document.getElementById('insc-statut');
+    if (statutGuard) {
+      statutGuard.addEventListener('change', function() { _syncJustifUI(); });
+    }
   }
 
   // ── Pass ──
@@ -476,11 +887,17 @@ function _showForm(container, insc) {
 }
 
 async function _refreshSidebar(container) {
-  const insc = await getInscriptions();
+  const insc = await _loadInscListe();
   const searchEl = document.getElementById('insc-search');
   const q = searchEl ? searchEl.value.toLowerCase() : '';
   const listEl = document.getElementById('insc-list');
+  const actif  = listEl && listEl.querySelector('.insc-list-item.active');
+  const actifId = actif ? actif.dataset.id : null;
   if (listEl) listEl.innerHTML = _renderListItems(insc, q);
+  if (actifId) {
+    const el = listEl.querySelector('.insc-list-item[data-id="' + actifId + '"]');
+    if (el) el.classList.add('active');
+  }
   _bindListItems(container);
 }
 
@@ -606,9 +1023,14 @@ function _handleSubmit(container, existingId, existingData) {
     justificatif1Name: existingData ? existingData.justificatif1Name : '',
     justificatif2:     existingData ? existingData.justificatif2 : null,
     justificatif2Name: existingData ? existingData.justificatif2Name : '',
+    justificatifStatut: existingData ? (existingData.justificatifStatut || null) : null,
   };
 
   _readFiles(g('f-doc1'), g('f-doc2'), inscData, async function(data) {
+    // Nouveau document joint : il faut le vérifier à nouveau
+    if (existingData && (data.justificatif1 !== existingData.justificatif1 || data.justificatif2 !== existingData.justificatif2)) {
+      data.justificatifStatut = null;
+    }
     try {
       if (existingId) {
         await updateInscription(existingId, {

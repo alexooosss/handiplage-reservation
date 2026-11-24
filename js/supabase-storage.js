@@ -310,6 +310,19 @@ async function getReservationsForGroupe(groupeId, groupeNom) {
   return [...(byId.data || []), ...(byNom.data || [])].sort(function(a, b) { return b.date.localeCompare(a.date); });
 }
 
+// Toutes les réservations de groupes depuis le 1er janvier de l'année en cours (venues passées + à venir)
+async function getGroupeReservationsSaison() {
+  var debut = new Date().getFullYear() + '-01-01';
+  var result = await supabaseClient.from('reservations')
+    .select('date, creneau_id, statut, spot_id, nb_usagers, groupe_id, nom')
+    .eq('resa_type', 'groupe')
+    .gte('date', debut)
+    .order('date', { ascending: true })
+    .limit(2000);
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
 async function getReservationsForInscription(inscriptionId) {
   var result = await supabaseClient.from('reservations')
     .select('id, date, creneau_id, statut, accompagnants, spot_id, resa_type')
