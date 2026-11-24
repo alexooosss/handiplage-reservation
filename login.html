@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Capturer le hash avant que Supabase ne le consomme -->
   <script>window._initialHash = window.location.hash;</script>
-  <link rel="icon" type="image/png" href="icons/favicon-palmier.png">
+  <link rel="icon" type="image/png" sizes="128x128" href="icons/favicon-palmier.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icone-handiplage.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0772b8">
@@ -254,8 +255,8 @@
     /* ── Étiquette adresse : ouvre le plan ── */
     .login-place {
       position: fixed;
-      right: 24px;
-      top: 20px;
+      right: calc(24px + env(safe-area-inset-right, 0px));
+      top: calc(20px + env(safe-area-inset-top, 0px));
       z-index: 2;
       display: inline-flex;
       align-items: center;
@@ -279,8 +280,8 @@
     /* ── Pied de page ── */
     .login-footer {
       position: fixed;
-      right: 24px;
-      bottom: 16px;
+      right: calc(24px + env(safe-area-inset-right, 0px));
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
       display: flex;
       flex-wrap: wrap;
       gap: 4px 12px;
@@ -290,6 +291,86 @@
     }
     .login-footer a { color: inherit; text-decoration: none; }
     .login-footer a:hover { text-decoration: underline; }
+
+    /* ── Aperçu du plan (fenêtre) ── */
+    .map-dialog {
+      width: min(640px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      margin: auto;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.6);
+      border-radius: 24px;
+      overflow: hidden;
+      color: #1a2340;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      box-shadow: 0 30px 80px -20px rgba(10,22,40,.55), inset 0 1px 0 rgba(255,255,255,.95);
+    }
+    .map-dialog::backdrop { background: rgba(10,22,40,.45); backdrop-filter: blur(3px); }
+    .map-dialog[open]::backdrop { animation: map-fond-in .3s ease-out; }
+    .map-dialog.is-closing::backdrop { animation: map-fond-out .26s ease-in forwards; }
+    @keyframes map-fond-in  { from { opacity: 0; } }
+    @keyframes map-fond-out { to   { opacity: 0; } }
+
+    /* Tiroir : panneau qui glisse depuis la droite, toute la hauteur */
+    .map-dialog[data-anim="tiroir"] {
+      margin: 0 0 0 auto;
+      width: min(520px, 100%);   /* 100% = largeur visible, hors barre de défilement (100vw l'inclut) */
+      height: 100vh; height: 100dvh;
+      max-height: none;
+      max-width: none;   /* annule la marge maximale imposée par le navigateur aux fenêtres */
+      border-radius: 28px 0 0 28px;
+      border-right: none;
+    }
+    .map-dialog[data-anim="tiroir"][open] { display: flex; flex-direction: column; animation: tiroir-in .34s cubic-bezier(.2,.8,.2,1); }
+    .map-dialog[data-anim="tiroir"].is-closing { animation: tiroir-out .26s ease-in forwards; }
+    .map-dialog[data-anim="tiroir"] .map-frame { flex: 1; height: auto; min-height: 240px; }
+    /* Écran très bas (téléphone à l'horizontale) : carte plus petite, et le tiroir défile
+       en dernier recours pour que le bouton d'itinéraire reste toujours atteignable */
+    .map-dialog[data-anim="tiroir"] { overflow-y: auto; }
+    @media (max-height: 480px) { .map-dialog[data-anim="tiroir"] .map-frame { min-height: 150px; } }
+    /* Marges de sécurité iPhone (encoche / Dynamic Island en haut, barre d'accueil en bas) :
+       valent 0 tant que la page n'est pas en viewport-fit=cover, mais protègent si ça change */
+    .map-dialog[data-anim="tiroir"] .map-head { padding: calc(18px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 14px 20px; }
+    .map-dialog[data-anim="tiroir"] .map-actions { padding: 16px calc(20px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) 20px; }
+    @keyframes tiroir-in  { from { transform: translateX(100%); } }
+    @keyframes tiroir-out { to   { transform: translateX(100%); } }
+
+
+    @media (prefers-reduced-motion: reduce) {
+      .map-dialog[open], .map-dialog.is-closing, .map-dialog[open]::backdrop, .map-dialog.is-closing::backdrop { animation: none !important; }
+    }
+    .map-head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 12px 18px; }
+    .map-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+    .map-head-text { flex: 1; min-width: 0; }
+    .map-head h2 { font-size: 1.05rem; font-weight: 800; color: #05559b; }
+    .map-head p { font-size: .82rem; color: #2f3b52; }
+    .map-close {
+      width: 44px; height: 44px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: none; border-radius: 12px; background: rgba(26,35,64,.06); color: #1a2340; cursor: pointer;
+    }
+    .map-close:hover { background: rgba(26,35,64,.12); }
+    .map-close:focus-visible { outline: 3px solid #05559b; outline-offset: 2px; }
+    .map-frame { height: 360px; background: #e8eef4; border-top: 1px solid rgba(26,35,64,.08); border-bottom: 1px solid rgba(26,35,64,.08); }
+    .map-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+    .map-actions { padding: 14px 18px 16px; }
+    .map-go {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: .9rem; border-radius: 14px;
+      background: #ee751d; color: #0f1b2e; font-weight: 700; font-size: .95rem; text-decoration: none;
+      box-shadow: 0 4px 14px rgba(238,117,29,.3);
+      transition: background .15s;
+    }
+    .map-go:hover { background: #f28a3d; }
+    .map-go:focus-visible { outline: 3px solid #05559b; outline-offset: 2px; }
+    .map-note { margin-top: 8px; text-align: center; font-size: .78rem; color: #2f3b52; }
+    @media (max-width: 680px) {
+      .map-frame { height: 300px; }
+      .map-dialog[data-anim="tiroir"] { width: 100%; border-radius: 0; }
+    }
+    @media (max-height: 620px) { .map-frame { height: 220px; } }
 
     /* ── Écrans peu hauts. La carte non resserrée mesure ~743 px de haut :
           • ≥ 809 px de fenêtre : aucun changement ;
@@ -317,18 +398,23 @@
 
     /* ── Téléphone : carte pleine largeur, photo visible autour ── */
     @media (max-width: 680px) {
-      body { flex-direction: column; align-items: stretch; padding: 14px 14px 18px; }
-      .login-place { position: static; align-self: center; margin-bottom: 12px; }
+      body {
+        flex-direction: column; align-items: stretch;
+        padding: calc(14px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px))
+                 calc(18px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px));
+      }
+      /* Étiquette d'adresse sous la carte de connexion (puis le pied de page) */
+      .login-place { position: static; align-self: center; order: 1; margin-top: 14px; }
       .login-card { padding: 26px 20px 20px; border-radius: 24px; }
       .login-logo { width: 270px; }
-      .login-footer { position: static; justify-content: center; margin-top: 14px; }
+      .login-footer { position: static; order: 2; justify-content: center; margin-top: 14px; }
     }
   </style>
 </head>
 <body>
-  <!-- Adresse : ouvre le plan dans un nouvel onglet -->
-  <a class="login-place" href="https://www.google.com/maps/search/?api=1&amp;query=Boulevard+James+Wyllie+Antibes"
-     target="_blank" rel="noopener" aria-label="Bd James Wyllie, Antibes : ouvrir le plan dans un nouvel onglet">
+  <!-- Adresse : ouvre un aperçu du plan dans la page (repli sans JS : Google Maps dans un nouvel onglet) -->
+  <a class="login-place" id="place-btn" href="https://www.google.com/maps/search/?api=1&amp;query=Boulevard+James+Wyllie+Antibes"
+     target="_blank" rel="noopener" aria-haspopup="dialog" aria-label="Bd James Wyllie, Antibes : voir le plan et l'itinéraire">
     <span aria-hidden="true">📍</span> Bd James Wyllie · Antibes <span class="login-place-arrow" aria-hidden="true">↗</span>
   </a>
 
@@ -386,6 +472,76 @@
     <a href="mentions-legales.html">Mentions légales</a>
     <a href="politique-confidentialite.html">Confidentialité</a>
   </footer>
+
+  <!-- Aperçu du plan : la carte Google n'est chargée qu'à l'ouverture (rien n'est envoyé à Google avant) -->
+  <!-- Tiroir : glisse depuis la droite, sur toute la hauteur -->
+  <dialog class="map-dialog" id="map-dialog" data-anim="tiroir" aria-labelledby="map-title">
+    <div class="map-head">
+      <img src="icons/icone-handiplage.svg" alt="" class="map-icon">
+      <div class="map-head-text">
+        <h2 id="map-title">Handiplage d'Antibes</h2>
+        <p>Bd James Wyllie, Antibes</p>
+      </div>
+      <button type="button" class="map-close" id="map-close" aria-label="Fermer l'aperçu du plan">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="map-frame">
+      <iframe id="map-iframe" title="Plan : Handiplage d'Antibes, boulevard James Wyllie" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <div class="map-actions">
+      <a class="map-go" href="https://www.google.com/maps/dir/?api=1&amp;destination=Boulevard+James+Wyllie+Antibes" target="_blank" rel="noopener">
+        Ouvrir l'itinéraire dans Google Maps <span aria-hidden="true">↗</span>
+      </a>
+      <p class="map-note">L'itinéraire est calculé depuis votre position actuelle.</p>
+    </div>
+  </dialog>
+
+  <!-- Aperçu du plan : ouverture/fermeture de la fenêtre -->
+  <script>
+    (function () {
+      var lien   = document.getElementById('place-btn');
+      var dialog = document.getElementById('map-dialog');
+      var iframe = document.getElementById('map-iframe');
+      // Navigateur sans <dialog> : on laisse le lien ouvrir Google Maps normalement
+      if (!lien || !dialog || typeof dialog.showModal !== 'function') return;
+      var CARTE = 'https://maps.google.com/maps?q=Boulevard+James+Wyllie+Antibes&z=15&output=embed';
+      var sansAnim = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      function ouvrir() {
+        if (!iframe.getAttribute('src')) iframe.setAttribute('src', CARTE);   // chargée au 1er clic seulement
+        dialog.classList.remove('is-closing');
+        dialog.showModal();
+      }
+      // Fermeture animée (repli instantané si animations désactivées)
+      function fermer() {
+        if (!dialog.open || dialog.classList.contains('is-closing')) return;
+        if (sansAnim.matches) { dialog.close(); return; }
+        dialog.classList.add('is-closing');
+        var fait = false;
+        function terminer() {
+          if (fait) return;
+          fait = true;
+          dialog.removeEventListener('animationend', fin);
+          dialog.classList.remove('is-closing');
+          dialog.close();
+        }
+        function fin(e) {
+          if (e.target !== dialog || e.pseudoElement) return;   // ignorer l'animation du fond (::backdrop)
+          terminer();
+        }
+        dialog.addEventListener('animationend', fin);
+        setTimeout(terminer, 450);   // sécurité : se ferme même si la fin d'animation n'est pas signalée
+      }
+
+      lien.addEventListener('click', function (e) { e.preventDefault(); ouvrir(); });
+      document.getElementById('map-close').addEventListener('click', fermer);
+      // Clic sur le fond assombri ou touche Échap : fermer avec l'animation
+      dialog.addEventListener('click', function (e) { if (e.target === dialog) fermer(); });
+      dialog.addEventListener('cancel', function (e) { e.preventDefault(); fermer(); });
+      dialog.addEventListener('close', function () { lien.focus(); });
+    })();
+  </script>
 
   <!-- Afficher / masquer le mot de passe (œil) -->
   <script>

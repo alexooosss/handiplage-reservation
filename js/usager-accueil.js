@@ -92,7 +92,7 @@ async function renderAccueil(container, inscription, showView) {
 
     container.innerHTML = demoBanner
       + annonceHtml
-      + '<p style="font-size:.9375rem;color:#555;margin-bottom:14px">Bonjour, <strong>' + _escA(inscription.prenom) + '</strong></p>'
+      + '<h1 class="usager-hello">Bonjour, <span class="usager-hello-name">' + _escA(inscription.prenom) + '</span></h1>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'
       +   '<div class="usager-tile usager-tile-primary' + (inscription.passActif && !seasonOver ? '' : ' usager-tile-pass-off') + '" data-view="reserver"><div class="usager-tile-icon"><img src="icone%20r%C3%A9server.svg" alt="Réserver"></div><div class="usager-tile-label">Réserver</div>' + (inscription.passActif && !seasonOver ? '' : '<span class="usager-tile-lock">🔒</span>') + '</div>'
