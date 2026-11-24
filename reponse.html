@@ -3,24 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Handiplage -Réponse à votre dossier</title>
+  <title>Réponse à votre dossier — Handiplage Antibes</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="icons/favicon-palmier.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icone-handiplage.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#eef2f6">
   <link rel="stylesheet" href="css/public.css">
 </head>
-<body>
+<body class="legal-page">
 
 <header class="pub-header">
-  <div>
-    <div class="pub-header-title">🏖 Handiplage Antibes</div>
-    <div class="pub-header-sub">Réponse à votre dossier</div>
-  </div>
+  <a href="login.html"><img src="logo-handiplage-mot-bleu.svg" alt="Handiplage — accueil" class="pub-header-logo"></a>
 </header>
 
-<div class="pub-container">
+<main class="pub-container legal-main">
+
+  <h1 class="legal-title">Réponse à votre dossier</h1>
+  <p class="legal-updated">Handiplage d'Antibes — CCAS</p>
+
   <div id="reponse-content">
 
     <div class="pub-card">
-      <div class="pub-card-title">Adressez votre réponse à l'équipe Handiplage</div>
-      <p style="font-size:.9375rem;color:#555;margin-bottom:16px;line-height:1.6">
+      <h2 class="pub-card-title">Adressez votre réponse à l'équipe Handiplage</h2>
+      <p class="legal-p" style="margin-bottom:16px">
         Ce formulaire vous permet de répondre à la décision concernant votre demande d'inscription.
         Joignez tout élément complémentaire en décrivant votre situation dans le champ ci-dessous.
       </p>
@@ -37,14 +42,22 @@
       <form id="reponse-form">
         <div class="pub-field">
           <label for="f-contenu">Votre message <span class="req">*</span></label>
-          <textarea id="f-contenu" rows="8" placeholder="Décrivez votre situation, joignez les informations complémentaires…" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem;font-family:inherit;resize:vertical"></textarea>
+          <textarea id="f-contenu" rows="8" placeholder="Décrivez votre situation, joignez les informations complémentaires…" style="resize:vertical"></textarea>
         </div>
         <button type="submit" class="pub-btn" id="reponse-submit">Envoyer ma réponse</button>
       </form>
     </div>
 
   </div>
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <span>© 2026 CCAS d'Antibes — Handiplage</span>
+    <a href="mentions-legales.html">Mentions légales</a>
+    <a href="politique-confidentialite.html">Politique de confidentialité</a>
+  </div>
+</footer>
 
 <script src="js/env.js"></script>
 <script src="js/reponse.js"></script>

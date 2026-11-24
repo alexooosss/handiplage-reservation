@@ -81,16 +81,34 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   days.forEach(d => {
     const iso     = _isoDate(d);
     const isToday = iso === todayISO;
-    gridHtml += `<div class="planning-grid-header${isToday ? ' today' : ''}">${_formatDayHeader(d)}</div>`;
+    gridHtml += isToday
+      ? `<div class="planning-grid-header today" aria-current="date"><span class="pgh-today-tag">Aujourd'hui</span><span>${_formatDayHeader(d)}</span></div>`
+      : `<div class="planning-grid-header">${_formatDayHeader(d)}</div>`;
   });
+
+  // Créneau en cours (seulement si la semaine affichée contient aujourd'hui)
+  const weekHasToday = days.some(d => _isoDate(d) === todayISO);
+  const nowDate      = new Date();
+  // En cours ; sinon (entre deux créneaux / avant l'ouverture) : le prochain de la journée
+  const runningSlot  = weekHasToday ? SLOTS.find(s => getSlotStatus(s, nowDate) === 'active') : null;
+  const nextSlot     = weekHasToday && !runningSlot ? SLOTS.find(s => getSlotStatus(s, nowDate) === 'upcoming') : null;
+  const activeSlot   = runningSlot || nextSlot || null;
+  const nowTag       = runningSlot ? 'En cours' : 'À suivre';
 
   // Slot rows
   SLOTS.forEach((slot, slotIdx) => {
     const slotEndParts = slot.end.split(':').map(Number);
     const color = SLOT_COLORS[slotIdx] || '#1565c0';
+    const isNowRow = !!activeSlot && activeSlot.id === slot.id;
 
-    // Slot label — coloré par créneau
-    gridHtml += `<div class="planning-slot-label" style="border-left:3px solid ${color};background:${color}18;color:${color}">${slot.label}</div>`;
+    // Slot label — coloré par créneau ; plein + « En cours » pour le créneau actuel
+    if (isNowRow) {
+      const txt = slotIdx === 4 ? '#0f1b2e' : '#ffffff'; // jaune → texte foncé pour le contraste
+      gridHtml += `<div class="planning-slot-label now-row${runningSlot ? '' : ' is-next'}${slotIdx === 4 ? ' is-jaune' : ''}"${runningSlot ? ' aria-current="time"' : ''} style="--slot-c:${color};background:${color};color:${txt}">`
+               +   `<span class="psl-now-tag">${nowTag}</span><span>${slot.label}</span></div>`;
+    } else {
+      gridHtml += `<div class="planning-slot-label" style="border-left:3px solid ${color};background:${color}18;color:${color}">${slot.label}</div>`;
+    }
 
     // Day cells
     days.forEach(d => {
@@ -109,6 +127,8 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       let classes = 'planning-cell';
       if (isToday) classes += ' today-col';
       if (isPast)  classes += ' past';
+      // Créneau en cours : seule la case d'aujourd'hui est mise en avant
+      if (isNowRow && isToday) classes += runningSlot ? ' now-cell' : ' now-cell is-next';
 
       const nCls = cntN >= CAPACITY_NORMAL ? 'phalf-count full'
                  : cntN >= CAPACITY_NORMAL * 0.8 ? 'phalf-count warn' : 'phalf-count';
@@ -121,7 +141,7 @@ async function renderPlanning(container, weekOffset, onCellClick) {
         : '';
 
       // Les compteurs sont mis via textContent après rendu pour éviter tout problème d'interprétation
-      gridHtml += '<div class="' + classes + '" data-date="' + iso + '" data-slot-id="' + slot.id + '" style="border-top:3px solid ' + color + '">'
+      gridHtml += '<div class="' + classes + '" data-date="' + iso + '" data-slot-id="' + slot.id + '" style="--slot-c:' + color + ';border-top:3px solid ' + (isToday ? 'transparent' : color) + '">'
         + '<div class="phalf-row">'
         + '<div class="phalf" style="background:' + color + '0d">'
         + '<span class="' + nCls + '" style="' + nSty + '" translate="no" data-cnt="' + cntN + '" data-cap="' + CAPACITY_NORMAL + '"></span>'

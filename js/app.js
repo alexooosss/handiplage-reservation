@@ -46,6 +46,25 @@ const App = (() => {
 
     setInterval(function() { if (!_refreshing) refresh().catch(console.error); }, 30000);
 
+    // Mise à jour automatique quand un créneau commence / se termine (ou au changement de jour)
+    let _phaseKey = _computePhaseKey();
+    setInterval(function() {
+      const key = _computePhaseKey();
+      if (key === _phaseKey) return;
+      // Ne pas redessiner sous une fenêtre ouverte : on réessaiera à la minute suivante
+      const modal = document.getElementById('app-modal');
+      if (modal && modal.open) return;
+      _phaseKey = key;
+      _renderHeader();
+      if (_currentView === 'planning') _renderPlanning().catch(console.error);
+    }, 30000);
+
+    // Onglet « Plage » : retour au plan
+    const btnCarte = document.getElementById('btn-carte-tab');
+    if (btnCarte) {
+      btnCarte.addEventListener('click', () => showView('carte'));
+    }
+
     // Planning tab button
     const btnPlanning = document.getElementById('btn-planning-tab');
     if (btnPlanning) {
@@ -139,6 +158,15 @@ const App = (() => {
     const btnStats       = document.getElementById('btn-stats-tab');
     const btnProfil      = document.getElementById('btn-profil-tab');
     const profilView     = document.getElementById('profil-view');
+    const btnCarte       = document.getElementById('btn-carte-tab');
+    const slotsNav       = document.getElementById('slots-nav');
+
+    // Créneaux visibles uniquement sur le plan
+    if (slotsNav) slotsNav.hidden = view !== 'carte';
+    if (btnCarte) btnCarte.classList.toggle('active', view === 'carte');
+    document.querySelectorAll('#app-header .planning-tab-btn').forEach(b => {
+      b.setAttribute('aria-current', 'false');
+    });
 
     // Masquer tout
     if (beachPanel)   beachPanel.style.display   = 'none';
@@ -193,6 +221,9 @@ const App = (() => {
       if (beachPanel) beachPanel.style.display = '';
       if (sidePanel)  sidePanel.style.display  = '';
     }
+    document.querySelectorAll('#app-header .planning-tab-btn.active').forEach(b => {
+      b.setAttribute('aria-current', 'page');
+    });
   }
 
   function _mcDateOffset(iso, delta) {
@@ -262,7 +293,9 @@ const App = (() => {
   function selectSlot(slotId) {
     _selectedSlotId = slotId;
     document.querySelectorAll('.slot-pill').forEach(el => {
-      el.classList.toggle('selected-slot', parseInt(el.dataset.slotId) === slotId);
+      const sel = parseInt(el.dataset.slotId) === slotId;
+      el.classList.toggle('selected-slot', sel);
+      el.setAttribute('aria-pressed', sel ? 'true' : 'false');
     });
     if (typeof subscribeSlot === 'function') {
       subscribeSlot(_date, slotId, function() { refresh().catch(console.error); });
@@ -558,13 +591,23 @@ const App = (() => {
     );
   }
 
+  // État des créneaux du jour (sert à détecter un changement de phase)
+  function _computePhaseKey() {
+    const now = new Date();
+    return getTodayISO() + '|' + SLOTS.map(s => getSlotStatus(s, now)).join(',');
+  }
+
   // ── Header & horloge ──
   function _renderHeader() {
     const nav = document.getElementById('slots-nav');
-    nav.innerHTML = SLOTS.map(slot => {
+    const libelles = { active: 'en cours', past: 'terminé', upcoming: 'à venir' };
+    nav.innerHTML = '<div class="slots-track">' + SLOTS.map(slot => {
       const status = getSlotStatus(slot, new Date());
-      return `<div class="slot-pill" data-slot-id="${slot.id}" data-status="${status}">${slot.label.split(' – ')[0]}</div>`;
-    }).join('');
+      const heure  = slot.label.split(' – ')[0];
+      const sel    = slot.id === _selectedSlotId;
+      return `<button type="button" class="slot-pill${sel ? ' selected-slot' : ''}" data-slot-id="${slot.id}" data-status="${status}"`
+           + ` aria-pressed="${sel}" aria-label="Créneau ${heure}, ${libelles[status] || ''}"${status === 'past' ? ' disabled' : ''}>${heure}</button>`;
+    }).join('') + '</div>';
     nav.querySelectorAll('.slot-pill').forEach(el => {
       el.addEventListener('click', () => {
         if (el.dataset.status !== 'past') selectSlot(parseInt(el.dataset.slotId));

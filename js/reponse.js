@@ -11,7 +11,11 @@ function initReponsePage() {
 
   if (!token) {
     document.getElementById('reponse-content').innerHTML =
-      '<p style="color:#c62828;padding:20px">Lien invalide. Vérifiez l\'URL dans votre email.</p>';
+      '<div class="pub-card">'
+      +   '<h2 class="pub-card-title">Lien invalide</h2>'
+      +   '<p class="legal-p">Ce lien de réponse est incomplet ou n\'est plus valable. Vérifiez l\'adresse dans votre email, '
+      +   'ou contactez l\'équipe Handiplage : <a class="legal-link" href="mailto:handiplageresa@gmail.com">handiplageresa@gmail.com</a>.</p>'
+      + '</div>';
     return;
   }
 

@@ -157,6 +157,9 @@ function _showForm(container, insc) {
   for (let d = 1; d <= 31; d++) dayOpts += '<option value="' + d + '"' + (dob.jour == d ? ' selected' : '') + '>' + String(d).padStart(2,'0') + '</option>';
 
   const chk  = function(val, opt) { return val === opt ? ' checked' : ''; };
+  // Pour les <option> : l'attribut est « selected » (« checked » est ignoré et la liste
+  // affichait toujours sa 1re option, « En attente », même pour un dossier validé/refusé)
+  const sel  = function(val, opt) { return val === opt ? ' selected' : ''; };
   const chkA = function(opt) { return aides.includes(opt) ? ' checked' : ''; };
   const chkB = function(b) { return b ? ' checked' : ''; };
   const noneAide   = aides.length === 0 || aides.includes('aucun');
@@ -166,7 +169,7 @@ function _showForm(container, insc) {
   mainEl.innerHTML = '<div class="insc-form-wrap">'
     + '<div class="insc-form-header">'
     +   '<h2>' + (isNew ? 'Nouvelle inscription' : 'Inscription — ' + _escI(v.nom) + ' ' + _escI(v.prenom)) + '</h2>'
-    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + chk(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + chk(v.statut,'refuse') + '>Refusé ✗</option></select></div>'
+    +   (!isNew ? '<div class="insc-form-status-sel"><label>Statut :</label><select id="insc-statut"><option value="en_attente"' + ((!v.statut || v.statut === 'en_attente') ? ' selected' : '') + '>En attente</option><option value="valide"' + sel(v.statut,'valide') + '>Validé ✓</option><option value="refuse"' + sel(v.statut,'refuse') + '>Refusé ✗</option></select></div>'
     + '<div id="refus-block" style="' + (v.statut === 'refuse' ? '' : 'display:none') + ';margin-top:10px"><textarea id="refus-motif" placeholder="Motif du refus (justificatif non valable, etc.)" rows="3" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;resize:vertical"></textarea><button type="button" id="btn-send-refusal" style="margin-top:6px;padding:7px 14px;background:#e53935;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✉ Ouvrir le modèle d\'email de refus</button></div>'
     : '')
     +   '<div class="insc-invite-msg" style="display:none;color:green;font-size:12px;margin-top:4px"></div>'

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icone-handiplage.svg">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0772b8">
+  <meta name="theme-color" content="#ffffff">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -17,24 +17,29 @@
   <!-- HEADER -->
   <header id="app-header">
     <div class="logo">
-      <img src="logo%20handiplage%20antibes%20alexis.svg" alt="Handiplage Antibes" class="logo-img">
+      <img src="icons/icone-fauteuil-bleu.svg" alt="Handiplage" class="logo-img logo-icone" title="Handiplage">
     </div>
-    <nav class="slots-nav" id="slots-nav">
-      <!-- Injecté par app.js -->
+    <!-- Sections : « Plage » = le plan (écran par défaut) -->
+    <nav class="staff-tabs" aria-label="Sections">
+      <button type="button" id="btn-carte-tab" class="planning-tab-btn active">Plage</button>
+      <button type="button" id="btn-planning-tab" class="planning-tab-btn">Planning</button>
+      <button type="button" id="btn-mc-tab" class="planning-tab-btn">Main courante</button>
+      <button type="button" id="btn-insc-tab" class="planning-tab-btn">Inscription</button>
+      <button type="button" id="btn-groupes-tab" class="planning-tab-btn">Groupes</button>
+      <button type="button" id="btn-messages-tab" class="planning-tab-btn">
+        Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
+      </button>
+      <button type="button" id="btn-stats-tab" class="planning-tab-btn">Stats</button>
     </nav>
-    <button id="btn-planning-tab" class="planning-tab-btn">Planning</button>
-    <button id="btn-mc-tab" class="planning-tab-btn">Main courante</button>
-    <button id="btn-insc-tab" class="planning-tab-btn">Inscription</button>
-    <button id="btn-groupes-tab" class="planning-tab-btn">Groupes</button>
-    <button id="btn-messages-tab" class="planning-tab-btn">
-      Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
-    </button>
-    <button id="btn-stats-tab" class="planning-tab-btn">Stats</button>
-    <button id="btn-profil-tab" class="planning-tab-btn" style="margin-left:auto" title="Mon profil"><img src="icone%20mon%20compte%20blanc.svg" alt="Mon profil" style="height:20px;width:20px;display:block"></button>
-    <button id="btn-logout" class="planning-tab-btn">Déconnexion</button>
-    <div class="datetime" id="datetime">
-      <span class="time" id="clock">--:--</span>
-      <span id="date-label"></span>
+    <!-- Créneaux : affichés uniquement sur l'écran « Plage » (injectés par app.js) -->
+    <nav class="slots-nav" id="slots-nav" aria-label="Créneau affiché sur le plan"></nav>
+    <div class="header-actions">
+      <button type="button" id="btn-profil-tab" class="planning-tab-btn header-icon-btn" title="Mon profil" aria-label="Mon profil"><img src="icone%20mon%20compte.svg" alt=""></button>
+      <button type="button" id="btn-logout" class="planning-tab-btn header-logout-btn">Déconnexion</button>
+      <div class="datetime" id="datetime">
+        <span class="time" id="clock">--:--</span>
+        <span id="date-label"></span>
+      </div>
     </div>
   </header>
 
