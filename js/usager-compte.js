@@ -4,6 +4,24 @@
 function _escC(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function renderCompte(container, inscription, showView) {
+  // Compte démo partagé : son mot de passe est utilisé par le bouton « Essayer en démo »
+  // de la page de connexion. Le changer casserait la démo pour tout le monde.
+  var securiteHtml = inscription.isDemo
+    ? '<div class="usager-card">'
+      +   '<div class="usager-card-title">Sécurité</div>'
+      +   '<p class="usager-demo-notice" style="margin-top:4px">Compte de démonstration : le mot de passe ne peut pas être modifié.</p>'
+      + '</div>'
+    : '<div class="usager-card">'
+      +   '<div class="usager-card-title">Sécurité</div>'
+      +   '<button class="usager-btn usager-btn-ghost" id="btn-change-pwd">Changer mon mot de passe</button>'
+      +   '<div id="pwd-form" style="display:none;margin-top:16px">'
+      +     '<div style="margin-bottom:10px"><input type="password" id="new-pwd" placeholder="Nouveau mot de passe (8 car. min.)" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem"></div>'
+      +     '<div style="margin-bottom:10px"><input type="password" id="new-pwd2" placeholder="Confirmer le mot de passe" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem"></div>'
+      +     '<div id="pwd-msg" style="font-size:.875rem;margin-bottom:8px"></div>'
+      +     '<button class="usager-btn usager-btn-primary" id="btn-save-pwd">Enregistrer</button>'
+      +   '</div>'
+      + '</div>';
+
   container.innerHTML = '<button class="usager-back" id="back-compte">← Accueil</button>'
     + '<div class="usager-card">'
     +   '<div class="usager-card-title">Mes informations</div>'
@@ -13,18 +31,10 @@ function renderCompte(container, inscription, showView) {
     +   _infoRow('Téléphone', inscription.telephone)
     +   _infoRow('Adresse',   inscription.adresse ? inscription.adresse + ', ' + inscription.codePostal + ' ' + inscription.ville : '—')
     + '</div>'
-    + '<div class="usager-card">'
-    +   '<div class="usager-card-title">Sécurité</div>'
-    +   '<button class="usager-btn usager-btn-ghost" id="btn-change-pwd">Changer mon mot de passe</button>'
-    +   '<div id="pwd-form" style="display:none;margin-top:16px">'
-    +     '<div style="margin-bottom:10px"><input type="password" id="new-pwd" placeholder="Nouveau mot de passe (8 car. min.)" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem"></div>'
-    +     '<div style="margin-bottom:10px"><input type="password" id="new-pwd2" placeholder="Confirmer le mot de passe" style="width:100%;padding:12px;border:1.5px solid #ccc;border-radius:8px;font-size:1rem"></div>'
-    +     '<div id="pwd-msg" style="font-size:.875rem;margin-bottom:8px"></div>'
-    +     '<button class="usager-btn usager-btn-primary" id="btn-save-pwd">Enregistrer</button>'
-    +   '</div>'
-    + '</div>';
+    + securiteHtml;
 
   container.querySelector('#back-compte').addEventListener('click', function() { showView('accueil'); });
+  if (inscription.isDemo) return;   // pas de formulaire de mot de passe pour la démo
 
   var btnChangePwd = container.querySelector('#btn-change-pwd');
   var pwdForm      = container.querySelector('#pwd-form');
@@ -37,6 +47,7 @@ function renderCompte(container, inscription, showView) {
     var pwd2 = container.querySelector('#new-pwd2').value;
     var msgEl = container.querySelector('#pwd-msg');
     msgEl.style.color = '#c62828';
+    if (inscription.isDemo) { msgEl.textContent = 'Compte de démonstration : modification impossible.'; return; }
     if (pwd.length < 8) { msgEl.textContent = 'Minimum 8 caractères.'; return; }
     if (pwd !== pwd2)   { msgEl.textContent = 'Les mots de passe ne correspondent pas.'; return; }
     var btn = container.querySelector('#btn-save-pwd');

@@ -9,19 +9,19 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/public.css">
 </head>
-<body>
+<body class="legal-page">
 
-<header class="pub-header">
-  <div>
-    <div class="pub-header-title">Handiplage Antibes</div>
-    <div class="pub-header-sub">Mentions légales</div>
-  </div>
+<header class="pub-header legal-header">
+  <a href="login.html" class="legal-header-logo"><img src="logo-handiplage-mot-bleu.svg" alt="Handiplage — accueil"></a>
+  <a href="login.html" class="legal-back" id="legal-back">← Retour</a>
 </header>
 
-<main class="pub-container" style="padding-top:24px">
+<main class="pub-container legal-main">
+
+  <h1 class="legal-title">Mentions légales</h1>
 
   <div class="pub-card">
-    <div class="pub-card-title">Éditeur du site</div>
+    <h2 class="pub-card-title">Éditeur du site</h2>
     <p class="legal-p"><strong>Centre Communal d'Action Sociale d'Antibes Juan-les-Pins (CCAS)</strong></p>
     <p class="legal-p">SIRET : 26060022600062</p>
     <p class="legal-p">16 avenue Pasteur<br>06600 Antibes</p>
@@ -30,7 +30,7 @@
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">Hébergeurs</div>
+    <h2 class="pub-card-title">Hébergeurs</h2>
     <p class="legal-p"><strong>GitHub Pages</strong> (pages statiques)<br>
     GitHub, Inc. / Microsoft Corporation<br>
     88 Colin P Kelly Jr St, San Francisco, CA 94107, USA<br>
@@ -41,16 +41,16 @@
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">Propriété intellectuelle</div>
+    <h2 class="pub-card-title">Propriété intellectuelle</h2>
     <p class="legal-p">L'ensemble du contenu de ce site (textes, visuels, organisation) est la propriété du CCAS d'Antibes. Toute reproduction sans autorisation écrite préalable est interdite.</p>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">Responsabilité</div>
+    <h2 class="pub-card-title">Responsabilité</h2>
     <p class="legal-p">Le CCAS d'Antibes s'efforce de maintenir les informations de ce site à jour et exactes. Il ne saurait être tenu responsable des interruptions de service liées à des maintenances ou incidents techniques indépendants de sa volonté.</p>
   </div>
 
-  <p style="text-align:center;margin:24px 0 8px"><a href="politique-confidentialite.html" class="legal-link">Politique de confidentialité →</a></p>
+  <p class="legal-crosslink-wrap"><a href="politique-confidentialite.html" class="legal-crosslink">Politique de confidentialité →</a></p>
 
 </main>
 
@@ -62,5 +62,14 @@
   </div>
 </footer>
 
-</body>
+<script>
+  // « Retour » : revient à la page précédente du site si on en vient, sinon à la connexion
+  document.getElementById('legal-back').addEventListener('click', function (e) {
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+        e.preventDefault(); history.back();
+      }
+    } catch (err) {}
+  });
+</script></body>
 </html>

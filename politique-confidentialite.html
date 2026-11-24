@@ -9,25 +9,26 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/public.css">
 </head>
-<body>
+<body class="legal-page">
 
-<header class="pub-header">
-  <div>
-    <div class="pub-header-title">🏖️ Handiplage Antibes</div>
-    <div class="pub-header-sub">Politique de confidentialité</div>
-  </div>
+<header class="pub-header legal-header">
+  <a href="login.html" class="legal-header-logo"><img src="logo-handiplage-mot-bleu.svg" alt="Handiplage — accueil"></a>
+  <a href="login.html" class="legal-back" id="legal-back">← Retour</a>
 </header>
 
-<main class="pub-container" style="padding-top:24px">
+<main class="pub-container legal-main">
+
+  <h1 class="legal-title">Politique de confidentialité</h1>
+  <p class="legal-updated">Dernière mise à jour : juillet 2026</p>
 
   <div class="pub-card">
-    <div class="pub-card-title">1. Responsable de traitement</div>
+    <h2 class="pub-card-title">1. Responsable de traitement</h2>
     <p class="legal-p">Le responsable du traitement est le <strong>Centre Communal d'Action Sociale d'Antibes Juan-les-Pins (CCAS)</strong>, SIRET 26060022600062, 16 avenue Pasteur, 06600 Antibes.</p>
     <p class="legal-p">Délégué à la Protection des Données (DPO) : <a href="mailto:rgpd@ccas-antibes.fr" class="legal-link">rgpd@ccas-antibes.fr</a></p>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">2. Données collectées</div>
+    <h2 class="pub-card-title">2. Données collectées</h2>
     <ul class="legal-list">
       <li><strong>Données d'identité :</strong> nom, prénom, date de naissance</li>
       <li><strong>Données de contact :</strong> adresse email, téléphone, adresse postale, ville, code postal</li>
@@ -39,8 +40,8 @@
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">3. Finalités et bases légales</div>
-    <table class="legal-table">
+    <h2 class="pub-card-title">3. Finalités et bases légales</h2>
+    <div class="legal-table-wrap"><table class="legal-table">
       <thead><tr><th>Finalité</th><th>Base légale</th></tr></thead>
       <tbody>
         <tr><td>Gestion des inscriptions et réservations de plage adaptée</td><td>Mission de service public (Art. 6.1.e RGPD)</td></tr>
@@ -48,23 +49,23 @@
         <tr><td>Communications du CCAS (informations saisonnières)</td><td>Consentement (Art. 6.1.a RGPD)</td></tr>
         <tr><td>Sécurité et journaux techniques</td><td>Intérêt légitime (Art. 6.1.f RGPD)</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">4. Durées de conservation</div>
-    <table class="legal-table">
+    <h2 class="pub-card-title">4. Durées de conservation</h2>
+    <div class="legal-table-wrap"><table class="legal-table">
       <thead><tr><th>Type de données</th><th>Durée</th></tr></thead>
       <tbody>
         <tr><td>Dossier d'inscription et réservations</td><td>2 ans à compter de la fermeture saisonnière</td></tr>
         <tr><td>Logs de connexion</td><td>1 an</td></tr>
         <tr><td>Données comptables (si applicable)</td><td>10 ans (obligation légale)</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">5. Destinataires</div>
+    <h2 class="pub-card-title">5. Destinataires</h2>
     <p class="legal-p">Les données sont accessibles uniquement au personnel du service Autonomie et Adaptation du Cadre de Vie du CCAS d'Antibes habilité à gérer le service Handiplage.</p>
     <p class="legal-p" style="margin-top:8px"><strong>Sous-traitants techniques :</strong></p>
     <ul class="legal-list">
@@ -75,12 +76,12 @@
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">6. Transferts hors Union Européenne</div>
+    <h2 class="pub-card-title">6. Transferts hors Union Européenne</h2>
     <p class="legal-p">Les pages statiques du site sont hébergées par GitHub (Microsoft, USA), couvert par le Data Privacy Framework UE–USA. Les données personnelles (base de données) sont hébergées en France (AWS Paris) et ne quittent pas l'Union Européenne.</p>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">7. Vos droits</div>
+    <h2 class="pub-card-title">7. Vos droits</h2>
     <p class="legal-p">Conformément au RGPD, vous disposez des droits suivants :</p>
     <ul class="legal-list">
       <li><strong>Droit d'accès :</strong> obtenir une copie de vos données</li>
@@ -96,16 +97,16 @@
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">8. Cookies et traceurs</div>
+    <h2 class="pub-card-title">8. Cookies et traceurs</h2>
     <p class="legal-p">Ce site utilise uniquement des données de session stockées localement dans votre navigateur (localStorage) pour maintenir votre connexion. Aucun cookie de tracking ou de publicité n'est utilisé. Aucun consentement n'est requis.</p>
   </div>
 
   <div class="pub-card">
-    <div class="pub-card-title">9. Sécurité</div>
+    <h2 class="pub-card-title">9. Sécurité</h2>
     <p class="legal-p">Le site est accessible exclusivement en HTTPS (chiffrement TLS). Les mots de passe sont hachés par Supabase Auth (bcrypt). Les accès sont restreints par rôles (usager / staff). Des journaux de connexion sont conservés à des fins de sécurité.</p>
   </div>
 
-  <p style="text-align:center;margin:16px 0 8px;font-size:.875rem;color:#666">Dernière mise à jour : juillet 2026</p>
+  <p class="legal-crosslink-wrap"><a href="mentions-legales.html" class="legal-crosslink">Mentions légales →</a></p>
 
 </main>
 
@@ -117,5 +118,14 @@
   </div>
 </footer>
 
-</body>
+<script>
+  // « Retour » : revient à la page précédente du site si on en vient, sinon à la connexion
+  document.getElementById('legal-back').addEventListener('click', function (e) {
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+        e.preventDefault(); history.back();
+      }
+    } catch (err) {}
+  });
+</script></body>
 </html>
