@@ -4241,3 +4241,4 @@ dialog.plan-dialog {
 /* Vue Plage : le plan passe au-dessus de la mer (les rochers et la rampe entrent dans l'eau) */
 .beach-map-container { position: relative; z-index: 1; }
 .beach-sea { z-index: 0; }
+#app-modal:focus { outline: none; }   /* focus posé sur la fenêtre elle-même (pas de clavier à l’ouverture) */

@@ -166,6 +166,15 @@ function openAddReservationModal(onConfirm) {
   nomInp.focus();
 }
 
+// Texte comparable : sans accents, en minuscules
+function _sansAccent(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+// Suggestion d'inscription : début du nom et/ou début du prénom (au moins l'un des deux saisi)
+function _correspondInscription(i, nom, prenom) {
+  return !!i.nom && (!nom || _sansAccent(i.nom).startsWith(nom)) && (!prenom || _sansAccent(i.prenom).startsWith(prenom));
+}
+
 // ── Modale 2 : Assigner un emplacement à une personne arrivée ──
 // resa : { nom, prenom, accompagnants } — depuis la liste d'attente
 // freeSpots : ['P1', 'P3', ...] — emplacements libres
@@ -239,16 +248,16 @@ function openWalkinEntryModal(onConfirm, opts) {
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group" style="position:relative">
+      <div class="form-row" style="position:relative">
+        <div class="form-group">
           <label>NOM</label>
           <input type="text" id="wk-nom" placeholder="NOM" autocomplete="off" style="text-transform:uppercase">
-          <div id="wk-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
         </div>
         <div class="form-group">
           <label>Prénom</label>
           <input type="text" id="wk-prenom" placeholder="Prénom" autocomplete="off">
         </div>
+        <div id="wk-nom-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div>
       </div>
       <div class="form-group">
         <label>Nombre d'accompagnants</label>
@@ -285,9 +294,9 @@ function openWalkinEntryModal(onConfirm, opts) {
     nomEl.addEventListener('input', function() {
       var val = nomEl.value.trim().toUpperCase();
       _close();
-      if (!val || typeof getCachedInscriptions !== 'function') return;
+      if ((!val && !prenomEl.value.trim()) || typeof getCachedInscriptions !== 'function') return;
       var matches = getCachedInscriptions()
-        .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+        .filter(function(i) { return _correspondInscription(i, _sansAccent(val), _sansAccent(prenomEl.value)); })
         .slice(0, 8);
       if (!matches.length) return;
       suggestEl.style.display = 'block';
@@ -336,6 +345,10 @@ function openWalkinEntryModal(onConfirm, opts) {
     });
     nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
     nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
+    // Le prénom propose aussi des suggestions (en complément du nom)
+    prenomEl.addEventListener('input',   function() { nomEl.dispatchEvent(new Event('input')); });
+    prenomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
+    prenomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
   })();
 
   document.getElementById('modal-confirm').addEventListener('click', () => {
@@ -1094,13 +1107,13 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       _linkedGroupeId        = null;
       var val = nomEl.value.trim().toUpperCase();
       _close();
-      if (!val) return;
+      if (!val && !prenomEl.value.trim()) return;
 
       var currentType = (document.querySelector('#pf-type .radio-btn.selected') || {}).dataset
         ? document.querySelector('#pf-type .radio-btn.selected').dataset.value : 'normal';
 
       if (currentType === 'groupe') {
-        if (typeof getCachedGroupes !== 'function') return;
+        if (!val || typeof getCachedGroupes !== 'function') return;
         var gmatches = getCachedGroupes()
           .filter(function(g) { return g.nom.toUpperCase().includes(val); })
           .slice(0, 8);
@@ -1132,7 +1145,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       } else {
         if (typeof getCachedInscriptions !== 'function') return;
         var matches = getCachedInscriptions()
-          .filter(function(i) { return i.nom && i.nom.toUpperCase().startsWith(val); })
+          .filter(function(i) { return _correspondInscription(i, _sansAccent(val), _sansAccent(prenomEl.value)); })
           .slice(0, 8);
         if (!matches.length) return;
         suggestEl.style.display = 'block';
@@ -1186,6 +1199,10 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
     nomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
     nomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
+    // Le prénom propose aussi des suggestions d'usagers (en complément du nom)
+    prenomEl.addEventListener('input',   function() { nomEl.dispatchEvent(new Event('input')); });
+    prenomEl.addEventListener('blur',    function() { setTimeout(_close, 150); });
+    prenomEl.addEventListener('keydown', function(e) { if (e.key === 'Escape') _close(); });
   })();
 
   // Réservation lancée depuis la fiche d'un groupe (onglet Groupes → « Réserver un créneau ») :
@@ -1274,7 +1291,10 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   _dialog().classList.add('plan-dialog');
   _dialog().showModal();
-  document.getElementById('pf-prenom').focus();
+  // Aucun champ sélectionné à l'ouverture : sur tablette, le clavier ne s'ouvre pas tout seul
+  // (on choisit d'abord l'action ; le clavier vient quand on touche Nom ou Prénom).
+  _dialog().setAttribute('tabindex', '-1');
+  _dialog().focus({ preventScroll: true });
   _refreshAll();
 
   // Souscription Realtime : rafraîchit la liste si une réservation change (ex: annulation depuis l'interface usager)
