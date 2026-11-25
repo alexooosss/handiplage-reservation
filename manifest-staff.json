@@ -1,0 +1,28 @@
+{
+  "id": "./index.html?app=staff",
+  "name": "Handiplage — Staff",
+  "short_name": "Handiplage Staff",
+  "description": "Interface staff de la Handiplage d'Antibes (tablette de plage)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#111b33",
+  "theme_color": "#0772b8",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
