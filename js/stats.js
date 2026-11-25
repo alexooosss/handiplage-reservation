@@ -198,10 +198,19 @@ var StatsView = (function () {
 
   function _topTable(resas) {
     var map = {};
-    _usagerResas(resas).forEach(function (r) {
-      if (r.statut === 'annule' || r.statut === 'suspendu') return;
-      var key = r.inscription_id || ((r.nom || '') + '|' + (r.prenom || ''));
+    // Une réservation saisie à la main par le staff (sans choisir la suggestion) n'est pas liée
+    // à l'inscription : on la rattache à l'usager inscrit qui porte le même nom (sans tenir compte
+    // des majuscules ni des accents), pour ne pas compter la même personne deux fois.
+    function nomCle(r) {
+      return ((r.nom || '') + '|' + (r.prenom || '')).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+    var valides = _usagerResas(resas).filter(function (r) { return r.statut !== 'annule' && r.statut !== 'suspendu'; });
+    var inscriptionParNom = {};
+    valides.forEach(function (r) { if (r.inscription_id && !inscriptionParNom[nomCle(r)]) inscriptionParNom[nomCle(r)] = r.inscription_id; });
+    valides.forEach(function (r) {
+      var key = r.inscription_id || inscriptionParNom[nomCle(r)] || ('nom:' + nomCle(r));
       if (!map[key]) map[key] = { nom: r.nom, prenom: r.prenom, inscriptionId: r.inscription_id, total: 0, presents: 0, absents: 0 };
+      if (r.inscription_id && !map[key].inscriptionId) { map[key].inscriptionId = r.inscription_id; map[key].nom = r.nom; map[key].prenom = r.prenom; }
       map[key].total++;
       if (r.statut === 'present' || r.statut === 'parti') map[key].presents++;
       if (r.statut === 'absent' || r.statut === 'pas_venu') map[key].absents++;
