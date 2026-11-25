@@ -174,7 +174,9 @@ function _initMapScaling(mapEl) {
     if (!W || !H) return;                                  // vue masquée
     const s  = echellePlan(W, H, 0);
     const tx = (W - v.w * s) / 2 - v.x * s;                // centrée en largeur
-    const ty = Math.min((H - v.h * s) / 2, 0) - v.y * s;   // calée en haut : un écran plus haut montre plus de mer, pas plus de sable
+    // Calée en haut (un écran plus haut montre plus de mer, pas plus de sable), puis descendue
+    // d'environ 1 cm (38 px) : le fond de sable reste en place, la mer suit le plan
+    const ty = Math.min((H - v.h * s) / 2, 0) - v.y * s + 38;
     mapEl.style.position = 'absolute';
     mapEl.style.left = '0';
     mapEl.style.top = '0';
