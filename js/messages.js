@@ -1,14 +1,61 @@
 // js/messages.js
 'use strict';
 
+var _msgAll        = [];
+var _msgFilter     = 'todo';   // 'todo' | 'done' | 'all'
+var _msgSelectedId = null;
+
+// Débuts de réponse prêts à l'emploi (modifiables avant envoi)
+var MSG_MODELES = [
+  { label: 'Dossier bien reçu',
+    texte: 'Nous avons bien reçu votre message et les éléments transmis. Votre dossier va être examiné dans les meilleurs délais.' },
+  { label: 'Inscription validée',
+    texte: 'Votre inscription à la Handiplage est validée. Vous allez recevoir un e-mail pour activer votre espace et réserver vos créneaux.' },
+  { label: 'Justificatif encore illisible',
+    texte: 'Le justificatif transmis n\'est malheureusement pas lisible. Pourriez-vous nous envoyer une photo nette, recto et verso, de votre carte en cours de validité ?' },
+];
+
 function _escM(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function _formatDate(iso) {
   if (!iso) return '';
-  var d = new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// « il y a 2 h », « hier », « il y a 3 j », sinon la date
+function _msgDepuis(iso) {
+  if (!iso) return '';
+  var d = new Date(iso), now = new Date();
+  var min = Math.round((now - d) / 60000);
+  if (min < 1)  return 'à l\'instant';
+  if (min < 60) return 'il y a ' + min + ' min';
+  var h = Math.round(min / 60);
+  var hier = new Date(now); hier.setDate(now.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return 'il y a ' + h + ' h';
+  if (d.toDateString() === hier.toDateString()) return 'hier';
+  var j = Math.round((now - d) / 86400000);
+  if (j < 7) return 'il y a ' + j + ' j';
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function _msgIsUsager(m)    { return !!(m.motifRefus && m.motifRefus.startsWith('[USAGER]')); }
+function _msgIsReponse(m)   { return !_msgIsUsager(m) && !!m.contenu; }        // réponse à un refus
+function _msgIsSansRep(m)   { return !_msgIsUsager(m) && !m.contenu; }         // refus resté sans réponse
+function _msgATraiter(m)    { return (_msgIsUsager(m) || _msgIsReponse(m)) && !m.lu; }
+function _msgTraite(m)      { return (_msgIsUsager(m) || _msgIsReponse(m)) && m.lu; }
+function _msgNomAffiche(m)  { return _escM((m.nom || '').toUpperCase()) + ' ' + _escM(m.prenom || ''); }
+function _msgInitiales(m)   { return ((m.nom || '?').charAt(0) + (m.prenom || '').charAt(0)).toUpperCase(); }
+
+// Met à jour la pastille rouge de l'onglet Messages
+function _msgMajBadge() {
+  if (typeof getUnreadCount !== 'function') return;
+  getUnreadCount().then(function(n) {
+    var b = document.getElementById('messages-badge');
+    if (!b) return;
+    if (n > 0) { b.textContent = n; b.style.display = 'inline'; } else { b.style.display = 'none'; }
+  }).catch(function() {});
 }
 
 async function renderMessages(container) {
@@ -19,270 +66,254 @@ async function renderMessages(container) {
 
 async function _renderMessagesBody(container) {
   container.innerHTML = '<div class="msg-loading">Chargement…</div>';
-
-  var messages;
   try {
-    messages = await getMessages();
+    _msgAll = await getMessages();
   } catch (e) {
     container.innerHTML = '<div class="msg-error">Erreur de chargement : ' + _escM(e.message) + '</div>';
     return;
   }
+  // Le message sélectionné a pu être supprimé entre-temps
+  if (_msgSelectedId && !_msgAll.some(function(m) { return m.id === _msgSelectedId; })) _msgSelectedId = null;
 
-  if (!messages.length) {
-    container.innerHTML = '<div class="msg-empty"><p>Aucun message pour le moment.</p></div>';
-    return;
-  }
-
-  var isUsagerMsg  = function(m) { return m.motifRefus && m.motifRefus.startsWith('[USAGER]'); };
-  var usagerMsgs   = messages.filter(isUsagerMsg);
-  var withReply    = messages.filter(function(m) { return !isUsagerMsg(m) && m.contenu; });
-  var withoutReply = messages.filter(function(m) { return !isUsagerMsg(m) && !m.contenu; });
-
-  container.innerHTML = '<div class="msg-layout">'
-    + '<div class="msg-list-panel" id="msg-list-panel">'
-    +   '<div class="msg-list-hd">Messages</div>'
-    +   _renderMessageList(withReply, withoutReply, usagerMsgs)
-    + '</div>'
-    + '<div class="msg-detail-panel" id="msg-detail-panel">'
-    +   '<div class="msg-detail-empty"><p>Sélectionnez un message</p></div>'
-    + '</div>'
+  container.innerHTML = '<div class="mx-layout">'
+    + '<aside class="mx-side">'
+    +   '<div class="mx-side-hd"><h2>Messages</h2>'
+    +     '<div class="mx-seg" role="tablist" aria-label="Filtrer les messages" id="mx-seg"></div>'
+    +   '</div>'
+    +   '<div class="mx-list" id="mx-list"></div>'
+    + '</aside>'
+    + '<section class="mx-detail" id="mx-detail"></section>'
     + '</div>';
 
-  container.querySelectorAll('.msg-list-item').forEach(function(el) {
-    el.addEventListener('click', async function() {
-      container.querySelectorAll('.msg-list-item').forEach(function(e) { e.classList.remove('active'); });
-      el.classList.add('active');
-      var id = el.dataset.id;
-      var msg = messages.find(function(m) { return m.id === id; });
-      if (!msg) return;
-      // Auto-mark read only for refusal messages (non-usager) with a reply
-      if (!isUsagerMsg(msg) && !msg.lu && msg.contenu) {
-        await markMessageRead(id).catch(function() {});
-        el.classList.remove('msg-unread');
-        msg.lu = true;
-      }
-      _renderDetail(document.getElementById('msg-detail-panel'), msg, el);
+  _msgRenderSeg();
+  _msgRenderList();
+  _msgRenderDetail();
+}
+
+function _msgRenderSeg() {
+  var seg = document.getElementById('mx-seg');
+  if (!seg) return;
+  var nTodo = _msgAll.filter(_msgATraiter).length;
+  var opts = [
+    { id: 'todo', label: 'À traiter', count: nTodo },
+    { id: 'done', label: 'Traités' },
+    { id: 'all',  label: 'Tous' },
+  ];
+  seg.innerHTML = opts.map(function(o) {
+    var on = _msgFilter === o.id;
+    return '<button type="button" role="tab" class="mx-seg-btn' + (on ? ' on' : '') + '" aria-selected="' + on + '" data-f="' + o.id + '">'
+      + o.label + (o.count ? '<span class="mx-seg-c">' + o.count + '</span>' : '') + '</button>';
+  }).join('');
+  seg.querySelectorAll('.mx-seg-btn').forEach(function(b) {
+    b.addEventListener('click', function() { _msgFilter = b.dataset.f; _msgRenderSeg(); _msgRenderList(); });
+  });
+}
+
+function _msgRenderList() {
+  var listEl = document.getElementById('mx-list');
+  if (!listEl) return;
+  var liste = _msgAll.filter(function(m) {
+    return _msgFilter === 'todo' ? _msgATraiter(m) : _msgFilter === 'done' ? _msgTraite(m) : true;
+  }).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+  if (!liste.length) {
+    listEl.innerHTML = '<p class="mx-empty">' + (_msgFilter === 'todo' ? 'Rien à traiter. ✓' : 'Aucun message.') + '</p>';
+    return;
+  }
+  listEl.innerHTML = liste.map(function(m) {
+    var tag, apercu, quand;
+    if (_msgIsUsager(m)) {
+      tag = '<span class="mx-tag mx-tag-u">Message</span>';
+      apercu = m.sujet || (m.contenu || '').slice(0, 80);
+      quand = _msgDepuis(m.createdAt);
+    } else if (_msgIsReponse(m)) {
+      tag = '<span class="mx-tag mx-tag-r">Réponse à un refus</span>';
+      apercu = (m.contenu || '').replace(/\s+/g, ' ').slice(0, 80);
+      quand = 'refus du ' + new Date(m.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    } else {
+      tag = '<span class="mx-tag mx-tag-n">Refus sans réponse</span>';
+      apercu = (m.motifRefus || '').slice(0, 80);
+      quand = _msgDepuis(m.createdAt);
+    }
+    var nonLu = _msgATraiter(m);
+    return '<button type="button" class="mx-item' + (m.id === _msgSelectedId ? ' on' : '') + (nonLu ? ' unread' : '') + '" data-id="' + _escM(m.id) + '">'
+      + '<span class="mx-dot" aria-hidden="true"></span>'
+      + '<span class="mx-name">' + _msgNomAffiche(m) + (nonLu ? '<span class="sr-only"> (à traiter)</span>' : '') + '</span>'
+      + '<span class="mx-when">' + quand + '</span>'
+      + '<span class="mx-prev">' + tag + _escM(apercu) + '</span>'
+      + '</button>';
+  }).join('');
+  listEl.querySelectorAll('.mx-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      _msgSelectedId = el.dataset.id;
+      listEl.querySelectorAll('.mx-item').forEach(function(x) { x.classList.toggle('on', x === el); });
+      _msgRenderDetail();
     });
   });
 }
 
-function _renderMessageList(withReply, withoutReply, usagerMsgs) {
-  var html = '';
+// ── Partie droite ──
+function _msgRenderDetail() {
+  var panel = document.getElementById('mx-detail');
+  if (!panel) return;
+  var msg = _msgAll.find(function(m) { return m.id === _msgSelectedId; });
+  if (!msg) { _msgRenderOverview(panel); return; }
 
-  if (usagerMsgs && usagerMsgs.length) {
-    var usagerPending = usagerMsgs.filter(function(m) { return !m.lu; });
-    var usagerHandled = usagerMsgs.filter(function(m) { return m.lu; });
+  var isUsager = _msgIsUsager(msg);
+  var aTraiter = _msgATraiter(msg);
+  var lienDossier = msg.inscriptionId
+    ? '<button type="button" class="mx-link" id="mx-dossier">Voir le dossier d\'inscription →</button>' : '';
 
-    if (usagerPending.length) {
-      html += '<div class="msg-list-section msg-section-usager">Messages usagers — En attente (' + usagerPending.length + ')</div>';
-      html += usagerPending.map(function(m) {
-        var preview = m.sujet ? m.sujet : (m.contenu ? m.contenu.slice(0, 60) + (m.contenu.length > 60 ? '…' : '') : '');
-        return '<div class="msg-list-item msg-unread msg-pending" data-id="' + _escM(m.id) + '">'
-          + '<div class="msg-list-name">' + _escM(m.nom) + ' ' + _escM(m.prenom) + '</div>'
-          + '<div class="msg-list-preview"><span class="msg-tag-usager">Message</span>' + _escM(preview) + '</div>'
-          + '<div class="msg-list-date">' + _formatDate(m.createdAt) + '</div>'
-          + '</div>';
-      }).join('');
-    }
-
-    if (usagerHandled.length) {
-      html += '<div class="msg-list-section msg-section-handled">Messages traités (' + usagerHandled.length + ')</div>';
-      html += usagerHandled.map(function(m) {
-        var preview = m.sujet ? m.sujet : '';
-        return '<div class="msg-list-item msg-handled" data-id="' + _escM(m.id) + '">'
-          + '<div class="msg-list-name">' + _escM(m.nom) + ' ' + _escM(m.prenom) + '</div>'
-          + '<div class="msg-list-preview"><span class="msg-tag-handled">Traité</span>' + _escM(preview) + '</div>'
-          + '<div class="msg-list-date">' + _formatDate(m.createdAt) + '</div>'
-          + '</div>';
-      }).join('');
-    }
+  var corps;
+  if (isUsager) {
+    corps = '<div><div class="mx-lab">' + _escM(msg.sujet || 'Message de l\'usager') + ' · reçu le ' + _formatDate(msg.createdAt) + '</div>'
+      + '<div class="mx-bubble">' + _escM(msg.contenu).replace(/\n/g, '<br>') + '</div></div>';
+  } else {
+    corps = '<div class="mx-card mx-sent"><div class="mx-lab">Refus envoyé le ' + _formatDate(msg.createdAt) + '</div>'
+      + '<div class="mx-sent-txt">' + _escM(msg.motifRefus || '').replace(/\n/g, '<br>') + '</div></div>'
+      + (msg.contenu
+          ? '<div><div class="mx-lab">Réponse de l\'usager</div><div class="mx-bubble">' + _escM(msg.contenu).replace(/\n/g, '<br>') + '</div></div>'
+          : '<p class="mx-empty">Aucune réponse reçue pour le moment.</p>');
   }
 
-  if (withReply.length) {
-    html += '<div class="msg-list-section">Notifications de refus — avec réponse</div>';
-    html += withReply.map(function(m) {
-      var unread  = !m.lu ? ' msg-unread' : '';
-      var preview = m.contenu ? m.contenu.slice(0, 60) + (m.contenu.length > 60 ? '…' : '') : '';
-      return '<div class="msg-list-item' + unread + '" data-id="' + _escM(m.id) + '">'
-        + '<div class="msg-list-name">' + _escM(m.nom) + ' ' + _escM(m.prenom) + '</div>'
-        + '<div class="msg-list-preview"><span class="msg-tag-refus">Refus</span>' + _escM(preview) + '</div>'
-        + '<div class="msg-list-date">' + _formatDate(m.createdAt) + '</div>'
-        + '</div>';
-    }).join('');
+  var actions = '';
+  if (!isUsager && msg.inscriptionId && msg.contenu) {
+    actions += '<button type="button" class="mx-btn-pri" id="mx-verif">Ouvrir le dossier pour vérifier</button>';
   }
-
-  if (withoutReply.length) {
-    html += '<div class="msg-list-section" style="color:#aaa">Notifications de refus — sans réponse</div>';
-    html += withoutReply.map(function(m) {
-      return '<div class="msg-list-item msg-no-reply" data-id="' + _escM(m.id) + '">'
-        + '<div class="msg-list-name">' + _escM(m.nom) + ' ' + _escM(m.prenom) + '</div>'
-        + '<div class="msg-list-preview"><span class="msg-tag-refus">Refus</span><span style="color:#aaa;font-style:italic">Pas encore de réponse</span></div>'
-        + '<div class="msg-list-date">' + _formatDate(m.createdAt) + '</div>'
-        + '</div>';
-    }).join('');
+  if (msg.mail) {
+    actions += '<button type="button" class="' + (isUsager ? 'mx-btn-pri' : 'mx-btn-sec') + '" id="mx-reply"><span aria-hidden="true">✉</span> Répondre par e-mail</button>';
   }
+  if (isUsager || msg.contenu) {
+    actions += aTraiter
+      ? '<button type="button" class="mx-btn-sec" id="mx-traite">✓ Marquer comme traité</button>'
+      : '<span class="mx-done">✓ Traité</span><button type="button" class="mx-link-sm" id="mx-retraiter">Remettre à traiter</button>';
+  }
+  actions += '<button type="button" class="mx-del" id="mx-delete">Supprimer</button>';
 
-  return html;
-}
-
-function _renderDetail(panel, msg, listItem) {
-  var isUsager    = !!(msg.motifRefus && msg.motifRefus.startsWith('[USAGER]'));
-  var canValidate = !isUsager && msg.statut === 'refuse';
-  var hasReply    = !!msg.contenu;
-
-  var bodyHtml = isUsager
-    ? '<div class="msg-detail-section msg-usager-block">'
-      +   '<div class="msg-detail-label">'
-      +     (msg.sujet ? _escM(msg.sujet) + ' — ' : 'Message de l\'usager — ')
-      +     _formatDate(msg.createdAt)
-      +   '</div>'
-      +   '<div class="msg-detail-body msg-reply-content">' + _escM(msg.contenu) + '</div>'
-      + '</div>'
-    : '<div class="msg-detail-section">'
-      +   '<div class="msg-detail-label">Motif du refus</div>'
-      +   '<div class="msg-detail-body">' + _escM(msg.motifRefus) + '</div>'
-      + '</div>'
-      + (hasReply
-        ? '<div class="msg-detail-section msg-reply-block">'
-          +   '<div class="msg-detail-label">Réponse reçue le ' + _formatDate(msg.createdAt) + '</div>'
-          +   '<div class="msg-detail-body msg-reply-content">' + _escM(msg.contenu) + '</div>'
-          + '</div>'
-        : '<div class="msg-detail-section"><em style="color:#aaa;font-size:13px">Aucune réponse reçue pour le moment.</em></div>'
-      );
-
-  panel.innerHTML = '<div class="msg-detail">'
-    + '<div class="msg-detail-hd">'
-    +   '<div class="msg-detail-name">' + _escM(msg.nom) + ' ' + _escM(msg.prenom) + '</div>'
-    +   '<div class="msg-detail-mail">' + _escM(msg.mail) + '</div>'
+  panel.innerHTML = '<div class="mx-page">'
+    + '<div class="mx-hd">'
+    +   '<span class="mx-avatar" aria-hidden="true">' + _escM(_msgInitiales(msg)) + '</span>'
+    +   '<div class="mx-hd-txt"><h2>' + _msgNomAffiche(msg) + '</h2>' + (msg.mail ? '<small>' + _escM(msg.mail) + '</small>' : '') + '</div>'
+    +   '<span class="mx-sp"></span>' + lienDossier
+    +   '<button type="button" class="mx-close" id="mx-close" title="Fermer le message (Échap)" aria-label="Fermer le message">✕</button>'
     + '</div>'
-
-    + bodyHtml
-
-    + '<div class="msg-detail-actions">'
-    + (canValidate
-      ? '<button type="button" class="btn-primary" id="msg-btn-validate">✓ Valider l\'inscription</button>'
-      : (!isUsager ? '<div style="font-size:13px;color:#2e7d32;padding:8px 0">✓ Inscription déjà validée</div>' : '')
-    )
-    + (isUsager
-      ? (!msg.lu
-        ? '<button type="button" class="btn-primary" id="msg-btn-traite">✓ Marquer comme traité</button>'
-        : '<div class="msg-traite-badge">✓ Message traité</div>'
-      )
-      : ''
-    )
-    + '<button type="button" class="btn-ghost" id="msg-btn-reply">✉ Répondre par email</button>'
-    + '<button type="button" class="btn-danger" id="msg-btn-delete">Supprimer</button>'
-    + '</div>'
-
-    + '<div id="msg-reply-form" style="display:none;margin-top:16px">'
-    +   '<textarea id="msg-reply-text" rows="5" placeholder="Votre réponse…" '
-    +     'style="width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:13px;resize:vertical"></textarea>'
-    +   '<div style="display:flex;gap:8px;margin-top:8px">'
-    +     '<button type="button" class="btn-primary" id="msg-btn-send-reply">Envoyer</button>'
-    +     '<button type="button" class="btn-ghost" id="msg-btn-cancel-reply">Annuler</button>'
+    + corps
+    + '<div class="mx-acts">' + actions + '</div>'
+    + '<div class="mx-card mx-comp" id="mx-comp" hidden>'
+    +   '<div class="mx-lab">Répondre à ' + _escM(msg.prenom || '') + ' ' + _escM(msg.nom || '') + '</div>'
+    +   '<div class="mx-modeles">' + MSG_MODELES.map(function(t, i) {
+          return '<button type="button" class="mx-modele" data-i="' + i + '">' + _escM(t.label) + '</button>';
+        }).join('') + '</div>'
+    +   '<label class="sr-only" for="mx-reply-text">Votre réponse</label>'
+    +   '<textarea id="mx-reply-text" rows="5" placeholder="Votre réponse… (ou choisissez un début de réponse ci-dessus)"></textarea>'
+    +   '<p class="mx-hint">La formule de politesse et la signature « L\'équipe Handiplage — CCAS d\'Antibes » sont ajoutées automatiquement.</p>'
+    +   '<div class="mx-acts">'
+    +     '<button type="button" class="mx-btn-pri" id="mx-send">Ouvrir dans ma messagerie</button>'
+    +     '<button type="button" class="mx-btn-sec" id="mx-cancel">Annuler</button>'
     +   '</div>'
-    +   '<div id="msg-reply-status" style="font-size:12px;margin-top:6px"></div>'
+    +   '<div id="mx-reply-status" class="mx-hint" role="status"></div>'
     + '</div>'
-
     + '</div>';
 
-  // Wirer le bouton Valider
-  var btnValidate = document.getElementById('msg-btn-validate');
-  if (btnValidate) {
-    btnValidate.addEventListener('click', async function() {
-      if (!confirm('Valider l\'inscription de ' + msg.nom + ' ' + msg.prenom + ' et envoyer l\'email d\'invitation ?')) return;
-      btnValidate.disabled = true;
-      btnValidate.textContent = 'Validation…';
-      try {
-        await updateInscription(msg.inscriptionId, { statut: 'valide' });
-        if (typeof inviteUser === 'function' && msg.mail) {
-          await inviteUser(msg.mail, msg.inscriptionId).catch(function() {});
-        }
-        await markMessageRead(msg.id).catch(function() {});
-        btnValidate.textContent = '✓ Inscription validée — email envoyé';
-        btnValidate.style.background = '#2e7d32';
-      } catch (e) {
-        btnValidate.disabled = false;
-        btnValidate.textContent = '✓ Valider l\'inscription';
-        alert('Erreur : ' + e.message);
-      }
-    });
+  // Fermer le message : retour à la vue d'ensemble
+  function fermer() {
+    _msgSelectedId = null;
+    document.querySelectorAll('#mx-list .mx-item').forEach(function(x) { x.classList.remove('on'); });
+    _msgRenderDetail();
   }
+  document.getElementById('mx-close').addEventListener('click', fermer);
+  panel.onkeydown = function(e) {
+    if (e.key === 'Escape' && !e.target.closest('textarea')) fermer();
+  };
+  if (!panel.hasAttribute('tabindex')) panel.setAttribute('tabindex', '-1');
 
-  // Wirer le bouton Marquer comme traité
-  var btnTraite = document.getElementById('msg-btn-traite');
-  if (btnTraite) {
-    btnTraite.addEventListener('click', async function() {
-      btnTraite.disabled = true;
-      btnTraite.textContent = 'Traitement…';
-      try {
-        await markMessageRead(msg.id);
-        msg.lu = true;
-        if (listItem) {
-          listItem.classList.remove('msg-unread', 'msg-pending');
-          listItem.classList.add('msg-handled');
-          var previewEl = listItem.querySelector('.msg-list-preview');
-          if (previewEl) {
-            previewEl.innerHTML = '<span class="msg-tag-handled">Traité</span>' + _escM(msg.sujet || '');
-          }
-        }
-        _renderDetail(panel, msg, listItem);
-      } catch (e) {
-        btnTraite.disabled = false;
-        btnTraite.textContent = '✓ Marquer comme traité';
-      }
-    });
+  function ouvrirDossier() {
+    if (typeof App !== 'undefined' && msg.inscriptionId) App.showView('inscription', msg.inscriptionId);
   }
+  var bDossier = document.getElementById('mx-dossier');
+  if (bDossier) bDossier.addEventListener('click', ouvrirDossier);
+  var bVerif = document.getElementById('mx-verif');
+  if (bVerif) bVerif.addEventListener('click', ouvrirDossier);
 
-  // Wirer le bouton Supprimer
-  var btnDelete = document.getElementById('msg-btn-delete');
-  if (btnDelete) {
-    btnDelete.addEventListener('click', async function() {
-      if (!confirm('Supprimer définitivement ce message ?')) return;
-      btnDelete.disabled = true;
-      btnDelete.textContent = 'Suppression…';
-      try {
-        await deleteMessage(msg.id);
-        if (listItem) listItem.remove();
-        panel.innerHTML = '<div class="msg-detail-empty"><p>Message supprimé.</p></div>';
-      } catch (e) {
-        btnDelete.disabled = false;
-        btnDelete.textContent = 'Supprimer';
-        alert('Erreur : ' + e.message);
-      }
-    });
+  async function changerEtat(lu) {
+    try {
+      if (lu) await markMessageRead(msg.id);
+      else    await markMessageUnread(msg.id);
+      msg.lu = lu;
+      _msgRenderSeg(); _msgRenderList(); _msgRenderDetail(); _msgMajBadge();
+    } catch (e) { alert('Erreur : ' + e.message); }
   }
+  var bTraite = document.getElementById('mx-traite');
+  if (bTraite) bTraite.addEventListener('click', function() { bTraite.disabled = true; changerEtat(true); });
+  var bRe = document.getElementById('mx-retraiter');
+  if (bRe) bRe.addEventListener('click', function() { changerEtat(false); });
 
-  // Wirer le bouton Répondre
-  var btnReply = document.getElementById('msg-btn-reply');
-  var replyForm = document.getElementById('msg-reply-form');
-  if (btnReply && replyForm) {
-    btnReply.addEventListener('click', function() {
-      replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
-    });
-  }
+  var bDel = document.getElementById('mx-delete');
+  bDel.addEventListener('click', async function() {
+    if (!confirm('Supprimer définitivement ce message ?')) return;
+    bDel.disabled = true;
+    try {
+      await deleteMessage(msg.id);
+      _msgAll = _msgAll.filter(function(m) { return m.id !== msg.id; });
+      _msgSelectedId = null;
+      _msgRenderSeg(); _msgRenderList(); _msgRenderDetail(); _msgMajBadge();
+    } catch (e) { bDel.disabled = false; alert('Erreur : ' + e.message); }
+  });
 
-  var btnCancelReply = document.getElementById('msg-btn-cancel-reply');
-  if (btnCancelReply) {
-    btnCancelReply.addEventListener('click', function() {
-      replyForm.style.display = 'none';
+  // Réponse par e-mail
+  var comp = document.getElementById('mx-comp');
+  var txt  = document.getElementById('mx-reply-text');
+  var bReply = document.getElementById('mx-reply');
+  if (bReply) bReply.addEventListener('click', function() {
+    comp.hidden = !comp.hidden;
+    if (!comp.hidden) { comp.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); txt.focus(); }
+  });
+  comp.querySelectorAll('.mx-modele').forEach(function(b) {
+    b.addEventListener('click', function() {
+      txt.value = MSG_MODELES[parseInt(b.dataset.i)].texte;
+      txt.focus();
     });
-  }
+  });
+  document.getElementById('mx-cancel').addEventListener('click', function() { comp.hidden = true; });
+  document.getElementById('mx-send').addEventListener('click', function() {
+    var t = txt.value.trim();
+    if (!t) { txt.focus(); return; }
+    var subject = encodeURIComponent('Handiplage — Suite à votre message');
+    var body = encodeURIComponent('Bonjour ' + (msg.prenom || '') + ' ' + (msg.nom || '') + ',\n\n'
+      + t + '\n\nCordialement,\nL\'équipe Handiplage — CCAS d\'Antibes');
+    window.location.href = 'mailto:' + msg.mail + '?subject=' + subject + '&body=' + body;
+    document.getElementById('mx-reply-status').textContent = 'Votre messagerie a été ouverte avec l\'e-mail pré-rempli. Pensez à marquer le message comme traité une fois la réponse envoyée.';
+  });
+}
 
-  // Wirer l'envoi de réponse (via mailto)
-  var btnSendReply = document.getElementById('msg-btn-send-reply');
-  if (btnSendReply) {
-    btnSendReply.addEventListener('click', async function() {
-      var text = document.getElementById('msg-reply-text').value.trim();
-      if (!text) return;
-      var subject = encodeURIComponent('Handiplage — Suite à votre demande d\'inscription');
-      var body    = encodeURIComponent(
-        'Madame, Monsieur ' + msg.prenom + ' ' + msg.nom + ',\n\n'
-        + text + '\n\n'
-        + 'Cordialement,\nL\'équipe Handiplage — CCAS d\'Antibes'
-      );
-      window.location.href = 'mailto:' + msg.mail + '?subject=' + subject + '&body=' + body;
-      document.getElementById('msg-reply-status').textContent = 'Votre messagerie a été ouverte avec l\'email pré-rempli.';
-    });
-  }
+// Aucun message sélectionné : résumé + accès au plus ancien à traiter
+function _msgRenderOverview(panel) {
+  var todo    = _msgAll.filter(_msgATraiter).sort(function(a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+  var reps    = todo.filter(_msgIsReponse);
+  var annee   = String(new Date().getFullYear());
+  var traites = _msgAll.filter(function(m) { return _msgTraite(m) && String(m.createdAt || '').slice(0, 4) === annee; });
+  var plusAncien = todo[0];
+
+  var kpi = function(cls, n, l, s) {
+    return '<div class="mx-kpi"><span class="mx-kpi-n ' + cls + '">' + n + '</span><span class="mx-kpi-l">' + l + '</span><span class="mx-kpi-s">' + s + '</span></div>';
+  };
+  panel.innerHTML = '<div class="mx-page">'
+    + '<div class="mx-page-hd"><h2>Messages</h2><p>Messages des usagers et réponses aux refus d\'inscription</p></div>'
+    + '<div class="mx-kpis">'
+    +   kpi('k-orange', todo.length, 'À traiter', plusAncien ? 'le plus ancien attend ' + (function(d) {
+        return d === 'hier' ? 'depuis hier' : /^il y a /.test(d) ? d.replace(/^il y a /, 'depuis ') : /^\d/.test(d) ? 'depuis le ' + d : d;
+      })(_msgDepuis(plusAncien.createdAt)) : 'tout est à jour')
+    +   kpi('k-red', reps.length, 'Réponses à un refus', reps.length ? 'dossier' + (reps.length > 1 ? 's' : '') + ' à revérifier' : 'aucune en attente')
+    +   kpi('k-green', traites.length, 'Traités', 'cette saison')
+    + '</div>'
+    + (plusAncien
+        ? '<button type="button" class="mx-link mx-link-big" id="mx-oldest">Ouvrir le plus ancien message à traiter →</button>'
+        : '<p class="mx-empty">Aucun message en attente. ✓</p>')
+    + '</div>';
+  var b = document.getElementById('mx-oldest');
+  if (b) b.addEventListener('click', function() {
+    _msgSelectedId = plusAncien.id;
+    _msgFilter = 'todo';
+    _msgRenderSeg(); _msgRenderList(); _msgRenderDetail();
+  });
 }

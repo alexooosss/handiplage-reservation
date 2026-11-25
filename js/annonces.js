@@ -63,7 +63,7 @@ function _paintAnnonce(container, annonce, draft) {
       + '</div>';
   } else {
     html = _annonceHeaderHtml(ANNONCE_CHIP_OFF,
-      '<button type="button" class="btn-ghost annonce-btn" id="annonce-btn-new">Rédiger une annonce</button>');
+      '<button type="button" class="nb-sec" id="annonce-btn-new">Rédiger une annonce</button>');
   }
 
   container.innerHTML = '<section class="annonce-staff" aria-labelledby="annonce-staff-title">' + html + '</section>';

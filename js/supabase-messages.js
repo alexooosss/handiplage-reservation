@@ -49,6 +49,15 @@ async function markMessageRead(id) {
   if (result.error) throw result.error;
 }
 
+// « Remettre à traiter » : le message repasse en non lu
+async function markMessageUnread(id) {
+  var result = await supabaseClient
+    .from('messages')
+    .update({ lu: false })
+    .eq('id', id);
+  if (result.error) throw result.error;
+}
+
 async function getUnreadCount() {
   var result = await supabaseClient
     .from('messages')

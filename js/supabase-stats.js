@@ -3,7 +3,18 @@
 async function fetchStatsResas(startDate, endDate) {
   var result = await supabaseClient
     .from('reservations')
-    .select('date, statut, creneau_id, inscription_id, nom, prenom')
+    .select('date, statut, creneau_id, inscription_id, nom, prenom, resa_type, groupe_id, spot_id')
+    .gte('date', startDate)
+    .lte('date', endDate);
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
+// Compteurs de la main courante (fréquentation réelle + matériel) sur une période
+async function fetchMcStats(startDate, endDate) {
+  var result = await supabaseClient
+    .from('main_courante')
+    .select('date, creneau_id, compteurs')
     .gte('date', startDate)
     .lte('date', endDate);
   if (result.error) throw result.error;
