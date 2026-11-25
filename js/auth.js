@@ -19,6 +19,7 @@ async function signIn(email, password) {
 }
 
 async function signOut() {
+  try { sessionStorage.removeItem('hp_intro_vue'); } catch (e) {}   // la prochaine connexion rejoue l'animation
   await supabaseClient.auth.signOut();
   window.location.href = 'login.html';
 }

@@ -114,10 +114,10 @@ body > header + * { flex: 1 0 auto; width: 100%; }
   letter-spacing: -.02em;
   line-height: 1.2;
   color: #1a2340;
-  margin: 4px 0 16px;
+  margin: 22px 0 16px;
 }
 .usager-hello-name { color: #05559b; }
-@media (min-width: 720px) { .usager-hello { font-size: 1.85rem; margin: 6px 0 20px; } }
+@media (min-width: 720px) { .usager-hello { font-size: 1.85rem; margin: 26px 0 20px; } }
 
 /* ── Contenu principal ─────────────────────────────────────────── */
 #usager-content {

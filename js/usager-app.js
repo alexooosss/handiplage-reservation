@@ -26,7 +26,12 @@ const UsagerApp = (() => {
 
     var saisonCourante;
     try {
-      var results = await Promise.all([getUserInscription(), getSaisonCourante()]);
+      // Le prénom part vers l'animation d'accueil dès que l'inscription arrive, sans attendre le reste
+      var pInscription = getUserInscription();
+      pInscription.then(function(i) {
+        if (i && i.mail !== DEMO_EMAIL && typeof introPrenom === 'function') introPrenom(i.prenom);
+      }).catch(function() {});
+      var results = await Promise.all([pInscription, getSaisonCourante()]);
       _inscription = results[0];
       _inscription.isDemo = (_inscription.mail === DEMO_EMAIL);
       saisonCourante = results[1];

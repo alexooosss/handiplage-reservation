@@ -11,6 +11,17 @@
   <link rel="manifest" href="manifest-staff.json"><!-- installation staff : plein écran, paysage -->
   <meta name="theme-color" content="#ffffff">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Animation d'ouverture : rien de l'interface ne s'affiche avant elle -->
+  <style>html.intro-attente::after{content:'';position:fixed;inset:0;z-index:99999;background:#0a1628}</style>
+  <script>
+    try {
+      if (sessionStorage.getItem('hp_intro_vue') !== '1') {
+        document.documentElement.classList.add('intro-attente');
+        // Sécurité : jamais d'écran bloqué si l'animation ne peut pas démarrer
+        setTimeout(function () { document.documentElement.classList.remove('intro-attente'); }, 4000);
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
 
@@ -107,6 +118,7 @@
   <script src="js/auth.js"></script>
   <script src="js/data.js"></script>
   <script src="js/slots.js"></script>
+  <script src="js/intro.js"></script>
   <script src="js/timer.js"></script>
   <script src="js/logo.js"></script>
   <script src="js/supabase-storage.js"></script>
@@ -150,6 +162,8 @@
           window.location.href = 'login.html';
           return;
         }
+        // Animation d'ouverture : la page se charge dessous pendant ce temps
+        if (typeof introStaff === 'function') introStaff();
         document.getElementById('btn-logout').addEventListener('click', signOut);
         // Onglet « Plans » : responsable uniquement (la base vérifie aussi ce droit)
         if (estResponsable(session)) document.getElementById('btn-plans-tab').hidden = false;
