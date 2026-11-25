@@ -86,7 +86,7 @@ async function renderReserver(container, inscription, showView) {
   }
 }
 
-function _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate) {
+function _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate, sens) {
   var dayFr    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   var monthsFr = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 
@@ -118,16 +118,39 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
 
   container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
     + weekBar
+    + '<div class="usager-jour-cadre"><div class="usager-jour' + (sens ? ' usager-jour-' + sens : '') + '">'
     + '<div class="usager-card-title">' + selLabel.charAt(0).toUpperCase() + selLabel.slice(1) + '</div>'
-    + '<div id="slots-list">' + slotsHtml + '</div>';
+    + '<div id="slots-list">' + slotsHtml + '</div>'
+    + '</div></div>';
 
   container.querySelector('#back-accueil').addEventListener('click', function() { showView('accueil'); });
 
+  var barre = container.querySelector('.usager-week-bar');
+  _barreGlissable(barre);
+
   container.querySelectorAll('.usager-day-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
+      if (barre && barre._glisse) return;            // fin d'un glisser à la souris : pas un choix de jour
+      if (btn.dataset.date === selectedDate) return;
+      // Le contenu du jour arrive par la droite (jour suivant) ou par la gauche (jour précédent)
+      var sensNouveau = btn.dataset.date > selectedDate ? 'suiv' : 'prec';
       selectedDate = btn.dataset.date;
       var savedScroll = (container.querySelector('.usager-week-bar') || {}).scrollLeft || 0;
-      _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate);
+      var ancien = container.querySelector('.usager-jour');
+      var ancienHtml = ancien ? ancien.innerHTML : '';
+      _renderReserverContent(container, inscription, showView, days, dateKeys, selectedDate, sensNouveau);
+      // L'ancien jour sort entièrement du côté opposé pendant que le nouveau entre
+      var cadre = container.querySelector('.usager-jour-cadre');
+      _cascade(container.querySelector('.usager-jour'));
+      if (cadre && ancienHtml) {
+        var sortant = document.createElement('div');
+        sortant.className = 'usager-jour usager-jour-sortant usager-jour-sort-' + sensNouveau;
+        sortant.setAttribute('aria-hidden', 'true');
+        sortant.innerHTML = ancienHtml;
+        cadre.appendChild(sortant);
+        _cascade(sortant);
+        setTimeout(function() { if (sortant.isConnected) sortant.remove(); }, 1200);
+      }
       var newBar = container.querySelector('.usager-week-bar');
       if (newBar) newBar.scrollLeft = savedScroll;
     });
@@ -165,6 +188,49 @@ function _renderReserverContent(container, inscription, showView, days, dateKeys
       });
     });
   });
+}
+
+// Changement de jour : le titre puis chaque créneau partent l'un après l'autre (cascade)
+function _cascade(jour) {
+  if (!jour) return;
+  var elts = jour.querySelectorAll('.usager-card-title, #slots-list > *');
+  for (var i = 0; i < elts.length; i++) elts[i].style.animationDelay = (i * 0.06).toFixed(2) + 's';
+}
+
+// Ordinateur : la barre des jours se fait glisser à la souris (main), et la molette la fait défiler
+// de gauche à droite. Au doigt, le défilement natif reste inchangé.
+function _barreGlissable(barre) {
+  if (!barre) return;
+  var depart = null;
+  barre.addEventListener('pointerdown', function(e) {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    depart = { x: e.clientX, scroll: barre.scrollLeft };
+    barre._glisse = false;
+  });
+  barre.addEventListener('pointermove', function(e) {
+    if (!depart) return;
+    var dx = e.clientX - depart.x;
+    if (!barre._glisse && Math.abs(dx) > 5) {
+      barre._glisse = true;
+      barre.classList.add('glisse');
+      try { barre.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (barre._glisse) barre.scrollLeft = depart.scroll - dx;
+  });
+  function finir() {
+    if (!depart) return;
+    depart = null;
+    barre.classList.remove('glisse');
+    // Le clic qui suit le relâchement est ignoré, puis la barre redevient cliquable
+    setTimeout(function() { barre._glisse = false; }, 0);
+  }
+  barre.addEventListener('pointerup', finir);
+  barre.addEventListener('pointercancel', finir);
+  barre.addEventListener('wheel', function(e) {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || barre.scrollWidth <= barre.clientWidth) return;
+    e.preventDefault();
+    barre.scrollLeft += e.deltaY;
+  }, { passive: false });
 }
 
 var _SLOT_COLORS = ['#1565c0', '#2e7d32', '#e65100', '#6a1b9a', '#f9a825'];

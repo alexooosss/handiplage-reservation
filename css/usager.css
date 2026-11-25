@@ -246,6 +246,29 @@ body > header + * { flex: 1 0 auto; width: 100%; }
   scrollbar-width: none;
 }
 .usager-week-bar::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .usager-week-bar { cursor: grab; }
+  .usager-week-bar.glisse, .usager-week-bar.glisse .usager-day-btn { cursor: grabbing; user-select: none; }
+}
+/* Changement de jour : les créneaux défilent entièrement, l'ancien jour sort d'un côté,
+   le nouveau entre de l'autre (vers la gauche pour le jour suivant, vers la droite pour le précédent) */
+.usager-jour-cadre { position: relative; overflow-x: clip; overflow-clip-margin: 12px; }
+.usager-jour-sortant { position: absolute; top: 0; left: 0; right: 0; pointer-events: none; }
+/* Cascade : chaque élément (titre, créneaux) part avec un léger décalage (fixé en JS) */
+.usager-jour-suiv > .usager-card-title, .usager-jour-suiv #slots-list > * { animation: usager-entre-droite .35s cubic-bezier(.3,.7,.3,1) backwards; }
+.usager-jour-prec > .usager-card-title, .usager-jour-prec #slots-list > * { animation: usager-entre-gauche .35s cubic-bezier(.3,.7,.3,1) backwards; }
+.usager-jour-sort-suiv > .usager-card-title, .usager-jour-sort-suiv #slots-list > * { animation: usager-sort-gauche .35s cubic-bezier(.3,.7,.3,1) forwards; }
+.usager-jour-sort-prec > .usager-card-title, .usager-jour-sort-prec #slots-list > * { animation: usager-sort-droite .35s cubic-bezier(.3,.7,.3,1) forwards; }
+@keyframes usager-entre-droite { from { transform: translateX(100%); } }
+@keyframes usager-entre-gauche { from { transform: translateX(-100%); } }
+@keyframes usager-sort-gauche  { to { transform: translateX(-100%); } }
+@keyframes usager-sort-droite  { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .usager-jour-suiv > .usager-card-title, .usager-jour-suiv #slots-list > *,
+  .usager-jour-prec > .usager-card-title, .usager-jour-prec #slots-list > * { animation: usager-jour-fondu .2s ease-out; animation-delay: 0s !important; }
+  .usager-jour-sortant { display: none; }
+  @keyframes usager-jour-fondu { from { opacity: 0; } }
+}
 .usager-day-btn {
   flex-shrink: 0;
   text-align: center;
