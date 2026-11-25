@@ -69,7 +69,7 @@ async function renderAccueil(container, inscription, showView) {
         + '</div>';
     } else if (inscription.passActif) {
       passCard = '<div class="usager-summary-card usager-summary-pass">'
-        +   '<div class="usager-summary-label">Pass ce mois</div>'
+        +   '<div class="usager-summary-label">Pass de ' + nomMoisCourant() + '</div>'
         +   '<div class="usager-summary-value">' + balance.remaining + ' / ' + balance.quota + '</div>'
         +   '<div class="usager-pass-bar-wrap" style="margin-top:8px">'
         +     '<div class="usager-pass-bar-fill ' + fillCls + '" style="width:' + pct + '%"></div>'
@@ -84,17 +84,12 @@ async function renderAccueil(container, inscription, showView) {
         + '</div>';
     }
 
-    var demoBanner = inscription.isDemo
-      ? '<div class="usager-demo-banner"><img src="icone%20demo.svg" alt="" style="height:16px;vertical-align:middle;margin-right:7px;filter:brightness(0)invert(1)">Compte démo — vos actions ne seront pas enregistrées</div>'
-      : '';
-
     // Fermeture de la plage : bandeau dédié, affiché uniquement le jour concerné
     if (typeof annonceDuJour === 'function') annonce = annonceDuJour(annonce, today);
     var fermeture = (annonce && typeof parseFermetureAnnonce === 'function') ? parseFermetureAnnonce(annonce) : null;
     var annonceHtml = fermeture ? _fermetureBannerHtml(fermeture) : (annonce ? _annonceBannerHtml(annonce) : '');
 
-    container.innerHTML = demoBanner
-      + annonceHtml
+    container.innerHTML = annonceHtml
       + '<h1 class="usager-hello">Bonjour, <span class="usager-hello-name">' + _escA(inscription.prenom) + '</span></h1>'
       + '<div class="usager-summary-row">' + nextCard + passCard + '</div>'
       + '<div class="usager-tiles">'

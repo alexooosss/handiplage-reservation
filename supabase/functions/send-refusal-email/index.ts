@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
   const callerClient = createClient(supabaseUrl, anonKey)
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
   const { data: { user }, error: userError } = await callerClient.auth.getUser(token)
-  if (userError || !user || user.user_metadata?.role !== 'staff') {
+  if (userError || !user || user.app_metadata?.role !== 'staff') {
     return new Response(JSON.stringify({ error: 'Accès refusé' }), {
       status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

@@ -1,8 +1,15 @@
 'use strict';
 
+// Le rôle est lu dans app_metadata, que seule l'administration Supabase peut modifier
+// (user_metadata, lui, est modifiable par l'utilisateur : il ne sert jamais à décider des droits).
 function getUserRole(session) {
   if (!session || !session.user) return null;
-  return (session.user.user_metadata && session.user.user_metadata.role) || null;
+  return (session.user.app_metadata && session.user.app_metadata.role) || null;
+}
+
+// Responsable : membre du staff autorisé à modifier les plans de la plage
+function estResponsable(session) {
+  return getUserRole(session) === 'staff' && !!(session.user.app_metadata && session.user.app_metadata.responsable);
 }
 
 async function signIn(email, password) {
@@ -18,7 +25,15 @@ async function signOut() {
 
 async function getSession() {
   const result = await supabaseClient.auth.getSession();
-  return result.data.session;
+  let session = result.data.session;
+  // Session ouverte avant la mise à jour des rôles : on la rafraîchit pour obtenir le rôle sécurisé
+  if (session && !getUserRole(session)) {
+    try {
+      const r = await supabaseClient.auth.refreshSession();
+      if (r.data && r.data.session) session = r.data.session;
+    } catch (e) { /* hors ligne : on garde la session telle quelle */ }
+  }
+  return session;
 }
 
 // Redirige vers login.html si pas de session, vers usager.html si rôle user
@@ -62,5 +77,5 @@ async function inviteUser(email, inscriptionId) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { getUserRole, signIn, signOut, getSession, requireStaffAuth, inviteUser };
+  module.exports = { getUserRole, estResponsable, signIn, signOut, getSession, requireStaffAuth, inviteUser };
 }

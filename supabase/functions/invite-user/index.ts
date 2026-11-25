@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
   const { data: { user }, error: userError } = await callerClient.auth.getUser(token)
 
-  if (userError || !user || user.user_metadata?.role !== 'staff') {
+  if (userError || !user || user.app_metadata?.role !== 'staff') {
     return new Response(JSON.stringify({ error: 'Accès refusé — réservé au staff' }), {
       status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
@@ -81,6 +81,12 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: inviteError.message }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+  }
+
+  // Rôle sécurisé (app_metadata, non modifiable par l'usager)
+  if (invited.user) {
+    const { error: roleError } = await adminClient.auth.admin.updateUserById(invited.user.id, { app_metadata: { role: 'user' } })
+    if (roleError) console.error('app_metadata role failed:', roleError.message)
   }
 
   // Lier le user_id à l'inscription si fourni

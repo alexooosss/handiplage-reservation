@@ -147,6 +147,14 @@ async function renderMc(container, date) {
       + '</div>'
       + '<button type="button" class="mc-btn-rouvrir" id="mc-rouvrir">Rouvrir la plage</button>'
       + '</section>'
+      // Fermeture déclarée avant la mise à jour : elle n'est pas encore appliquée aux réservations
+      + (!st.fermee_id
+          ? '<section class="mc-card mc-ferme-rattrapage" role="alert">'
+            + '<p><b>Cette fermeture n\'est pas encore appliquée aux réservations.</b> Elle a été déclarée avec l\'ancienne version : '
+            + 'les créneaux restent réservables et les réservations ne sont pas suspendues.</p>'
+            + '<button type="button" class="mc-btn-danger" id="mc-appliquer">Appliquer la fermeture maintenant</button>'
+            + '</section>'
+          : '')
       // Usagers dont la réservation est suspendue : à prévenir
       + '<section class="mc-card mc-prevenir" aria-labelledby="mc-prev-t">'
       +   '<div class="mc-card-hd"><h2 id="mc-prev-t">Usagers à prévenir</h2>'
@@ -341,6 +349,31 @@ async function renderMc(container, date) {
   const rerender = () => renderMc(container, date).catch(console.error);
 
   if (st.fermee) _mcChargerAPrevenir(date);
+
+  // Rattrapage d'une fermeture déclarée avant la mise à jour
+  const appliquerBtn = document.getElementById('mc-appliquer');
+  if (appliquerBtn) appliquerBtn.addEventListener('click', async () => {
+    const heure = isToday ? _heureCourante() : '00:00';
+    if (!confirm('Appliquer la fermeture à partir de ' + (isToday ? heure.replace(':', 'h') : 'toute la journée') + ' ?\n\n'
+      + 'Les réservations en attente des créneaux pas encore terminés seront suspendues, et ces créneaux ne seront plus réservables.')) return;
+    appliquerBtn.disabled = true;
+    try {
+      const d = _mcCurrentData;
+      const res = await fermerPlage(date, heure, d.staff.fermee_motif, d.staff.fermee_precision);
+      d.staff.fermee_id = res.fermeture.id;
+      d.staff.fermee_heure = heure;
+      d.staff.fermee_suspendues = res.suspendues;
+      if (!d.notes) d.notes = [];
+      d.notes.unshift({ ts: isToday ? Date.now() : new Date(date + 'T12:00:00').getTime(),
+        text: 'Fermeture appliquée aux réservations' + (isToday ? ' à ' + heure.replace(':', 'h') : '') + ' · ' + res.suspendues + ' réservation' + (res.suspendues > 1 ? 's' : '') + ' suspendue' + (res.suspendues > 1 ? 's' : ''),
+        reporter: _lsGet(MC_REPORTER_KEY), type: 'fermeture' });
+      await _mcSave(date, d);
+      rerender();
+    } catch (e) {
+      appliquerBtn.disabled = false;
+      alert('Impossible d\'appliquer la fermeture : ' + (e.message || e));
+    }
+  });
 
   // ── Wiring : export PDF ──
   const pdfBtn = document.getElementById('mc-nav-pdf');

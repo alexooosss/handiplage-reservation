@@ -49,6 +49,22 @@ const UsagerApp = (() => {
     // réelle, et sans étape de renouvellement. Activé APRÈS l'appel du bandeau gauche,
     // qui garde donc les vraies dates de saison.
     if (_inscription.isDemo) activerSaisonDemo();
+    // Compte démo : ses réservations sont simulées dans ce navigateur (voir usager-storage.js)
+    if (_inscription.isDemo) window._hpDemoInscriptionId = _inscription.id;
+
+    // Compte démo : simple repère discret dans le pied de page (pas de bandeau sur l'accueil)
+    if (_inscription.isDemo && !document.getElementById('footer-demo')) {
+      var footerInner = document.querySelector('.site-footer-inner');
+      if (footerInner) {
+        var demoTag = document.createElement('span');
+        demoTag.id = 'footer-demo';
+        demoTag.className = 'site-footer-demo';
+        demoTag.title = 'Compte démo — vos actions ne sont pas enregistrées';
+        demoTag.innerHTML = '<img src="icone%20demo.svg" alt="" aria-hidden="true">Démo'
+          + '<span class="sr-only"> : compte de démonstration, vos actions ne sont pas enregistrées</span>';
+        footerInner.appendChild(demoTag);
+      }
+    }
     var state = _inscription.isDemo ? 'actif' : computeUsagerAccessState(_inscription, saisonCourante);
 
     if (state === 'refuse' || state === 'premiere_demande') {

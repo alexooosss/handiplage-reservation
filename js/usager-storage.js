@@ -34,13 +34,40 @@ function _rowToUsagerReservation(row) {
   };
 }
 
+// ── Compte démo : réservations simulées, gardées dans le navigateur (session) ──
+// Mêmes règles qu'un vrai compte (2 par jour, quota, créneau complet ou fermé…),
+// mais rien n'est écrit dans la base : les places des vrais usagers ne sont pas touchées.
+var _DEMO_KEY = 'hp_demo_reservations';
+var _demoMemoire = null;
+
+function _estDemo(inscriptionId) {
+  return !!(typeof window !== 'undefined' && window._hpDemoInscriptionId && inscriptionId === window._hpDemoInscriptionId);
+}
+function _demoLire() {
+  if (_demoMemoire) return _demoMemoire;
+  try { _demoMemoire = JSON.parse(sessionStorage.getItem(_DEMO_KEY) || '[]'); } catch (e) { _demoMemoire = []; }
+  return _demoMemoire;
+}
+function _demoEcrire(rows) {
+  _demoMemoire = rows;
+  try { sessionStorage.setItem(_DEMO_KEY, JSON.stringify(rows)); } catch (e) { /* mémoire seule */ }
+}
+// Ligne au format de la base (avec l'heure de fin du créneau, comme la jointure « creneaux »)
+function _demoLigne(r) {
+  var slot = (typeof getSlotById === 'function') ? getSlotById(r.creneau_id) : null;
+  return Object.assign({}, r, { creneaux: { heure_fin: slot ? slot.end + ':00' : null } });
+}
+
 function computePassBalance(reservations, quota) {
   var today    = new Date();
   var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-  var used = reservations.filter(function(r) {
-    return r.date && r.date.startsWith(monthKey) && resaCompteDansQuota(r);
-  }).length;
+  // Pass décompté au mois où l'on réserve (voir passUtilise dans slots.js)
+  var used = passUtilise(reservations, today);
   return { used: used, remaining: Math.max(0, quota - used), quota: quota, monthKey: monthKey };
+}
+
+function nomMoisCourant() {
+  return new Date().toLocaleDateString('fr-FR', { month: 'long' });
 }
 
 function canCancelReservation(dateISO) {
@@ -114,7 +141,7 @@ async function requestRenewal() {
 async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var crRes  = await supabaseClient.from('creneaux').select('id, label, heure_debut, heure_fin, capacite_resa').order('id');
   var resaRes = await supabaseClient.from('reservations')
-    .select('id, date, creneau_id, inscription_id, statut')
+    .select('id, date, creneau_id, inscription_id, statut, resa_type, type')
     .gte('date', fromISO).lte('date', toISO).not('statut', 'in', '(annule,suspendu)');
 
   if (crRes.error)   throw crRes.error;
@@ -122,9 +149,20 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
 
   var creneaux = crRes.data || [];
   var resas    = resaRes.data || [];
+  // Compte démo : ses réservations simulées s'ajoutent aux vraies (places, « Réservé », limite du jour)
+  if (_estDemo(inscriptionId)) {
+    resas = resas.concat(_demoLire().filter(function(r) {
+      return r.date >= fromISO && r.date <= toISO && r.statut !== 'annule' && r.statut !== 'suspendu';
+    }));
+  }
   var fermetures = [];
   if (typeof getFermetures === 'function') {
     try { fermetures = await getFermetures(fromISO, toISO); } catch (e) { fermetures = []; }
+  }
+  // Places réglées par le staff (sinon capacité normale du créneau)
+  var capaIndex = {};
+  if (typeof getCapacites === 'function') {
+    try { capaIndex = indexCapacites(await getCapacites(fromISO, toISO)); } catch (e) { capaIndex = {}; }
   }
 
   var counts           = {};
@@ -134,7 +172,8 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var userDayCounts    = {};
   resas.forEach(function(r) {
     var key = r.date + '_' + r.creneau_id;
-    counts[key] = (counts[key] || 0) + 1;
+    // Seules les réservations usagers en ligne occupent les places en ligne
+    if ((r.resa_type || 'normal') === 'normal' && (r.type || 'reserved') === 'reserved') counts[key] = (counts[key] || 0) + 1;
     if (inscriptionId && r.inscription_id === inscriptionId) {
       userBooked[key] = true;
       userResaId[key] = r.id;
@@ -154,15 +193,17 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
       var booked         = !!userBooked[key];
       var dayLimitReached = !booked && (userDayCounts[dateISO] || 0) >= 2;
       var ferme = creneauFerme(fermetures, dateISO, c.id);
+      var regle = capaIndex[key];
+      var cap   = regle ? Math.max(0, regle.capacite_totale - regle.places_groupes) : c.capacite_resa;
       return {
         creneauId:  c.id,
         label:      c.label,
         heureDebut: c.heure_debut,
         heureFin:   c.heure_fin,
-        capacity:   c.capacite_resa,
+        capacity:   cap,
         count:      count,
-        remaining:  Math.max(0, c.capacite_resa - count),
-        available:  !booked && !dayLimitReached && !ferme && count < c.capacite_resa,
+        remaining:  Math.max(0, cap - count),
+        available:  !booked && !dayLimitReached && !ferme && count < cap,
         ferme:      !!ferme,
         userBooked:    booked,
         resaId:        userResaId[key] || null,
@@ -175,6 +216,24 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
 }
 
 async function getUserReservations(inscriptionId) {
+  if (_estDemo(inscriptionId)) {
+    var rows = _demoLire();
+    // Fermeture de la plage : les réservations démo concernées sont suspendues, comme les vraies
+    var fermetures = [];
+    if (rows.length && typeof getFermetures === 'function') {
+      var dates = rows.map(function(r) { return r.date; }).sort();
+      try { fermetures = await getFermetures(dates[0], dates[dates.length - 1]); } catch (e) { fermetures = []; }
+    }
+    return rows.slice().sort(function(a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; })
+      .map(function(r) {
+        var f = r.statut === 'attente' && creneauFerme(fermetures, r.date, r.creneau_id);
+        // Suspendue si le créneau n'était pas terminé à l'heure de fermeture
+        // … et pas rétablie par une réouverture avant la fin du créneau (même règle que rouvrirPlage)
+        var suspendue = f && creneauxNonTerminesA(f.heure_fermeture).indexOf(r.creneau_id) !== -1
+          && !(f.heure_reouverture && creneauxNonTerminesA(f.heure_reouverture).indexOf(r.creneau_id) !== -1);
+        return _rowToUsagerReservation(_demoLigne(suspendue ? Object.assign({}, r, { statut: 'suspendu' }) : r));
+      });
+  }
   var result = await supabaseClient
     .from('reservations')
     .select('id, date, creneau_id, statut, accompagnants, spot_id, created_at, creneaux(heure_fin)')
@@ -186,7 +245,7 @@ async function getUserReservations(inscriptionId) {
 
 async function createUserReservation(inscription, dateISO, creneauId) {
   if (!inscription.passActif) throw new Error('Pass non activé. Contactez l\'équipe Handiplage.');
-  if (inscription.isDemo) throw new Error('Compte démo — aucune réservation n\'est enregistrée.');
+  var demo = _estDemo(inscription.id);
 
   // Fermeture saisonnière : aucune réservation au-delà de la fin de saison
   var saisonDates = await getSaisonDates();
@@ -200,7 +259,7 @@ async function createUserReservation(inscription, dateISO, creneauId) {
   // n'est jamais remis à false au changement de saison, donc rien d'autre n'empêcherait
   // un appel direct à cette fonction de réussir pour un compte non renouvelé.
   var saisonCourante = await getSaisonCourante();
-  if (inscription.derniereSaisonValidee !== saisonCourante) {
+  if (!demo && inscription.derniereSaisonValidee !== saisonCourante) {
     throw new Error('Votre inscription doit être renouvelée pour la saison en cours. Contactez l\'équipe Handiplage.');
   }
 
@@ -217,24 +276,39 @@ async function createUserReservation(inscription, dateISO, creneauId) {
     if (creneauFerme(fs, dateISO, creneauId)) throw new Error('La Handiplage est fermée sur ce créneau : aucune réservation possible.');
   }
 
-  var dayRes = await supabaseClient.from('reservations')
-    .select('date, creneau_id, statut')
-    .eq('inscription_id', inscription.id)
-    .eq('date', dateISO)
-    .neq('statut', 'annule');
+  var dayRes = demo
+    ? { data: _demoLire().filter(function(r) { return r.date === dateISO && r.statut !== 'annule'; }) }
+    : await supabaseClient.from('reservations')
+      .select('date, creneau_id, statut')
+      .eq('inscription_id', inscription.id)
+      .eq('date', dateISO)
+      .neq('statut', 'annule');
   if (dayRes.error) throw dayRes.error;
+  if (demo && dayRes.data.some(function(r) { return r.creneau_id === creneauId; })) throw new Error('Vous avez déjà réservé ce créneau.');
   if ((dayRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= 2) throw new Error('Limite de 2 réservations par jour atteinte.');
 
   // Vérification quota mensuel (40 par mois)
   var monthKey = dateISO.slice(0, 7);
-  var monthRes = await supabaseClient.from('reservations')
-    .select('date, creneau_id, statut')
-    .eq('inscription_id', inscription.id)
-    .gte('date', monthKey + '-01')
-    .lt('date', (function() { var d = new Date(monthKey + '-01'); d.setMonth(d.getMonth() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })())
-    .neq('statut', 'annule');
+  var monthRes = demo
+    ? { data: _demoLire() }
+    : await supabaseClient.from('reservations')
+      .select('date, creneau_id, statut, created_at')
+      .eq('inscription_id', inscription.id)
+      .or('created_at.gte.' + debutMoisCourant() + ',date.gte.' + debutMoisCourant())
+      .neq('statut', 'annule');
   if (monthRes.error) throw monthRes.error;
-  if ((monthRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint.');
+  if (passUtilise(monthRes.data || []) >= PASS_QUOTA) throw new Error('Pass du mois épuisé : ' + PASS_QUOTA + ' réservations déjà faites ce mois-ci. Il se renouvelle le 1er du mois prochain.');
+
+  // Compte démo : enregistrée seulement dans ce navigateur
+  if (demo) {
+    var row = {
+      id: 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      date: dateISO, creneau_id: creneauId, inscription_id: inscription.id,
+      statut: 'attente', accompagnants: 0, spot_id: null, created_at: new Date().toISOString(),
+    };
+    _demoEcrire(_demoLire().concat([row]));
+    return _rowToUsagerReservation(_demoLigne(row));
+  }
 
   var result = await supabaseClient.from('reservations').insert({
     date:           dateISO,
@@ -253,6 +327,10 @@ async function createUserReservation(inscription, dateISO, creneauId) {
 }
 
 async function cancelUserReservation(reservationId) {
+  if (String(reservationId).indexOf('demo-') === 0) {
+    _demoEcrire(_demoLire().map(function(r) { return r.id === reservationId ? Object.assign({}, r, { statut: 'annule' }) : r; }));
+    return;
+  }
   var result = await supabaseClient.from('reservations')
     .update({ statut: 'annule' })
     .eq('id', reservationId);
@@ -260,6 +338,8 @@ async function cancelUserReservation(reservationId) {
 }
 
 async function sendUsagerMessage(inscriptionId, sujet, text) {
+  // Compte démo : le message n'est pas transmis au staff (même parcours, rien n'est enregistré)
+  if (_estDemo(inscriptionId)) return;
   var result = await supabaseClient.from('messages').insert({
     inscription_id: inscriptionId,
     motif_refus:    '[USAGER] ' + sujet,

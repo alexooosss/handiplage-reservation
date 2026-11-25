@@ -62,10 +62,14 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   const days         = _weekDays(ws);
   const weekStartISO = _isoDate(ws);
   const weekEndISO   = _isoDate(days[6]);
-  const [counts, fermetures] = await Promise.all([
+  const [counts, fermetures, capaRows] = await Promise.all([
     getWeekReservationCounts(weekStartISO, weekEndISO),
     typeof getFermetures === 'function' ? getFermetures(weekStartISO, weekEndISO).catch(() => []) : Promise.resolve([]),
+    typeof getCapacites === 'function' ? getCapacites(weekStartISO, weekEndISO).catch(() => []) : Promise.resolve([]),
   ]);
+  const capaIndex = typeof indexCapacites === 'function' ? indexCapacites(capaRows) : {};
+  container._capaIndex = capaIndex;
+  const groupesCache = typeof getCachedGroupes === 'function' ? getCachedGroupes() : [];
 
   // Bandeau : réservation en cours pour un groupe (lancée depuis l'onglet Groupes)
   const gp = window._hpGroupePreselect;
@@ -96,9 +100,13 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   days.forEach(d => {
     const iso     = _isoDate(d);
     const isToday = iso === todayISO;
-    gridHtml += isToday
-      ? `<div class="planning-grid-header today" aria-current="date"><span class="pgh-today-tag">Aujourd'hui</span><span>${_formatDayHeader(d)}</span></div>`
-      : `<div class="planning-grid-header">${_formatDayHeader(d)}</div>`;
+    const jourModifie = SLOTS.some(s => capaIndex[iso + '_' + s.id]);
+    gridHtml += '<button type="button" class="planning-grid-header pgh-btn' + (isToday ? ' today' : '') + (jourModifie ? ' pgh-modif' : '') + '"'
+      + ' data-date="' + iso + '" aria-haspopup="menu" title="Régler les places de la journée"' + (isToday ? ' aria-current="date"' : '') + '>'
+      + (isToday ? '<span class="pgh-today-tag">Aujourd\'hui</span>' : '')
+      + '<span>' + _formatDayHeader(d) + '</span>'
+      + '<span class="pgh-regler">Places ▾</span>'
+      + '</button>';
   });
 
   // Créneau en cours (seulement si la semaine affichée contient aujourd'hui)
@@ -148,10 +156,25 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       const fermeCell = typeof creneauFerme === 'function' ? creneauFerme(fermetures, iso, slot.id) : null;
       if (fermeCell) classes += ' ferme-cell';
 
-      const nCls = cntN >= CAPACITY_NORMAL ? 'phalf-count full'
-                 : cntN >= CAPACITY_NORMAL * 0.8 ? 'phalf-count warn' : 'phalf-count';
-      const gCls = cntG >= CAPACITY_GROUPE ? 'phalf-count full'
-                 : cntG >= CAPACITY_GROUPE * 0.8 ? 'phalf-count warn' : 'phalf-count';
+      // Places du créneau (réglage ponctuel ou capacité normale)
+      const cap  = typeof capaciteDe === 'function' ? capaciteDe(capaIndex, iso, slot.id)
+                 : { usagers: CAPACITY_NORMAL, groupes: CAPACITY_GROUPE, modifie: false };
+      const capN = cap.usagers, capG = cap.groupes;
+      const nCls = cntN > capN ? 'phalf-count full over' : cntN >= capN ? 'phalf-count full'
+                 : cntN >= capN * 0.8 ? 'phalf-count warn' : 'phalf-count';
+      const gCls = cntG > capG ? 'phalf-count full over' : cntG >= capG ? 'phalf-count full'
+                 : cntG >= capG * 0.8 ? 'phalf-count warn' : 'phalf-count';
+      // Étiquette quand le créneau a été réglé
+      let capTag = '';
+      if (cap.modifie) {
+        const grp = cap.groupeId ? groupesCache.find(g => g.id === cap.groupeId) : null;
+        if (cntN > capN && capN > 0)              capTag = '<span class="capa-tag capa-over">Limite dépassée</span>';
+        else if (capN === 0)                     capTag = '<span class="capa-tag capa-off">Fermé en ligne</span>';
+        else if (grp)                            capTag = '<span class="capa-tag capa-grp" title="Places groupes réservées pour ' + String(grp.nom).replace(/"/g, '&quot;') + '">' + String(grp.nom).replace(/</g, '&lt;') + '</span>';
+        else if (capN > CAPA_DEFAUT.totale - CAPA_DEFAUT.groupes) capTag = '<span class="capa-tag capa-plus">+ ouvert</span>';
+        else                                     capTag = '<span class="capa-tag capa-lim">Limité</span>';
+        classes += ' capa-modif';
+      }
       const nSty = nCls === 'phalf-count' ? 'color:' + color : '';
 
       const walkinHtml = walkins > 0
@@ -162,15 +185,15 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       gridHtml += '<div class="' + classes + '" data-date="' + iso + '" data-slot-id="' + slot.id + '"'
         + (fermeCell ? ' title="Plage fermée' + (fermeCell.motif ? ' : ' + String(fermeCell.motif).replace(/"/g, '&quot;') : '') + '"' : '')
         + ' style="--slot-c:' + color + ';border-top:3px solid ' + (isToday ? 'transparent' : color) + '">'
-        + (fermeCell ? '<span class="ferme-tag">Fermé</span>' : '')
+        + (fermeCell ? '<span class="ferme-tag">Fermé</span>' : capTag)
         + '<div class="phalf-row">'
         + '<div class="phalf" style="background:' + color + '0d">'
-        + '<span class="' + nCls + '" style="' + nSty + '" translate="no" data-cnt="' + cntN + '" data-cap="' + CAPACITY_NORMAL + '"></span>'
+        + '<span class="' + nCls + '" style="' + nSty + '" translate="no" data-cnt="' + cntN + '" data-cap="' + capN + '"></span>'
         + '<span class="phalf-label">Réservations</span>'
         + '</div>'
         + '<div class="phalf-div"></div>'
         + '<div class="phalf phalf-groupe">'
-        + '<span class="' + gCls + '" translate="no" data-cnt="' + cntG + '" data-cap="' + CAPACITY_GROUPE + '"></span>'
+        + '<span class="' + gCls + '" translate="no" data-cnt="' + cntG + '" data-cap="' + capG + '"></span>'
         + '<span class="phalf-label">Groupes</span>'
         + '</div>'
         + '</div>'
@@ -202,6 +225,12 @@ async function renderPlanning(container, weekOffset, onCellClick) {
     window._hpGroupePreselect = null;
     const b = document.getElementById('plan-groupe-banner');
     if (b) b.remove();
+  });
+
+  container.querySelectorAll('.pgh-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (typeof ouvrirMenuJournee === 'function') ouvrirMenuJournee(btn, btn.dataset.date, capaIndex, () => { if (container._onCapacite) container._onCapacite(); });
+    });
   });
 
   const planTodayBtn = document.getElementById('btn-plan-today');

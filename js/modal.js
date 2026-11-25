@@ -808,6 +808,8 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   const goLiveBtn = callbacks.onGoLive
     ? `<button class="btn-ghost" id="btn-go-live">&#9654; Vue live</button>` : '';
+  const capa = callbacks.capacite || { usagers: CAPACITY_NORMAL, groupes: CAPACITY_GROUPE, totale: CAPACITY_NORMAL + CAPACITY_GROUPE, modifie: false };
+  const CAP_N = capa.usagers, CAP_G = capa.groupes;
 
   _dialog().innerHTML = `
     <div class="modal-header">
@@ -819,6 +821,11 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body plan-modal-body">
+      <!-- Places du créneau (réglables) -->
+      <div class="plan-capa${capa.modifie ? ' plan-capa-modif' : ''}">
+        <span>Places en ligne : <b>${CAP_N}</b> usagers · <b>${CAP_G}</b> groupes${capa.modifie ? ' <em>(réglage du jour)</em>' : ''}</span>
+        ${typeof ouvrirReglageCapacite === 'function' ? '<button type="button" class="plan-capa-btn" id="pf-capa">Régler les places</button>' : ''}
+      </div>
       <!-- Formulaire d'ajout inline -->
       <div class="plan-inline-form">
         <div class="plan-form-row">
@@ -1035,13 +1042,22 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
 
   async function _refreshAll() {
     await Promise.all([
-      _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAPACITY_NORMAL),
-      _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAPACITY_GROUPE),
+      _refreshSection('normal', 'planning-list-normal', 'cap-normal', CAP_N),
+      _refreshSection('groupe', 'planning-list-groupe', 'cap-groupe', CAP_G),
       _refreshWalkins(),
     ]);
   }
 
   _bindRadioGroup('pf-type');
+
+  const capaBtn = document.getElementById('pf-capa');
+  if (capaBtn) capaBtn.addEventListener('click', () => {
+    ouvrirReglageCapacite({
+      date: dateISO, creneauId: slot.id, portee: 'creneau',
+      depart: { totale: capa.totale, groupes: capa.groupes, groupeId: capa.groupeId },
+      onDone: () => { if (_dialog().open) _dialog().close(); if (callbacks.onCapacite) callbacks.onCapacite(); },
+    });
+  });
 
   // Bascule Acc. ↔ Empl. et Nom/Prénom ↔ Nom du groupe selon le type
   document.querySelectorAll('#pf-type .radio-btn').forEach(btn => {
@@ -1201,19 +1217,19 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
       getReservationList(dateISO, slot.id),
       getReservations(dateISO, slot.id),
     ]);
-    const limit = resaType === 'normal' ? CAPACITY_NORMAL : CAPACITY_GROUPE;
+    const limit = resaType === 'normal' ? CAP_N : CAP_G;
     if (resaType === 'groupe') {
       const existingEmpl = all.filter(function(r) { return r.resaType === 'groupe'; })
         .reduce(function(sum, r) { return sum + (r.nbUsagers || 1); }, 0);
-      if (existingEmpl + accompagnants > limit) {
-        errEl.textContent = 'Capacité maximale atteinte (' + limit + ' emplacements).';
+      if (existingEmpl + accompagnants > limit
+          && !confirm('Ce créneau est limité à ' + limit + ' places groupes et ' + existingEmpl + ' sont déjà prises.\n\nAjouter quand même ce groupe ?')) {
         return;
       }
     } else {
       const count        = all.filter(function(r) { return !r.resaType || r.resaType === 'normal'; }).length;
       const arrivedCount = Object.values(spotsMap).filter(function(r) { return r.type === 'reserved'; }).length;
-      if (count + arrivedCount >= limit) {
-        errEl.textContent = 'Capacité maximale atteinte (' + limit + ').';
+      if (count + arrivedCount >= limit
+          && !confirm('Ce créneau est limité à ' + limit + ' places en ligne et ' + (count + arrivedCount) + ' sont déjà réservées.\n\nAjouter quand même cette réservation ?')) {
         return;
       }
     }

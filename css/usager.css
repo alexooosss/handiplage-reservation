@@ -566,6 +566,9 @@ body > header + * { flex: 1 0 auto; width: 100%; }
 .site-footer-inner { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
 .site-footer-inner a { color: rgba(255,255,255,.8); text-decoration: none; }
 .site-footer-inner a:hover { color: white; text-decoration: underline; }
+.site-footer-demo { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: rgba(255,255,255,.75); }
+.site-footer-demo img { width: 16px; height: 16px; filter: brightness(0) invert(1); opacity: .75; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ── Sidebar (cachée par défaut — desktop seulement) ─────────────── */
 .usager-shell  { display: block; }

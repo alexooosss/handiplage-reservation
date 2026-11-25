@@ -86,6 +86,33 @@ function resaCompteDansQuota(r, now) {
   return true;
 }
 
+// ── Pass mensuel : décompté au mois où l'on RÉSERVE (pas celui de la date réservée) ──
+// • Une réservation compte sur le pass du mois de sa création, quelle que soit sa date.
+// • Le 1er du mois, le pass repart à 40, sans report du mois précédent.
+// • Annulation : le crédit revient au pass du mois de création (perdu si ce mois est passé).
+// • Exception fermeture : une réservation faite un mois précédent et recréditée pour cause
+//   de fermeture rend son crédit au pass du mois de la fermeture (= mois de sa date).
+function _moisDe(isoOuDate) {
+  var d = new Date(isoOuDate);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function passUtilise(reservations, now) {
+  now = now || new Date();
+  var mois = _moisDe(now);
+  var utilise = 0, bonus = 0;
+  (reservations || []).forEach(function(r) {
+    var cree = r.created_at || r.createdAt;
+    var moisCree = cree ? _moisDe(cree) : (r.date || '').slice(0, 7);
+    if (moisCree === mois && resaCompteDansQuota(r, now)) utilise++;
+    if (moisCree < mois && r.date && r.date.slice(0, 7) === mois && suspensionRecreditee(r, now)) bonus++;
+  });
+  return Math.max(0, utilise - bonus);
+}
+// Début du mois en cours (« AAAA-MM-01 ») : borne des requêtes du pass
+function debutMoisCourant(now) {
+  return _moisDe(now || new Date()) + '-01';
+}
+
 // Le créneau est-il touché par une fermeture (intervalle [fermeture, réouverture[) ?
 function creneauFerme(fermetures, dateISO, creneauId) {
   var slot = SLOTS.find(function(s) { return s.id === creneauId; });
@@ -109,5 +136,5 @@ function creneauxNonTerminesA(heure) {
 
 if (typeof module !== 'undefined') {
   module.exports = { SLOTS, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot,
-    suspensionRecreditee, resaCompteDansQuota, creneauFerme, creneauxNonTerminesA };
+    suspensionRecreditee, resaCompteDansQuota, creneauFerme, creneauxNonTerminesA, passUtilise, debutMoisCourant };
 }

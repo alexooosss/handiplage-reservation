@@ -1077,9 +1077,7 @@ function _loadHistory(inscriptionId) {
     // Mettre à jour le solde pass depuis les vraies données Supabase
     if (typeof getPassMonthKey === 'function' && typeof PASS_QUOTA !== 'undefined') {
       var monthKey = getPassMonthKey();
-      var usedThisMonth = rows.filter(function(r) {
-        return r.date && r.date.startsWith(monthKey) && resaCompteDansQuota(r);
-      }).length;
+      var usedThisMonth = passUtilise(rows);
       var remaining = Math.max(0, PASS_QUOTA - usedThisMonth);
       var countEl = document.querySelector('.pass-remaining-count');
       if (countEl) {

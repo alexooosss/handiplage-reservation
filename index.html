@@ -30,6 +30,7 @@
         Messages<span id="messages-badge" class="msg-badge" style="display:none"></span>
       </button>
       <button type="button" id="btn-stats-tab" class="planning-tab-btn">Stats</button>
+      <button type="button" id="btn-plans-tab" class="planning-tab-btn" hidden>Plans</button>
     </nav>
     <!-- Créneaux : affichés uniquement sur l'écran « Plage » (injectés par app.js) -->
     <nav class="slots-nav" id="slots-nav" aria-label="Créneau affiché sur le plan"></nav>
@@ -85,6 +86,9 @@
     <!-- Vue Statistiques -->
     <div id="stats-view" style="display:none" class="stats-view"></div>
 
+    <!-- Vue Plans (responsable) -->
+    <div id="plans-view" style="display:none" class="plans-view"></div>
+
     <!-- Vue Profil -->
     <div id="profil-view" style="display:none" class="profil-view"></div>
 
@@ -112,6 +116,10 @@
   <script src="js/supabase-geo.js"></script>
   <script src="js/supabase-mc.js"></script>
   <script src="js/supabase-fermetures.js"></script>
+  <script src="js/supabase-capacites.js"></script>
+  <script src="js/capacites-ui.js"></script>
+  <script src="js/supabase-plans.js"></script>
+  <script src="js/plans.js"></script>
   <script src="js/map.js"></script>
   <script src="js/panel.js"></script>
   <script src="js/modal.js"></script>
@@ -142,7 +150,10 @@
           return;
         }
         document.getElementById('btn-logout').addEventListener('click', signOut);
+        // Onglet « Plans » : responsable uniquement (la base vérifie aussi ce droit)
+        if (estResponsable(session)) document.getElementById('btn-plans-tab').hidden = false;
         var mapEl = document.getElementById('beach-map');
+        await chargerPlanDuJour();   // plan en service aujourd'hui (sinon plan de secours)
         renderMapStatic(mapEl);
         App.init();
       } catch (err) {

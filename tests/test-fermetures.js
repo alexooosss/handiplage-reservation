@@ -1,7 +1,7 @@
 // tests/test-fermetures.js — règles de fermeture de la plage (suspension / recrédit)
 'use strict';
 const assert = require('assert');
-const { suspensionRecreditee, resaCompteDansQuota, creneauFerme, creneauxNonTerminesA } = require('../js/slots.js');
+const { suspensionRecreditee, resaCompteDansQuota, creneauFerme, creneauxNonTerminesA, passUtilise } = require('../js/slots.js');
 
 const at = (iso, hhmm) => new Date(iso + 'T' + hhmm + ':00');
 const J = '2026-07-15';
@@ -36,5 +36,31 @@ assert.ok(!creneauFerme(F, J, 5));   // 16h30 – 18h15 : réservable après la 
 assert.ok(!creneauFerme(F, '2026-07-16', 3));
 // Fermeture sans réouverture : jusqu'au soir
 assert.ok(creneauFerme([{ date: J, heure_fermeture: '12:20', heure_reouverture: null }], J, 5));
+
+// ── Pass mensuel : décompté au mois où l'on réserve ──
+{
+  const nov25 = at('2026-11-25', '10:00');
+  const resas = [
+    { date: '2026-11-25', creneau_id: 3, statut: 'attente', created_at: '2026-11-20T09:00:00' },
+    { date: '2026-12-02', creneau_id: 2, statut: 'attente', created_at: '2026-11-24T09:00:00' }, // réservée en novembre pour décembre
+    { date: '2026-12-03', creneau_id: 2, statut: 'annule',  created_at: '2026-11-24T09:05:00' }, // annulée : crédit rendu à novembre
+    { date: '2026-11-10', creneau_id: 1, statut: 'parti',   created_at: '2026-10-30T09:00:00' }, // réservée en octobre : pas sur novembre
+  ];
+  // Novembre : 2 réservations faites en novembre (dont une pour décembre)
+  assert.strictEqual(passUtilise(resas, nov25), 2);
+  // 1er décembre : le pass repart à zéro (rien de réservé en décembre), sans report
+  assert.strictEqual(passUtilise(resas, at('2026-12-01', '08:00')), 0);
+
+  // Exception fermeture : réservée en novembre pour le 2 décembre, plage fermée ce jour-là
+  // → le crédit revient au pass de décembre
+  const ferme = [
+    { date: '2026-12-02', creneau_id: 3, statut: 'suspendu', created_at: '2026-11-24T09:00:00' },
+    { date: '2026-12-02', creneau_id: 4, statut: 'attente',  created_at: '2026-12-01T09:00:00' },
+    { date: '2026-12-01', creneau_id: 1, statut: 'attente',  created_at: '2026-12-01T09:10:00' },
+  ];
+  assert.strictEqual(passUtilise(ferme, at('2026-12-02', '15:00')), 1);   // 2 faites en décembre − 1 recrédit fermeture
+  // Avant la fin du créneau suspendu, le recrédit n'est pas encore acquis
+  assert.strictEqual(passUtilise(ferme, at('2026-12-02', '13:00')), 2);
+}
 
 console.log('✓ test-fermetures.js OK');

@@ -55,11 +55,12 @@ async function renderReservations(container, inscription, showView) {
 
       passHtml = '<div class="usager-card usager-pass-banner">'
         + '<div class="usager-pass-banner-row">'
-        +   '<div class="usager-pass-banner-label">Pass ce mois</div>'
+        +   '<div class="usager-pass-banner-label">Pass de ' + nomMoisCourant() + '</div>'
         +   '<div class="usager-pass-banner-count"><span class="usager-pass-banner-num">' + balance.remaining + '</span> / ' + balance.quota + '</div>'
         + '</div>'
         + '<div class="usager-pass-bar-wrap" style="margin:8px 0 4px"><div class="usager-pass-bar-fill ' + fillCls + '" style="width:' + pct + '%"></div></div>'
-        + '<div class="usager-pass-meta">Réinitialisation le ' + resetLabel + '</div>'
+        + '<div class="usager-pass-meta">Chaque réservation faite ce mois-ci compte sur ce pass, quelle que soit sa date. '
+        +   'Il repart à ' + PASS_QUOTA + ' le ' + resetLabel + ' (les réservations non utilisées ne sont pas reportées).</div>'
         + '</div>';
     }
 

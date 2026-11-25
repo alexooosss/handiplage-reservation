@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE OR REPLACE FUNCTION public.auth_user_role()
 RETURNS text AS $$
   SELECT COALESCE(
-    (auth.jwt() -> 'user_metadata' ->> 'role'),
+    (auth.jwt() -> 'app_metadata' ->> 'role'),  -- jamais user_metadata (modifiable par l'utilisateur)
     'user'
   )
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp;

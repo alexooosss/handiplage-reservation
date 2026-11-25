@@ -147,17 +147,12 @@ async function addReservation(date, slotId, data) {
     // Quota mensuel : 40 réservations par mois
     var monthKey = date.slice(0, 7);
     var monthRes = await supabaseClient.from('reservations')
-      .select('date, creneau_id, statut')
+      .select('date, creneau_id, statut, created_at')
       .eq('inscription_id', data.inscriptionId)
-      .gte('date', monthKey + '-01')
-      .lt('date', (function() {
-        var d = new Date(monthKey + '-01');
-        d.setMonth(d.getMonth() + 1);
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
-      })())
+      .or('created_at.gte.' + debutMoisCourant() + ',date.gte.' + debutMoisCourant())
       .neq('statut', 'annule');
     if (monthRes.error) throw monthRes.error;
-    if ((monthRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint pour cet usager.');
+    if (passUtilise(monthRes.data || []) >= PASS_QUOTA) throw new Error('Pass du mois épuisé pour cet usager (' + PASS_QUOTA + ' réservations faites ce mois-ci).');
   }
 
   var row = {
@@ -246,14 +241,14 @@ async function getPassRemainingCount(inscriptionId, monthISO) {
   nextMonth.setMonth(nextMonth.getMonth() + 1);
   var end = nextMonth.getFullYear() + '-'
     + String(nextMonth.getMonth() + 1).padStart(2, '0') + '-01';
+  // Pass décompté au mois où l'on réserve (monthISO = mois en cours)
   var result = await supabaseClient.from('reservations')
-    .select('date, creneau_id, statut')
+    .select('date, creneau_id, statut, created_at')
     .eq('inscription_id', inscriptionId)
-    .gte('date', start)
-    .lt('date', end)
+    .or('created_at.gte.' + start + ',date.gte.' + start)
     .neq('statut', 'annule');
   if (result.error) throw result.error;
-  return (result.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length;
+  return passUtilise(result.data || []);
 }
 
 // ── Flux 2 étapes ──
@@ -325,7 +320,7 @@ async function getGroupeReservationsSaison() {
 
 async function getReservationsForInscription(inscriptionId) {
   var result = await supabaseClient.from('reservations')
-    .select('id, date, creneau_id, statut, accompagnants, spot_id, resa_type')
+    .select('id, date, creneau_id, statut, accompagnants, spot_id, resa_type, created_at')
     .eq('inscription_id', inscriptionId)
     .order('date', { ascending: false });
   if (result.error) throw result.error;

@@ -119,6 +119,14 @@ const App = (() => {
       });
     }
 
+    // Plans tab button (responsable)
+    const btnPlans = document.getElementById('btn-plans-tab');
+    if (btnPlans) {
+      btnPlans.addEventListener('click', () => {
+        showView(_currentView === 'plans' ? 'carte' : 'plans');
+      });
+    }
+
     // Profil tab button
     const btnProfil = document.getElementById('btn-profil-tab');
     if (btnProfil) {
@@ -164,6 +172,8 @@ const App = (() => {
     const btnStats       = document.getElementById('btn-stats-tab');
     const btnProfil      = document.getElementById('btn-profil-tab');
     const profilView     = document.getElementById('profil-view');
+    const plansView      = document.getElementById('plans-view');
+    const btnPlans       = document.getElementById('btn-plans-tab');
     const btnCarte       = document.getElementById('btn-carte-tab');
     const slotsNav       = document.getElementById('slots-nav');
 
@@ -184,6 +194,8 @@ const App = (() => {
     if (messagesView) messagesView.style.display  = 'none';
     if (statsView)    statsView.style.display     = 'none';
     if (profilView)   profilView.style.display    = 'none';
+    if (plansView)    plansView.style.display     = 'none';
+    if (btnPlans)     btnPlans.classList.remove('active');
     if (btnPlanning)  btnPlanning.classList.remove('active');
     if (btnMc)        btnMc.classList.remove('active');
     if (btnInsc)      btnInsc.classList.remove('active');
@@ -219,6 +231,10 @@ const App = (() => {
       if (statsView) statsView.style.display = 'block';
       if (btnStats)  btnStats.classList.add('active');
       StatsView.render(statsView).catch(console.error);
+    } else if (view === 'plans') {
+      if (plansView) plansView.style.display = 'block';
+      if (btnPlans)  btnPlans.classList.add('active');
+      renderPlansView(plansView).catch(console.error);
     } else if (view === 'profil') {
       if (profilView) profilView.style.display = 'block';
       if (btnProfil)  btnProfil.classList.add('active');
@@ -304,12 +320,16 @@ const App = (() => {
     container._onPrev  = () => { _planningWeekOffset--; _renderPlanning(); };
     container._onNext  = () => { _planningWeekOffset++; _renderPlanning(); };
     container._onToday = () => { _planningWeekOffset = 0; _renderPlanning(); };
+    container._onCapacite = () => { _renderPlanning(); };
     await renderPlanning(container, _planningWeekOffset, async (dateISO, slot) => {
       const isToday = dateISO === _date;
       openSlotPlanningModal(dateISO, slot, {
         onAdd:    async data => { await addReservation(dateISO, slot.id, data); await _renderPlanning(); },
         onRemove: async id   => { await removeReservation(id); await _renderPlanning(); },
         onGoLive: isToday ? () => { showView('carte'); selectSlot(slot.id); } : null,
+        // Places du créneau (réglage ponctuel ou normal) et réglage depuis la fenêtre
+        capacite: typeof capaciteDe === 'function' ? capaciteDe(container._capaIndex || {}, dateISO, slot.id) : null,
+        onCapacite: () => _renderPlanning(),
       });
     });
   }
