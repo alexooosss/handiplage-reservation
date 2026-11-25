@@ -5,6 +5,28 @@ var _gpMode       = 'view'; // 'view' | 'edit' | 'new'
 var _gpSearch     = '';
 var _gpContainer  = null;
 var _gpSaison     = [];     // réservations de groupes de la saison (passées + à venir)
+var _gpType       = '';     // filtre par type de structure ('' = tous)
+var _gpTri        = 'nom';  // 'nom' | 'venue'
+var _gpSaisonNum  = null;   // saison en cours (app_config)
+
+// Venues d'un groupe : prochaine prévue, dernière effectuée, nombre de venues effectuées
+function _gpSuiviGroupe(g) {
+  var today  = _gpTodayISO();
+  var venues = _gpVenues(_gpRowsDuGroupe(g, _gpSaison));
+  var faites = venues.filter(function(v) { return v.etat === 'venu'; });
+  return {
+    venues: venues,
+    nbVenues: faites.length,
+    prochaine: venues.filter(function(v) { return v.etat === 'prevue'; }).sort(function(a, b) { return a.date.localeCompare(b.date); })[0] || null,
+    derniere: faites.filter(function(v) { return v.date < today; }).sort(function(a, b) { return b.date.localeCompare(a.date); })[0] || null,
+  };
+}
+
+// Ouvre le Planning, avec le groupe présélectionné si on en donne un
+function _gpPlanifier(g) {
+  window._hpGroupePreselect = g ? { id: g.id, nom: String(g.nom).toUpperCase() } : null;
+  if (typeof App !== 'undefined') App.showView('planning');
+}
 
 // ── Utilitaires ──
 function _gpEsc(s) {
@@ -96,8 +118,14 @@ async function renderGroupes(container, selectedId) {
             <h2 class="gp-sidebar-title">Groupes</h2>
             <button type="button" class="gp-dash-link" id="gp-dash-btn" hidden>Vue d'ensemble</button>
           </div>
-          <input type="search" id="gp-search" class="gp-search-input" placeholder="Rechercher un groupe, une commune…">
           <button id="gp-new-btn" class="btn-primary gp-new-btn">＋ Nouveau groupe</button>
+          <input type="search" id="gp-search" class="gp-search-input" placeholder="Nom, commune, type…" aria-label="Rechercher un groupe">
+          <div class="gp-liste-barre">
+            <span class="insc-nb" id="gp-nb" aria-live="polite"></span>
+            <label class="insc-tri"><span class="sr-only">Type de structure</span><select id="gp-type"></select></label>
+            <label class="insc-tri"><span class="sr-only">Trier</span><select id="gp-tri">
+              <option value="nom">Nom A → Z</option><option value="venue">Dernière venue</option></select></label>
+          </div>
         </div>
         <div id="gp-list" class="gp-list"></div>
       </div>
@@ -109,6 +137,15 @@ async function renderGroupes(container, selectedId) {
     _gpSearch = e.target.value;
     _gpRenderList();
   });
+  document.getElementById('gp-tri').value = _gpTri;
+  document.getElementById('gp-tri').addEventListener('change', function(e) { _gpTri = e.target.value; _gpRenderList(); });
+  document.getElementById('gp-type').addEventListener('change', function(e) { _gpType = e.target.value; _gpRenderList(); });
+  if (typeof getSaisonCourante === 'function') {
+    getSaisonCourante().then(function(s) {
+      _gpSaisonNum = s;
+      if (_gpContainer === container && !_gpSelectedId && _gpMode === 'view') _gpRenderDetail(null);
+    }).catch(function() {});
+  }
   document.getElementById('gp-new-btn').addEventListener('click', function() {
     _gpSelectedId = null;
     _gpMode = 'new';
@@ -137,8 +174,19 @@ async function renderGroupes(container, selectedId) {
 function _gpRenderList() {
   var listEl = document.getElementById('gp-list');
   if (!listEl) return;
-  var groupes = getCachedGroupes();
+  var tous    = getCachedGroupes();
+  var groupes = tous;
   var search  = _gpSearch.toLowerCase().trim();
+
+  // Liste des types présents (menu « Tous les types »)
+  var typeSel = document.getElementById('gp-type');
+  if (typeSel) {
+    var types = Array.from(new Set(tous.map(function(g) { return g.typeStructure; }))).sort();
+    if (_gpType && types.indexOf(_gpType) < 0) _gpType = '';
+    typeSel.innerHTML = '<option value="">Tous les types</option>'
+      + types.map(function(t) { return '<option value="' + _gpEsc(t) + '"' + (t === _gpType ? ' selected' : '') + '>' + _gpEsc(t) + '</option>'; }).join('');
+  }
+  if (_gpType) groupes = groupes.filter(function(g) { return g.typeStructure === _gpType; });
   if (search) {
     groupes = groupes.filter(function(g) {
       return g.nom.toLowerCase().includes(search)
@@ -150,18 +198,27 @@ function _gpRenderList() {
   var dashBtn = document.getElementById('gp-dash-btn');
   if (dashBtn) dashBtn.hidden = !(_gpSelectedId || _gpMode === 'new');
 
+  var nbEl = document.getElementById('gp-nb');
+  if (nbEl) nbEl.textContent = groupes.length + ' groupe' + (groupes.length > 1 ? 's' : '');
+
   if (groupes.length === 0) {
-    listEl.innerHTML = '<div class="gp-list-empty">' + (search ? 'Aucun résultat' : 'Aucun groupe inscrit') + '</div>';
+    listEl.innerHTML = '<div class="gp-list-empty">' + (search || _gpType ? 'Aucun résultat' : 'Aucun groupe inscrit') + '</div>';
     return;
   }
-  var today = _gpTodayISO();
+  var suivis = {};
+  groupes.forEach(function(g) { suivis[g.id] = _gpSuiviGroupe(g); });
+  groupes = groupes.slice().sort(_gpTri === 'venue'
+    ? function(a, b) {
+        var da = suivis[a.id].derniere ? suivis[a.id].derniere.date : '', db = suivis[b.id].derniere ? suivis[b.id].derniere.date : '';
+        return db.localeCompare(da) || String(a.nom).localeCompare(String(b.nom), 'fr');
+      }
+    : function(a, b) { return String(a.nom).localeCompare(String(b.nom), 'fr'); });
   listEl.innerHTML = groupes.map(function(g) {
-    var venues  = _gpVenues(_gpRowsDuGroupe(g, _gpSaison));
-    var proch   = venues.filter(function(v) { return v.etat === 'prevue'; }).sort(function(a, b) { return a.date.localeCompare(b.date); })[0];
-    var derniere = venues.filter(function(v) { return v.date < today && v.etat === 'venu'; }).sort(function(a, b) { return b.date.localeCompare(a.date); })[0];
+    var s = suivis[g.id], proch = s.prochaine, derniere = s.derniere;
+    var nb = s.nbVenues ? s.nbVenues + ' venue' + (s.nbVenues > 1 ? 's' : '') + ' · ' : '';
     var suivi = proch
-      ? '<span class="gp-list-next">Prochaine venue : ' + _gpDateCourt(proch.date) + '</span>'
-      : derniere ? 'Dernière venue : ' + _gpDateCourt(derniere.date)
+      ? nb + '<span class="gp-list-next">Prochaine : ' + _gpDateCourt(proch.date) + '</span>'
+      : derniere ? nb + 'Dernière : ' + _gpDateCourt(derniere.date)
       : 'Aucune venue cette saison';
     var active = g.id === _gpSelectedId ? ' active' : '';
     return '<div class="gp-list-item' + active + '" data-id="' + _gpEsc(g.id) + '" tabindex="0" role="button">'
@@ -220,27 +277,75 @@ function _gpRenderOverview(el) {
   var passees  = toutes.filter(function(v) { return v.etat === 'venu'; });
   var places   = passees.reduce(function(s, v) { return s + (v.places || 0); }, 0);
   var aVenir   = toutes.filter(function(v) { return v.etat === 'prevue'; }).sort(function(a, b) { return (a.date + a.creneauId).localeCompare(b.date + b.creneauId); });
-  var aVenir14 = aVenir.filter(function(v) { return v.date <= dans14; });
+  var recentes = passees.filter(function(v) { return v.date < today; }).sort(function(a, b) { return b.date.localeCompare(a.date); });
 
+  // Suivi par groupe inscrit : venus au moins une fois, à relancer
+  var suivis = groupes.map(function(g) { var s = _gpSuiviGroupe(g); s.groupe = g; return s; });
+  var venus  = suivis.filter(function(s) { return s.nbVenues > 0; }).length;
+  var il30j  = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  var aRelancer = suivis.filter(function(s) { return !s.prochaine && (!s.derniere || s.derniere.date < il30j); })
+    .sort(function(a, b) { return (a.derniere ? a.derniere.date : '').localeCompare(b.derniere ? b.derniere.date : ''); });
+
+  // Chiffres clés : une rangée compacte, même présentation que l'onglet Inscription
   var kpi = function(cls, n, l, s) {
-    return '<div class="gp-kpi"><span class="gp-kpi-n ' + cls + '">' + n + '</span><span class="gp-kpi-l">' + l + '</span><span class="gp-kpi-s">' + s + '</span></div>';
+    return '<div class="idb-kpi ' + cls + '"><span class="idb-kpi-n">' + n + '</span><span class="idb-kpi-l">' + l + '</span><span class="idb-kpi-s">' + s + '</span></div>';
   };
   var types = Array.from(new Set(groupes.map(function(g) { return g.typeStructure; }))).slice(0, 4).join(', ');
+  var proch = aVenir[0];
+  var btnPlanif = '<button type="button" class="gp-btn-pri gp-planif" data-planif="">＋ Planifier une venue</button>';
+  var saison = _gpSaisonNum || new Date().getFullYear();
 
   el.innerHTML = '<div class="gp-page">'
-    + '<div class="gp-page-hd"><h2>Groupes — saison ' + new Date().getFullYear() + '</h2><p>Vue d\'ensemble des structures et de leurs venues</p></div>'
-    + '<div class="gp-kpis gp-kpis-4">'
-    +   kpi('k-blue',  groupes.length, 'Groupes inscrits', types || '—')
-    +   kpi('k-green', passees.length, 'Venues cette saison', 'tous groupes confondus')
-    +   kpi('k-blue',  places, 'Places occupées', 'lors des venues de la saison')
-    +   kpi('k-orange', aVenir14.length, 'Venues à venir', 'ces 14 prochains jours')
+    + '<div class="gp-page-hd"><h2>Groupes — saison ' + saison + '</h2><p>Vue d\'ensemble des structures et de leurs venues</p></div>'
+    + '<div class="idb-kpis">'
+    +   kpi('k-new', groupes.length, 'Groupes inscrits', _gpEsc(types) || '—')
+    +   kpi('k-ok', venus + '<small>/' + groupes.length + '</small>', 'Groupes déjà venus', 'au moins une fois cette saison')
+    +   kpi('k-ok', passees.length, 'Venues cette saison', places + ' place' + (places > 1 ? 's' : '') + ' occupée' + (places > 1 ? 's' : ''))
+    +   kpi('k-wait', proch ? '<span class="gp-kpi-jour">' + new Date(proch.date + 'T12:00:00').getDate() + '</span>' : '—', 'Prochaine venue',
+          proch ? _gpEsc(_gpDateCourt(proch.date)) + ' · ' + _gpEsc(proch.groupe.nom) : 'aucune prévue')
     + '</div>'
-    + '<section class="gp-card"><h2 class="gp-card-t">Prochaines venues de groupes</h2>'
+    + '<section class="gp-card"><div class="gp-card-hd"><h2 class="gp-card-t">Prochaines venues de groupes</h2>' + btnPlanif + '</div>'
     +   (aVenir.length
           ? '<ul class="gp-venues">' + aVenir.slice(0, 12).map(function(v) { return _gpVenueRow(v, v.groupe.nom); }).join('') + '</ul>'
           : '<p class="gp-empty">Aucune venue de groupe prévue pour l\'instant.</p>')
     + '</section>'
+    + '<div class="idb-cols">'
+    +   '<section class="gp-card"><h2 class="gp-card-t">À relancer</h2>'
+    +     '<p class="gp-card-sub">Pas de venue prévue, et pas venus depuis plus d\'un mois</p>'
+    +     (aRelancer.length
+            ? '<ul class="gp-relance">' + aRelancer.slice(0, 8).map(function(s) {
+                var g = s.groupe;
+                return '<li class="gp-relance-row">'
+                  + '<button type="button" class="gp-relance-who" data-ouvrir="' + _gpEsc(g.id) + '"><b>' + _gpEsc(g.nom) + '</b>'
+                  +   '<small>' + _gpEsc(g.typeStructure) + ' · ' + (s.derniere ? 'Dernière venue : ' + _gpEsc(_gpDateCourt(s.derniere.date)) : 'Aucune venue cette saison') + '</small></button>'
+                  + (g.referentTel ? '<a class="gp-relance-tel" href="tel:' + _gpEsc(g.referentTel.replace(/\s/g, '')) + '" title="Appeler ' + _gpEsc(g.referentNom || g.nom) + '">' + _gpEsc(_gpTel(g.referentTel)) + '</a>' : '')
+                  + '<button type="button" class="gp-relance-planif" data-planif="' + _gpEsc(g.id) + '">Planifier</button>'
+                  + '</li>';
+              }).join('') + '</ul>'
+              + (aRelancer.length > 8 ? '<p class="gp-empty">et ' + (aRelancer.length - 8) + ' autre' + (aRelancer.length - 8 > 1 ? 's' : '') + '</p>' : '')
+            : '<p class="gp-empty">Aucun groupe à relancer : tous sont venus récemment ou ont une venue prévue. ✓</p>')
+    +   '</section>'
+    +   '<section class="gp-card"><h2 class="gp-card-t">Dernières venues</h2>'
+    +     (recentes.length
+            ? '<ul class="gp-venues">' + recentes.slice(0, 6).map(function(v) { return _gpVenueRow(v, v.groupe.nom); }).join('') + '</ul>'
+            : '<p class="gp-empty">Aucune venue de groupe cette saison.</p>')
+    +   '</section>'
+    + '</div>'
     + '</div>';
+
+  el.querySelectorAll('[data-planif]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      _gpPlanifier(b.dataset.planif ? groupes.find(function(g) { return g.id === b.dataset.planif; }) : null);
+    });
+  });
+  el.querySelectorAll('[data-ouvrir]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      _gpSelectedId = b.dataset.ouvrir;
+      _gpMode = 'view';
+      _gpRenderList();
+      _gpRenderDetail(groupes.find(function(g) { return g.id === _gpSelectedId; }));
+    });
+  });
 }
 
 // ── Fiche d'un groupe ──

@@ -53,6 +53,57 @@ function _formatWeekLabel(days) {
 // Renders the weekly planning grid into container
 // weekOffset: 0=current week, -1=previous, +1=next
 // onCellClick(dateISO, slot) called when a cell is clicked
+// Défilement de semaine, en deux temps et dans la vraie grille (rien ne se superpose) :
+// 1. les colonnes des jours de la semaine affichée partent une à une (pendant le chargement de la suivante) ;
+// 2. la nouvelle semaine s'affiche et ses colonnes arrivent une à une de l'autre côté.
+// La colonne des créneaux reste fixe.
+const _PL_SORTIE = 320, _PL_ENTREE = 420, _PL_DECALAGE = 45;   // millisecondes
+
+function _plReduit() {
+  return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+function _plCascade(grille, classe, sens) {
+  const colonnes = [];                                            // ordre des jours dans la grille
+  grille.querySelectorAll('[data-date]').forEach(el => {
+    let i = colonnes.indexOf(el.dataset.date);
+    if (i < 0) { colonnes.push(el.dataset.date); i = colonnes.length - 1; }
+    const rang = sens === 'suiv' ? i : 6 - i;                     // la colonne du côté du mouvement part la première
+    el.style.animationDelay = (rang * _PL_DECALAGE) + 'ms';
+    el.classList.add(classe);
+  });
+}
+
+// Étape 1 : renvoie une promesse résolue quand l'ancienne semaine est sortie
+function _plSortieSemaine(container, sens) {
+  const grille = container.querySelector('.planning-grid');
+  if (!grille || _plReduit()) return Promise.resolve();
+  container.classList.add('pl-anim');
+  container.style.setProperty('--pl-dist', Math.round(grille.offsetWidth * 0.5) + 'px');
+  _plCascade(grille, 'pl-sort-' + sens, sens);
+  return new Promise(r => setTimeout(r, _PL_SORTIE + 6 * _PL_DECALAGE));
+}
+
+// Étape 2 : la nouvelle semaine vient d'être affichée, ses colonnes arrivent
+function _plEntreeSemaine(container, sens) {
+  const grille = container.querySelector('.planning-grid');
+  if (!grille) return;
+  if (_plReduit()) { container.classList.remove('pl-anim'); grille.classList.add('pl-fondu'); return; }
+  const id = (container._plAnimId || 0) + 1;
+  container._plAnimId = id;
+  container.classList.add('pl-anim');
+  container.style.setProperty('--pl-dist', Math.round(grille.offsetWidth * 0.5) + 'px');
+  _plCascade(grille, 'pl-entre-' + sens, sens);
+  setTimeout(() => {
+    if (container._plAnimId !== id || !grille.isConnected) return;   // une autre semaine a été demandée entre-temps
+    container.classList.remove('pl-anim');
+    grille.querySelectorAll('[data-date]').forEach(el => {
+      el.classList.remove('pl-entre-suiv', 'pl-entre-prec');
+      el.style.animationDelay = '';
+    });
+  }, _PL_ENTREE + 6 * _PL_DECALAGE + 80);
+}
+
 async function renderPlanning(container, weekOffset, onCellClick) {
   const todayISO = _isoDate(new Date());
   const now = new Date();
@@ -62,6 +113,10 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   const days         = _weekDays(ws);
   const weekStartISO = _isoDate(ws);
   const weekEndISO   = _isoDate(days[6]);
+  // Changement de semaine : l'ancienne part pendant que la nouvelle se charge
+  const sens = container._sensSemaine;
+  container._sensSemaine = null;
+  const sortie = sens ? _plSortieSemaine(container, sens) : null;
   const [counts, fermetures, capaRows] = await Promise.all([
     getWeekReservationCounts(weekStartISO, weekEndISO),
     typeof getFermetures === 'function' ? getFermetures(weekStartISO, weekEndISO).catch(() => []) : Promise.resolve([]),
@@ -204,7 +259,9 @@ async function renderPlanning(container, weekOffset, onCellClick) {
 
   gridHtml += `</div>`;
 
+  if (sortie) await sortie;                                          // l'ancienne semaine a fini de partir
   container.innerHTML = navHtml + gridHtml;
+  if (sens) _plEntreeSemaine(container, sens);
 
   // Remplissage des compteurs via textContent
   container.querySelectorAll('span[data-cnt]').forEach(function(el) {

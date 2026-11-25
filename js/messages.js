@@ -59,8 +59,7 @@ function _msgMajBadge() {
 }
 
 async function renderMessages(container) {
-  container.innerHTML = '<div id="annonce-staff-container"></div><div id="msg-body-container"></div>';
-  renderAnnonceStaffBlock(document.getElementById('annonce-staff-container')).catch(console.error);
+  container.innerHTML = '<div id="msg-body-container"></div>';
   await _renderMessagesBody(document.getElementById('msg-body-container'));
 }
 
@@ -95,14 +94,14 @@ function _msgRenderSeg() {
   if (!seg) return;
   var nTodo = _msgAll.filter(_msgATraiter).length;
   var opts = [
-    { id: 'todo', label: 'À traiter', count: nTodo },
-    { id: 'done', label: 'Traités' },
-    { id: 'all',  label: 'Tous' },
+    { id: 'todo', label: 'À traiter', count: nTodo, alerte: nTodo > 0 },
+    { id: 'done', label: 'Traités', count: _msgAll.filter(_msgTraite).length },
+    { id: 'all',  label: 'Tous', count: _msgAll.length },
   ];
   seg.innerHTML = opts.map(function(o) {
     var on = _msgFilter === o.id;
     return '<button type="button" role="tab" class="mx-seg-btn' + (on ? ' on' : '') + '" aria-selected="' + on + '" data-f="' + o.id + '">'
-      + o.label + (o.count ? '<span class="mx-seg-c">' + o.count + '</span>' : '') + '</button>';
+      + o.label + '<span class="mx-seg-c' + (o.alerte ? '' : ' zero') + '">' + o.count + '</span></button>';
   }).join('');
   seg.querySelectorAll('.mx-seg-btn').forEach(function(b) {
     b.addEventListener('click', function() { _msgFilter = b.dataset.f; _msgRenderSeg(); _msgRenderList(); });
@@ -294,26 +293,57 @@ function _msgRenderOverview(panel) {
   var traites = _msgAll.filter(function(m) { return _msgTraite(m) && String(m.createdAt || '').slice(0, 4) === annee; });
   var plusAncien = todo[0];
 
-  var kpi = function(cls, n, l, s) {
-    return '<div class="mx-kpi"><span class="mx-kpi-n ' + cls + '">' + n + '</span><span class="mx-kpi-l">' + l + '</span><span class="mx-kpi-s">' + s + '</span></div>';
+  // Compteurs compacts (même présentation que les onglets Inscription et Groupes) ;
+  // ceux qui ont quelque chose à ouvrir sont cliquables
+  var kpi = function(cls, n, l, s, id) {
+    return '<' + (id ? 'button type="button" id="' + id + '"' : 'div') + ' class="idb-kpi ' + cls + (id ? ' mx-kpi-btn' : '') + '">'
+      + '<span class="idb-kpi-n">' + n + '</span><span class="idb-kpi-l">' + l + '</span><span class="idb-kpi-s">' + s + '</span>'
+      + '</' + (id ? 'button' : 'div') + '>';
   };
+  var depuis = plusAncien ? (function(d) {
+    return d === 'hier' ? 'depuis hier' : /^il y a /.test(d) ? d.replace(/^il y a /, 'depuis ') : /^\d/.test(d) ? 'depuis le ' + d : d;
+  })(_msgDepuis(plusAncien.createdAt)) : '';
+  var recents = _msgAll.filter(_msgTraite).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); }).slice(0, 6);
+
   panel.innerHTML = '<div class="mx-page">'
     + '<div class="mx-page-hd"><h2>Messages</h2><p>Messages des usagers et réponses aux refus d\'inscription</p></div>'
-    + '<div class="mx-kpis">'
-    +   kpi('k-orange', todo.length, 'À traiter', plusAncien ? 'le plus ancien attend ' + (function(d) {
-        return d === 'hier' ? 'depuis hier' : /^il y a /.test(d) ? d.replace(/^il y a /, 'depuis ') : /^\d/.test(d) ? 'depuis le ' + d : d;
-      })(_msgDepuis(plusAncien.createdAt)) : 'tout est à jour')
-    +   kpi('k-red', reps.length, 'Réponses à un refus', reps.length ? 'dossier' + (reps.length > 1 ? 's' : '') + ' à revérifier' : 'aucune en attente')
-    +   kpi('k-green', traites.length, 'Traités', 'cette saison')
+    + '<div class="idb-kpis mx-kpis3">'
+    +   kpi('k-wait' + (todo.length ? ' k-alerte' : ''), todo.length, 'À traiter',
+          plusAncien ? 'le plus ancien attend ' + depuis + ' · ouvrir →' : 'tout est à jour', plusAncien ? 'mx-oldest' : '')
+    +   kpi('k-ko', reps.length, 'Réponses à un refus',
+          reps.length ? 'dossier' + (reps.length > 1 ? 's' : '') + ' à revérifier · ouvrir →' : 'aucune en attente', reps.length ? 'mx-reps' : '')
+    +   kpi('k-ok', traites.length, 'Traités', 'cette saison')
     + '</div>'
-    + (plusAncien
-        ? '<button type="button" class="mx-link mx-link-big" id="mx-oldest">Ouvrir le plus ancien message à traiter →</button>'
-        : '<p class="mx-empty">Aucun message en attente. ✓</p>')
+    // Annonce aux usagers : ce qu'on envoie, à côté de ce qu'on reçoit
+    + '<div id="annonce-staff-container" class="mx-annonce"></div>'
+    + '<section class="idb-card"><h2 class="idb-card-t">Derniers messages traités</h2>'
+    +   (recents.length
+          ? '<ul class="idb-list">' + recents.map(function(m) {
+              var extrait = (_msgIsUsager(m) ? (m.sujet || m.contenu) : m.contenu) || '';
+              extrait = extrait.replace(/\s+/g, ' ');
+              return '<li class="idb-row idb-row-click" data-id="' + _escM(m.id) + '" tabindex="0" role="button">'
+                + '<div class="idb-who"><b>' + _msgNomAffiche(m) + '</b><small>'
+                +   (_msgIsUsager(m) ? 'Message' : 'Réponse à un refus') + ' · « ' + _escM(extrait.slice(0, 70)) + (extrait.length > 70 ? '…' : '') + ' »</small></div>'
+                + '<span class="idb-when">' + _escM(_msgDepuis(m.createdAt)) + '</span>'
+                + '</li>';
+            }).join('') + '</ul>'
+          : '<p class="idb-empty">Aucun message traité pour l\'instant.</p>')
+    + '</section>'
     + '</div>';
-  var b = document.getElementById('mx-oldest');
-  if (b) b.addEventListener('click', function() {
-    _msgSelectedId = plusAncien.id;
-    _msgFilter = 'todo';
+
+  renderAnnonceStaffBlock(document.getElementById('annonce-staff-container')).catch(console.error);
+
+  function ouvrirMessage(id, filtre) {
+    _msgSelectedId = id;
+    if (filtre) _msgFilter = filtre;
     _msgRenderSeg(); _msgRenderList(); _msgRenderDetail();
+  }
+  var b = document.getElementById('mx-oldest');
+  if (b) b.addEventListener('click', function() { ouvrirMessage(plusAncien.id, 'todo'); });
+  var br = document.getElementById('mx-reps');
+  if (br) br.addEventListener('click', function() { ouvrirMessage(reps[0].id, 'todo'); });
+  panel.querySelectorAll('.idb-row-click').forEach(function(r) {
+    r.addEventListener('click', function() { ouvrirMessage(r.dataset.id, null); });
+    r.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirMessage(r.dataset.id, null); } });
   });
 }

@@ -249,12 +249,20 @@ async function renderInscription(container, selectedId) {
     +   '<div class="insc-sidebar-hd">'
     +     '<div class="insc-sidebar-top"><h2 class="insc-sidebar-title">Inscriptions</h2>'
     +       '<button type="button" class="insc-dash-link" id="insc-dash-btn" hidden>Vue d\'ensemble</button></div>'
-    +     '<input type="search" id="insc-search" class="insc-search-inp" placeholder="Rechercher…">'
     +     '<button class="btn-primary" id="insc-new-btn">＋ Nouvelle inscription</button>'
-    +     '<button class="btn-secondary" id="insc-open-season-btn" style="margin-top:8px">Ouvrir la saison ' + (saisonCourante + 1) + '</button>'
-    +     '<div style="font-size:.8125rem;color:#666;margin-top:6px">Saison en cours : ' + saisonCourante + '</div>'
+    +     '<input type="search" id="insc-search" class="insc-search-inp" placeholder="Nom, prénom, téléphone…" aria-label="Rechercher une inscription">'
+    +     '<div class="insc-filtres" role="group" aria-label="Filtrer par statut" id="insc-filtres">' + _filtresHtml(inscriptions) + '</div>'
+    +     '<div class="insc-liste-barre">'
+    +       '<span class="insc-nb" id="insc-nb" aria-live="polite"></span>'
+    +       '<label class="insc-tri"><span class="sr-only">Trier</span><select id="insc-tri">'
+    +         '<option value="nom">Nom A → Z</option><option value="recent">Demandes récentes</option></select></label>'
+    +     '</div>'
     +   '</div>'
     +   '<div id="insc-list" class="insc-list">' + _renderListItems(inscriptions, '') + '</div>'
+    +   '<div class="insc-saison">'
+    +     '<span>Saison en cours : <b>' + saisonCourante + '</b></span>'
+    +     '<button type="button" class="insc-saison-btn" id="insc-open-season-btn">Ouvrir la saison ' + (saisonCourante + 1) + '…</button>'
+    +   '</div>'
     + '</div>'
     + '<div class="insc-main" id="insc-main"></div>'
     + '</div>';
@@ -262,10 +270,15 @@ async function renderInscription(container, selectedId) {
   // Partie droite : tableau de bord tant qu'aucune inscription n'est ouverte
   _showInscDashboard(container, inscriptions, saisonCourante);
 
-  document.getElementById('insc-search').addEventListener('input', async function() {
-    const q = this.value.toLowerCase();
-    document.getElementById('insc-list').innerHTML = _renderListItems(_inscListe, q);
-    _bindListItems(container);
+  _majCompteurListe();
+  document.getElementById('insc-search').addEventListener('input', function() { _rafraichirListe(container); });
+  document.getElementById('insc-tri').value = _inscTri;
+  document.getElementById('insc-tri').addEventListener('change', function() { _inscTri = this.value; _rafraichirListe(container); });
+  document.getElementById('insc-filtres').addEventListener('click', function(e) {
+    const b = e.target.closest('[data-filtre]');
+    if (!b) return;
+    _inscFiltre = b.dataset.filtre;
+    _rafraichirListe(container);
   });
 
   document.getElementById('insc-dash-btn').addEventListener('click', function() {
@@ -312,6 +325,7 @@ async function _showInscDashboard(container, inscriptions, saison) {
 
   const nom   = i => _escI((i.nom || '').toUpperCase()) + ' ' + _escI(i.prenom || '');
   const nbDoc = i => (i.justificatif1Name ? 1 : 0) + (i.justificatif2Name ? 1 : 0);
+  inscriptions = inscriptions.filter(i => !_estDemo(i));          // le compte démo ne compte pas
 
   const attente  = inscriptions.filter(i => !i.statut || i.statut === 'en_attente');
   const valides  = inscriptions.filter(i => i.statut === 'valide');
@@ -375,25 +389,47 @@ async function _showInscDashboard(container, inscriptions, saison) {
   }
   const nbTraiter = aVerif.length + aValider.length + sansDoc.length + reponses.length;
 
+  // À surveiller : inscrits validés à renouveler pour la saison, pass désactivés
+  // Même règle que l'espace usager (computeUsagerAccessState) : validé, mais pas pour la saison en cours
+  const aRenouveler = valides.filter(i => Number(i.derniereSaisonValidee) !== Number(saison));
+  const passOff     = valides.filter(i => !i.pass && aRenouveler.indexOf(i) < 0);
+  const validesSaison = valides.length - aRenouveler.length;
+  const lignesClic = (liste, sous) => '<ul class="idb-list">' + liste.slice(0, 6).map(i =>
+      '<li class="idb-row idb-row-click" data-id="' + i.id + '" tabindex="0" role="button">'
+    +   '<div class="idb-who"><b>' + nom(i) + '</b><small>' + sous(i) + '</small></div></li>').join('')
+    + (liste.length > 6 ? '<li class="idb-plus">et ' + (liste.length - 6) + ' autre' + (liste.length - 6 > 1 ? 's' : '') + '</li>' : '') + '</ul>';
+  let surveiller = '';
+  if (aRenouveler.length) surveiller += '<h3 class="idb-grp">À renouveler pour ' + saison + ' (' + aRenouveler.length + ')</h3>'
+    + lignesClic(aRenouveler, i => i.derniereSaisonValidee ? 'Dernière saison validée : ' + _escI(String(i.derniereSaisonValidee)) : 'Aucune saison validée enregistrée');
+  if (passOff.length) surveiller += '<h3 class="idb-grp">Pass désactivé (' + passOff.length + ')</h3>'
+    + lignesClic(passOff, () => 'Inscription validée, pass non actif');
+
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   mainEl.innerHTML = '<div class="idb">'
     + '<div class="idb-hd"><h2>Inscriptions — saison ' + saison + '</h2><p>' + today + ' · ce qu\'il reste à faire</p></div>'
 
+    // Chiffres clés : une seule rangée compacte ; seul « En attente » ressort quand il y a quelque chose
     + '<div class="idb-kpis">'
-    +   '<div class="idb-kpi k-wait"><span class="idb-kpi-n">' + attente.length + '</span><span class="idb-kpi-l">En attente</span>'
-    +     '<span class="idb-kpi-s">' + (aVerif.length ? 'dont ' + aVerif.length + ' justificatif' + (aVerif.length > 1 ? 's' : '') + ' à vérifier' : 'aucun justificatif à vérifier') + '</span></div>'
-    +   '<div class="idb-kpi k-ok"><span class="idb-kpi-n">' + valides.length + '</span><span class="idb-kpi-l">Validées</span>'
-    +     '<span class="idb-kpi-s">pass actifs</span></div>'
-    +   '<div class="idb-kpi k-ko"><span class="idb-kpi-n">' + refuses.length + '</span><span class="idb-kpi-l">Refusées</span>'
-    +     '<span class="idb-kpi-s">' + (reponses.length ? reponses.length + ' réponse' + (reponses.length > 1 ? 's' : '') + ' reçue' + (reponses.length > 1 ? 's' : '') : 'aucune réponse en attente') + '</span></div>'
-    +   '<div class="idb-kpi k-new"><span class="idb-kpi-n">' + nouvelles.length + '</span><span class="idb-kpi-l">Nouvelles demandes</span>'
-    +     '<span class="idb-kpi-s">ces 7 derniers jours</span></div>'
+    +   '<div class="idb-kpi k-wait' + (attente.length ? ' k-alerte' : '') + '"><span class="idb-kpi-n">' + attente.length + '</span>'
+    +     '<span class="idb-kpi-l">En attente</span>'
+    +     '<span class="idb-kpi-s">' + (aVerif.length ? aVerif.length + ' justificatif' + (aVerif.length > 1 ? 's' : '') + ' à vérifier' : 'rien à vérifier') + '</span></div>'
+    +   '<div class="idb-kpi k-ok"><span class="idb-kpi-n">' + validesSaison + '</span>'
+    +     '<span class="idb-kpi-l">Validées</span><span class="idb-kpi-s">saison ' + saison + '</span></div>'
+    +   '<div class="idb-kpi k-ko"><span class="idb-kpi-n">' + refuses.length + '</span>'
+    +     '<span class="idb-kpi-l">Refusées</span>'
+    +     '<span class="idb-kpi-s">' + (reponses.length ? reponses.length + ' réponse' + (reponses.length > 1 ? 's' : '') + ' à lire' : 'en attente d\'un nouveau justificatif') + '</span></div>'
+    +   '<div class="idb-kpi k-new"><span class="idb-kpi-n">' + nouvelles.length + '</span>'
+    +     '<span class="idb-kpi-l">Reçues cette semaine</span><span class="idb-kpi-s">tous statuts confondus</span></div>'
     + '</div>'
 
+    + '<section class="idb-card idb-traiter' + (nbTraiter ? ' a-faire' : '') + '"><h2 class="idb-card-t">À traiter <span class="idb-count' + (nbTraiter ? '' : ' zero') + '">' + nbTraiter + '</span></h2>'
+    +   (groupes || '<p class="idb-empty">Rien à traiter pour l\'instant. ✓</p>')
+    + '</section>'
+
     + '<div class="idb-cols">'
-    +   '<section class="idb-card"><h2 class="idb-card-t">À traiter <span class="idb-count' + (nbTraiter ? '' : ' zero') + '">' + nbTraiter + '</span></h2>'
-    +     (groupes || '<p class="idb-empty">Rien à traiter pour l\'instant. ✓</p>')
+    +   '<section class="idb-card"><h2 class="idb-card-t">À surveiller</h2>'
+    +     (surveiller || '<p class="idb-empty">Rien à signaler : toutes les inscriptions validées sont à jour. ✓</p>')
     +   '</section>'
     +   '<section class="idb-card"><h2 class="idb-card-t">Dernières demandes reçues</h2>'
     +     (recentes.length
@@ -433,10 +469,64 @@ async function _showInscDashboard(container, inscriptions, saison) {
   if (mapBtn) mapBtn.addEventListener('click', () => { if (typeof App !== 'undefined') App.showView('stats'); });
 }
 
+// Compte de démonstration : visible dans la liste (marqué « Démo »), exclu des chiffres du tableau de bord
+const INSC_DEMO_MAIL = 'utilisateur.handiplage@gmail.com';
+function _estDemo(i) { return !!i && String(i.mail || '').toLowerCase() === INSC_DEMO_MAIL; }
+
+let _inscFiltre = 'tous', _inscTri = 'nom';
+function _statutDe(i) { return i.statut === 'valide' ? 'valide' : i.statut === 'refuse' ? 'refuse' : 'attente'; }
+function _sansAccentI(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+function _filtresHtml(list) {
+  const n = { tous: list.length, attente: 0, valide: 0, refuse: 0 };
+  list.forEach(i => { n[_statutDe(i)]++; });
+  return [['tous', 'Tous'], ['attente', 'Attente'], ['valide', 'Validés'], ['refuse', 'Refusés']].map(f =>
+    '<button type="button" class="insc-filtre f-' + f[0] + (_inscFiltre === f[0] ? ' actif' : '') + '" data-filtre="' + f[0] + '"'
+    + ' aria-pressed="' + (_inscFiltre === f[0]) + '">' + f[1] + ' <span>' + n[f[0]] + '</span></button>').join('');
+}
+
+function _inscVisibles(list, query) {
+  const q = _sansAccentI(query).trim();
+  const qTel = q.replace(/[^0-9]/g, '');
+  return list
+    .filter(i => _inscFiltre === 'tous' || _statutDe(i) === _inscFiltre)
+    .filter(i => !q
+      || _sansAccentI(i.nom + ' ' + i.prenom).includes(q)
+      || _sansAccentI(i.prenom + ' ' + i.nom).includes(q)
+      || _sansAccentI(i.mail).includes(q)
+      || (qTel.length >= 3 && String(i.telephone || '').replace(/[^0-9]/g, '').includes(qTel)))
+    .sort(_inscTri === 'recent'
+      ? (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      : (a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr'));
+}
+
+function _majCompteurListe() {
+  const nb = document.getElementById('insc-nb');
+  const s = document.getElementById('insc-search');
+  if (!nb || !_inscListe) return;
+  const n = _inscVisibles(_inscListe, s ? s.value : '').length;
+  nb.textContent = n + ' inscription' + (n > 1 ? 's' : '');
+}
+
+function _rafraichirListe(container) {
+  const s = document.getElementById('insc-search');
+  const listEl = document.getElementById('insc-list');
+  const filtres = document.getElementById('insc-filtres');
+  if (!listEl || !_inscListe) return;
+  const actif = listEl.querySelector('.insc-list-item.active');
+  const actifId = actif ? actif.dataset.id : null;
+  if (filtres) filtres.innerHTML = _filtresHtml(_inscListe);
+  listEl.innerHTML = _renderListItems(_inscListe, s ? s.value : '');
+  if (actifId) {
+    const el = listEl.querySelector('.insc-list-item[data-id="' + actifId + '"]');
+    if (el) el.classList.add('active');
+  }
+  _majCompteurListe();
+  _bindListItems(container);
+}
+
 function _renderListItems(list, query) {
-  const filtered = list
-    .filter(i => (i.nom + ' ' + i.prenom).toLowerCase().includes(query))
-    .sort((a, b) => a.nom.localeCompare(b.nom));
+  const filtered = _inscVisibles(list, query || '');
 
   if (filtered.length === 0) {
     return '<div class="insc-list-empty">Aucune inscription trouvée</div>';
@@ -448,10 +538,11 @@ function _renderListItems(list, query) {
       : '';
     const sCls = i.statut === 'valide' ? 'insc-status-ok' : i.statut === 'refuse' ? 'insc-status-ko' : 'insc-status-wait';
     const sLbl = i.statut === 'valide' ? 'Validé' : i.statut === 'refuse' ? 'Refusé' : 'En attente';
-    return '<div class="insc-list-item" data-id="' + i.id + '">'
+    return '<div class="insc-list-item' + (_estDemo(i) ? ' insc-demo' : '') + '" data-id="' + i.id + '">'
       + '<div class="insc-list-name">' + _escI(i.nom) + ' ' + _escI(i.prenom) + '</div>'
       + (dob ? '<div class="insc-list-meta">Né·e le ' + dob + '</div>' : '')
       + '<span class="insc-status ' + sCls + '">' + sLbl + '</span>'
+      + (_estDemo(i) ? '<span class="insc-status insc-status-demo" title="Compte de démonstration : exclu des chiffres">Démo</span>' : '')
       + '</div>';
   }).join('');
 }
@@ -887,18 +978,8 @@ function _showForm(container, insc) {
 }
 
 async function _refreshSidebar(container) {
-  const insc = await _loadInscListe();
-  const searchEl = document.getElementById('insc-search');
-  const q = searchEl ? searchEl.value.toLowerCase() : '';
-  const listEl = document.getElementById('insc-list');
-  const actif  = listEl && listEl.querySelector('.insc-list-item.active');
-  const actifId = actif ? actif.dataset.id : null;
-  if (listEl) listEl.innerHTML = _renderListItems(insc, q);
-  if (actifId) {
-    const el = listEl.querySelector('.insc-list-item[data-id="' + actifId + '"]');
-    if (el) el.classList.add('active');
-  }
-  _bindListItems(container);
+  await _loadInscListe();
+  _rafraichirListe(container);
 }
 
 async function _sendRefusalEmail(inscriptionId) {

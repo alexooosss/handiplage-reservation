@@ -1145,6 +1145,36 @@ button.mc-cal-d:hover { background: #eaf2fb; }
 }
 .insc-search-inp:focus { border-color: var(--accent); }
 .insc-list { flex: 1; overflow-y: auto; }
+/* Filtres par statut, compteur et tri */
+.insc-filtres { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.insc-filtre {
+  font: inherit; font-size: 11.5px; font-weight: 700; color: #3b4658; background: #f1f4f8;
+  border: 1.5px solid transparent; border-radius: 999px; padding: 4px 2px; cursor: pointer; white-space: nowrap; text-align: center;
+}
+.insc-filtre span { font-weight: 800; opacity: .7; margin-left: 2px; }
+.insc-filtre:hover { background: #e6ebf2; }
+.insc-filtre.actif { background: #05559b; color: #fff; }
+.insc-filtre.actif span { opacity: .9; }
+.insc-filtre:focus-visible { outline: 2px solid #05559b; outline-offset: 2px; }
+.insc-liste-barre { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.insc-nb { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.insc-tri select {
+  font: inherit; font-size: 12px; color: #3b4658; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 3px 6px; background: #fff; cursor: pointer;
+}
+.insc-status-demo { background: #eceff3; color: #4a5568; margin-left: 4px; }
+/* Saison : action rare, en bas de la colonne, à l'écart du bouton principal */
+.insc-saison {
+  flex-shrink: 0; border-top: 1px solid var(--border); padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--text-muted);
+}
+.insc-saison b { color: var(--text); }
+.insc-saison-btn {
+  font: inherit; font-size: 12.5px; font-weight: 700; color: #05559b; background: none; border: none;
+  padding: 4px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.insc-saison-btn:hover { color: #033c6e; }
 .insc-list-item {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
@@ -1186,22 +1216,25 @@ button.mc-cal-d:hover { background: #eaf2fb; }
 .idb-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .idb-kpi {
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
-  column-gap: 14px; align-items: center;
-  background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px;
+  column-gap: 12px; align-items: center;
+  background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px;
 }
 .idb-kpi-n {
-  grid-row: 1 / span 2; min-width: 64px; height: 64px; padding: 0 10px; border-radius: 14px;
+  grid-row: 1 / span 2; min-width: 42px; height: 42px; padding: 0 8px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 32px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
 }
-.idb-kpi-l { font-size: 14px; font-weight: 800; color: #0f1b2e; align-self: end; }
-.idb-kpi-s { font-size: 12px; color: #5b6576; align-self: start; margin-top: 2px; }
+.idb-kpi.k-alerte { border-color: #f0a35e; box-shadow: 0 0 0 3px #fff1e5; }
+.idb-traiter.a-faire { border-color: #f0a35e; box-shadow: 0 0 0 3px #fff1e5; }
+.idb-plus { font-size: 12px; color: #5b6576; padding: 6px 8px; }
+.idb-kpi-l { font-size: 13px; font-weight: 800; color: #0f1b2e; align-self: end; }
+.idb-kpi-s { font-size: 11.5px; color: #5b6576; align-self: start; margin-top: 1px; }
 .k-wait .idb-kpi-n { background: #fff1e5; color: #b04a00; }
 .k-ok   .idb-kpi-n { background: #e8f5e9; color: #1b5e20; }
 .k-ko   .idb-kpi-n { background: #ffebee; color: #b71c1c; }
 .k-new  .idb-kpi-n { background: #eaf2fb; color: #05559b; }
 
-.idb-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.idb-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
 .idb-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
 .idb-card-t { font-size: 15px; font-weight: 800; color: #05559b; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .idb-count { background: var(--accent); color: #0f1b2e; font-size: 12px; border-radius: 999px; padding: 1px 9px; }
@@ -2159,6 +2192,23 @@ button.mc-cal-d:hover { background: #eaf2fb; }
 .plan-nav-today { color: #0f1b2e; }
 .plan-nav-today:focus-visible { outline: 2px solid #05559b; outline-offset: 2px; }
 
+/* Changement de semaine : les jours défilent en cascade (voir _plSortieSemaine / _plEntreeSemaine dans planning.js) */
+.pl-anim { position: relative; overflow-x: clip; }
+/* Colonne des créneaux opaque et au-dessus : les jours glissent dessous sans se voir au travers */
+.pl-anim .planning-slot-label { position: relative; z-index: 2; }
+.pl-anim .planning-slot-label:not(.now-row) { background: color-mix(in srgb, currentColor 9.4%, var(--panel-bg)) !important; }
+.pl-entre-suiv { animation: pl-entre-droite .42s cubic-bezier(.2,.75,.3,1) backwards; }
+.pl-entre-prec { animation: pl-entre-gauche .42s cubic-bezier(.2,.75,.3,1) backwards; }
+.pl-sort-suiv  { animation: pl-sort-gauche .32s cubic-bezier(.55,0,.8,.45) forwards; }
+.pl-sort-prec  { animation: pl-sort-droite .32s cubic-bezier(.55,0,.8,.45) forwards; }
+/* « translate » (et non « transform ») : la case du créneau en cours garde son léger agrandissement */
+@keyframes pl-entre-droite { from { opacity: 0; translate: var(--pl-dist, 50vw) 0; } }
+@keyframes pl-entre-gauche { from { opacity: 0; translate: calc(-1 * var(--pl-dist, 50vw)) 0; } }
+@keyframes pl-sort-gauche  { to { opacity: 0; translate: calc(-1 * var(--pl-dist, 50vw)) 0; } }
+@keyframes pl-sort-droite  { to { opacity: 0; translate: var(--pl-dist, 50vw) 0; } }
+.pl-fondu { animation: pl-fondu .25s ease-out; }
+@keyframes pl-fondu { from { opacity: 0; } }
+
 .planning-grid {
   display: grid;
   grid-template-columns: 110px repeat(7, 1fr);
@@ -2192,6 +2242,9 @@ button.mc-cal-d:hover { background: #eaf2fb; }
   gap: 0;
   padding: 5px 4px;
   box-shadow: 0 4px 14px rgba(var(--accent-rgb), .35);
+  /* La ligne « Aujourd'hui » déborde vers le haut (dans l'espace libre au-dessus de la grille) :
+     la rangée des jours garde la même hauteur que les autres semaines, donc les cases aussi */
+  margin-top: var(--pgh-depasse, -14px);
 }
 .pgh-today-tag {
   font-size: 10.5px;
@@ -3071,7 +3124,8 @@ dialog.plan-dialog {
 .gf-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 6px; }
 
 /* ═══ Onglet Groupes — refonte ═══ */
-.groupes-sidebar { width: 320px; }
+/* Même largeur de colonne que l'onglet Inscription */
+.groupes-sidebar, .insc-sidebar { width: 320px; }
 .gp-sidebar-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .gp-sidebar-title { font-size: 17px; color: #0f1b2e; }
 .gp-dash-link {
@@ -3088,6 +3142,37 @@ dialog.plan-dialog {
 .gp-list-nom { font-size: 14px; color: #0f1b2e; }
 .gp-list-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5b6576; margin-top: 4px; }
 .gp-list-suivi { font-size: 12px; color: #5b6576; margin-top: 3px; }
+/* Barre de liste : compteur, type, tri (mêmes styles que l'onglet Inscription) */
+.gp-liste-barre { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 6px; }
+.gp-liste-barre .insc-tri, .gp-liste-barre select { width: 100%; min-width: 0; }
+/* Vue d'ensemble */
+.idb-kpi-n small { font-size: .55em; font-weight: 800; opacity: .7; margin-left: 1px; }
+.gp-kpi-jour { font-size: 22px; }
+.gp-card-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.gp-card-hd .gp-card-t { margin-bottom: 0; }
+.gp-btn-pri.gp-planif { min-height: 34px; height: auto; padding: 6px 14px; font-size: 13px; border-radius: 999px; box-shadow: none; }
+.gp-card-sub { font-size: 12px; color: #5b6576; margin: -2px 0 6px; }
+.gp-relance { list-style: none; margin: 0; padding: 0; }
+.gp-relance-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #edf1f5; }
+.gp-relance-row:last-child { border-bottom: none; }
+.gp-relance-who {
+  flex: 1; min-width: 0; text-align: left; font: inherit; background: none; border: none; padding: 2px 4px;
+  border-radius: 8px; cursor: pointer; color: inherit;
+}
+.gp-relance-who:hover { background: #f3f7fc; }
+.gp-relance-who b { display: block; font-size: 14px; color: #0f1b2e; }
+.gp-relance-who small { display: block; font-size: 12px; color: #5b6576; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gp-relance-tel {
+  font-size: 12.5px; font-weight: 700; color: #05559b; text-decoration: none; white-space: nowrap;
+  background: #eaf2fb; border-radius: 999px; padding: 6px 10px;
+}
+.gp-relance-tel:hover { background: #d8e7f7; }
+.gp-relance-planif {
+  font: inherit; font-size: 12.5px; font-weight: 800; color: #05559b; background: #fff; border: 1.5px solid #05559b;
+  border-radius: 999px; padding: 0 12px; min-height: 32px; cursor: pointer; white-space: nowrap;
+}
+.gp-relance-planif:hover { background: #05559b; color: #fff; }
+.gp-relance-who:focus-visible, .gp-relance-tel:focus-visible, .gp-relance-planif:focus-visible { outline: 2px solid #05559b; outline-offset: 2px; }
 .gp-list-next { color: #05559b; font-weight: 700; }
 .gp-type-pill {
   display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .03em;
@@ -3170,6 +3255,12 @@ dialog.plan-dialog {
   padding: 9px 8px; border-bottom: 1px solid #edf1f5; font-size: 14px;
 }
 .gp-venue:last-child { border-bottom: none; }
+/* Dans une demi-colonne (vue d'ensemble) : date + statut, puis créneau · groupe, pour ne pas couper les noms */
+.idb-cols .gp-venue { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+.idb-cols .gp-v-date { grid-column: 1; }
+.idb-cols .gp-st { grid-column: 2; grid-row: 1; }
+.idb-cols .gp-v-slot { grid-column: 1; font-size: 12.5px; }
+.idb-cols .gp-v-info { grid-column: 1 / -1; font-size: 13px; white-space: normal; }
 .gp-venue-up { background: #f7fafe; border-radius: 8px; }
 .gp-v-date { font-weight: 700; color: #0f1b2e; }
 .gp-v-slot { color: #5b6576; }
@@ -3290,17 +3381,26 @@ dialog.plan-dialog {
 
 /* ═══ Onglet Messages — refonte ═══ */
 .mx-layout { display: flex; height: 100%; overflow: hidden; background: var(--panel-bg); }
-.mx-side { width: 380px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.mx-side { width: 320px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 .mx-side-hd { padding: 16px 16px 10px; border-bottom: 1px solid var(--border); }
 .mx-side-hd h2 { font-size: 18px; font-weight: 800; color: #0f1b2e; margin-bottom: 10px; }
 .mx-seg { display: flex; gap: 2px; background: #eef2f6; border-radius: 999px; padding: 4px; }
 .mx-seg-btn {
   flex: 1; font: inherit; font-size: 13px; font-weight: 700; color: #2f3b52;
-  background: transparent; border: none; border-radius: 999px; padding: 8px 6px; cursor: pointer;
+  background: transparent; border: none; border-radius: 999px; padding: 8px 4px; cursor: pointer; white-space: nowrap;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
 }
 .mx-seg-btn.on { background: #fff; color: #05559b; box-shadow: 0 1px 3px rgba(15,27,46,.15); }
-.mx-seg-c { background: var(--accent); color: #0f1b2e; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; }
+.mx-seg-c { background: var(--accent); color: #0f1b2e; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; margin-left: 0; }
+.mx-seg-c.zero { background: #dde3ea; color: #4a5568; }
+/* Vue d'ensemble des messages : 3 compteurs, dont certains cliquables */
+.idb-kpis.mx-kpis3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mx-kpi-btn { font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.mx-kpi-btn:hover { background: #f8fafc; }
+.mx-kpi-btn:focus-visible { outline: 2px solid #05559b; outline-offset: 2px; }
+/* L'annonce aux usagers, en carte dans la partie droite */
+.mx-annonce .annonce-staff { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.mx-annonce .annonce-preview { max-width: none; }
 .mx-list { flex: 1; overflow-y: auto; }
 .mx-item {
   display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 4px 10px; width: 100%;
@@ -3379,7 +3479,7 @@ dialog.plan-dialog {
 .annonce-staff .nb-sec { flex: none; }
 
 @media (max-width: 1100px) {
-  .mx-side { width: 300px; }
+  .mx-side { width: 230px; }
   .mx-kpis { grid-template-columns: 1fr; }
 }
 
@@ -3392,10 +3492,10 @@ dialog.plan-dialog {
   background: #c62828; color: #fff; border-radius: 999px; padding: 2px 8px;
 }
 .fermeture-plan {
-  background: #fff5f5; border-bottom: 2px solid #c62828; color: #7f1d1d;
+  background: #c62828; border-bottom: 2px solid #8e0000; color: #ffffff;
   padding: 10px 16px; font-size: 14px; flex-shrink: 0;
 }
-.fermeture-plan b { color: #b71c1c; }
+.fermeture-plan b { color: #ffffff; }
 
 /* Bandeau Planning : réservation pour un groupe */
 .plan-groupe-banner {

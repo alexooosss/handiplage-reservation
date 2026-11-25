@@ -317,9 +317,13 @@ const App = (() => {
   async function _renderPlanning() {
     const container = document.getElementById('planning-view');
     if (!container) return;
-    container._onPrev  = () => { _planningWeekOffset--; _renderPlanning(); };
-    container._onNext  = () => { _planningWeekOffset++; _renderPlanning(); };
-    container._onToday = () => { _planningWeekOffset = 0; _renderPlanning(); };
+    // Sens du changement de semaine : sert à l'animation de défilement (planning.js)
+    container._onPrev  = () => { _planningWeekOffset--; container._sensSemaine = 'prec'; _renderPlanning(); };
+    container._onNext  = () => { _planningWeekOffset++; container._sensSemaine = 'suiv'; _renderPlanning(); };
+    container._onToday = () => {
+      if (_planningWeekOffset !== 0) container._sensSemaine = _planningWeekOffset > 0 ? 'prec' : 'suiv';
+      _planningWeekOffset = 0; _renderPlanning();
+    };
     container._onCapacite = () => { _renderPlanning(); };
     await renderPlanning(container, _planningWeekOffset, async (dateISO, slot) => {
       const isToday = dateISO === _date;
