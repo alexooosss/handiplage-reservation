@@ -20,11 +20,17 @@ function _periodeFr(g) {
 function miniPlanHtml(contenu, largeur) {
   var W = BEACH_CONFIG.mapWidth, H = BEACH_CONFIG.mapHeight, k = largeur / (W + 40);
   var h = '<div class="pl-mini" style="width:' + largeur + 'px;height:' + Math.round((H + 60) * k) + 'px"><div class="pl-mini-in" style="transform:scale(' + k + ');width:' + (W + 40) + 'px;height:' + (H + 60) + 'px">';
-  (contenu.tapisH || []).forEach(function(t) { h += '<i class="pl-m-tapis" style="left:' + (t.x + 20) + 'px;top:' + (t.y + 14) + 'px;width:' + t.width + 'px;height:10px"></i>'; });
-  (contenu.tapisV || []).forEach(function(t) { h += '<i class="pl-m-tapis" style="left:' + (t.x + 20) + 'px;top:' + ((t.top || 0) + 14) + 'px;width:10px;height:' + (t.height || H) + 'px"></i>'; });
+  (contenu.tapisH || []).forEach(function(t) { h += '<i class="pl-m-tapis" style="left:' + (t.x + 20) + 'px;top:' + (t.y + 14) + 'px;width:' + t.width + 'px;height:10px' + (t.rot ? ';transform:rotate(' + t.rot + 'deg)' : '') + '"></i>'; });
+  (contenu.tapisV || []).forEach(function(t) { h += '<i class="pl-m-tapis" style="left:' + (t.x + 20) + 'px;top:' + ((t.top || 0) + 14) + 'px;width:10px;height:' + (t.height || H) + 'px' + (t.rot ? ';transform:rotate(' + t.rot + 'deg)' : '') + '"></i>'; });
   (contenu.spots || []).forEach(function(s) { h += '<i class="pl-m-place" style="left:' + (s.x + 5) + 'px;top:' + (s.y - 1) + 'px"></i>'; });
-  (contenu.showers || []).forEach(function(d) { h += '<i class="pl-m-douche" style="left:' + (d.x + 20) + 'px;top:' + (d.y + 14) + 'px"></i>'; });
-  (contenu.barnums || []).forEach(function(b) { h += '<i class="pl-m-barnum" style="left:' + (b.x + 20) + 'px;top:' + (b.y + 14) + 'px;width:' + (b.w || 100) + 'px;height:' + (b.h || 40) + 'px"></i>'; });
+  (contenu.showers || []).forEach(function(d) { h += '<i class="pl-m-douche" style="left:' + (d.x + 20) + 'px;top:' + (d.y + 14) + 'px' + (d.rot ? ';transform:rotate(' + d.rot + 'deg)' : '') + '"></i>'; });
+  if (typeof contenu.frontMer === 'number') {
+    h += '<i class="pl-m-mer" style="left:0;top:' + (contenu.frontMer + 14) + 'px;width:' + Math.round((W + 40) * .83) + 'px;height:' + Math.max(0, H + 60 - contenu.frontMer - 14) + 'px"></i>';
+  }
+  (Array.isArray(contenu.barriers) ? contenu.barriers : (BEACH_CONFIG.barriers || [])).forEach(function(g) {
+    h += '<i class="pl-m-barriere" style="left:' + (g.x + 20) + 'px;top:' + (g.y + 14) + 'px;' + (g.type === 'h' ? 'width:' + g.width + 'px;height:5px' : 'width:5px;height:' + g.height + 'px') + (g.rot ? ';transform:rotate(' + g.rot + 'deg)' : '') + '"></i>';
+  });
+  (contenu.barnums || []).forEach(function(b) { h += '<i class="pl-m-barnum" style="left:' + (b.x + 20) + 'px;top:' + (b.y + 14) + 'px;width:' + (b.w || 100) + 'px;height:' + (b.h || 40) + 'px' + (b.rot ? ';transform:rotate(' + b.rot + 'deg)' : '') + '"></i>'; });
   return h + '</div></div>';
 }
 
@@ -88,19 +94,21 @@ function _dessinerPlans(container) {
     mesProgs.forEach(function(g) { tags += '<span class="pl-tag pl-t-prog">' + _periodeFr(g) + '</span>'; });
     var maj = p.updated_at ? 'modifié le ' + new Date(p.updated_at).toLocaleDateString('fr-FR') : '';
     h += '<article class="pl-card' + (duJour && duJour.id === p.id ? ' pl-actif' : '') + '">'
-      + '<div class="pl-thumb">' + miniPlanHtml(p.contenu || {}, 340) + '</div>'
+      + '<div class="pl-thumb' + (typeof (p.contenu || {}).frontMer === 'number' ? ' pl-thumb-mer' : '') + '">' + miniPlanHtml(p.contenu || {}, 340) + '</div>'
       + '<div class="pl-bd"><h2>' + _escP(p.nom) + '</h2>'
       + (tags ? '<div class="pl-tags">' + tags + '</div>' : '')
       + '<p class="pl-meta">' + _resumePlan(p.contenu || {}) + (maj ? ' · ' + maj : '') + '</p>'
       + (p.description ? '<p class="pl-desc">' + _escP(p.description) + '</p>' : '')
       + '</div>'
       + '<div class="pl-acts">'
+      + '<button type="button" class="pl-btn pl-btn-pri" data-a="modifier" data-id="' + p.id + '"' + (duJour && duJour.id === p.id ? ' title="En service aujourd&#39;hui : vos modifications iront dans une copie"' : '') + '>Modifier</button>'
       + '<button type="button" class="pl-btn pl-btn-out" data-a="utiliser" data-id="' + p.id + '">Utiliser…</button>'
       + '<button type="button" class="pl-btn" data-a="dupliquer" data-id="' + p.id + '">Dupliquer</button>'
       + '<button type="button" class="pl-btn" data-a="renommer" data-id="' + p.id + '">Renommer</button>'
       + (p.par_defaut ? '' : '<button type="button" class="pl-btn pl-btn-del" data-a="supprimer" data-id="' + p.id + '" aria-label="Supprimer « ' + _escP(p.nom) + ' »" title="Supprimer">Supprimer</button>')
       + '</div></article>';
   });
+  h += '<button type="button" class="pl-nouveau" id="pl-nouveau"><span class="pl-nouveau-plus" aria-hidden="true">+</span>Nouveau plan<small>vide ou à partir d\'un plan existant</small></button>';
   h += '</div>';
 
   // Programmation : frise des 4 prochains mois + liste
@@ -138,6 +146,8 @@ function _dessinerPlans(container) {
   container.querySelectorAll('[data-a]').forEach(function(b) {
     b.addEventListener('click', function() { _actionPlan(container, b.dataset.a, b.dataset.id); });
   });
+  var btnNouveau = container.querySelector('#pl-nouveau');
+  if (btnNouveau) btnNouveau.addEventListener('click', function() { _dialogNouveauPlan(container); });
   var nouv = container.querySelector('#pl-prog-new');
   if (nouv) nouv.addEventListener('click', function() { _dialogUtiliser(container, null, 'dates'); });
 }
@@ -181,6 +191,13 @@ async function _actionPlan(container, a, id) {
       await retirerProgrammation(id);
       if (toucheAuj) return _rechargerPage();
       await _recharger(container);
+    } else if (a === 'modifier') {
+      var duJour = planPourDate(_plansEtat.plans, _plansEtat.progs, _dateLocaleISO());
+      ouvrirEditeurPlan(container, plan, {
+        plans: _plansEtat.plans, progs: _plansEtat.progs,
+        copie: !!(duJour && duJour.id === plan.id),   // on ne modifie jamais le plan en service aujourd'hui
+        onFin: function() { renderPlansView(container); },
+      });
     } else if (a === 'utiliser') {
       _dialogUtiliser(container, plan, 'defaut');
     }
@@ -221,6 +238,54 @@ function _dialogBase(titre, corps, libelleOk) {
   dlg.addEventListener('cancel', function(e) { e.preventDefault(); fermer(); });
   dlg.showModal();
   return { dlg: dlg, fermer: fermer, err: dlg.querySelector('#pl-err'), ok: dlg.querySelector('#pl-ok') };
+}
+
+// Nouveau plan : on choisit le nom et le point de départ, puis l'éditeur s'ouvre.
+// Le plan n'est créé en base qu'à l'enregistrement (rien n'est créé si on quitte).
+function _dialogNouveauPlan(container) {
+  var plans = _plansEtat.plans;
+  var defaut = plans.find(function(p) { return p.par_defaut; }) || plans[0];
+  var d = _dialogBase('Nouveau plan',
+    '<label class="pl-f">Nom<input id="pl-nn" maxlength="80" placeholder="Ex. Plan été 2027, Journée handisport"></label>'
+    + '<div class="pl-f">Point de départ<div class="cap-chips pl-modes" role="radiogroup" aria-label="Point de départ">'
+    +   '<label class="cap-chip"><input type="radio" name="pl-dep" value="copie" checked><span>Copie d\'un plan</span></label>'
+    +   '<label class="cap-chip"><input type="radio" name="pl-dep" value="vide"><span>Plan vide</span></label>'
+    + '</div></div>'
+    + '<label class="pl-f" id="pl-src-l">Plan à copier<select id="pl-src">'
+    +   plans.map(function(p) { return '<option value="' + p.id + '"' + (defaut && p.id === defaut.id ? ' selected' : '') + '>' + _escP(p.nom) + '</option>'; }).join('')
+    + '</select></label>'
+    + '<p class="cap-hint" id="pl-dep-aide"></p>',
+    'Créer et modifier');
+  var q = function(s) { return d.dlg.querySelector(s); };
+  function maj() {
+    var vide = q('input[name="pl-dep"]:checked').value === 'vide';
+    q('#pl-src-l').hidden = vide || !plans.length;
+    q('#pl-dep-aide').textContent = vide
+      ? 'Seuls le décor fixe et les barrières sont repris : vous placez les places, tapis, douches et barnums.'
+      : 'Le plan choisi est copié : vous le modifiez sans toucher à l\'original.';
+  }
+  d.dlg.addEventListener('change', maj);
+  maj();
+  setTimeout(function() { q('#pl-nn').focus(); }, 0);
+  d.ok.addEventListener('click', function() {
+    var nom = q('#pl-nn').value.trim();
+    if (!nom) { d.err.textContent = 'Donnez un nom au plan.'; q('#pl-nn').focus(); return; }
+    var contenu;
+    if (q('input[name="pl-dep"]:checked').value === 'vide' || !plans.length) {
+      var barr = (typeof PLAN_SECOURS !== 'undefined' && PLAN_SECOURS && PLAN_SECOURS.barriers) || BEACH_CONFIG.barriers || [];
+      contenu = { version: 1, spots: [], tapisH: [], tapisV: [], showers: [], barnums: [], barriers: JSON.parse(JSON.stringify(barr)) };
+    } else {
+      var src = plans.find(function(p) { return p.id === q('#pl-src').value; });
+      contenu = JSON.parse(JSON.stringify(src.contenu || {}));
+    }
+    d.fermer();
+    ouvrirEditeurPlan(container, { id: null, nom: nom, contenu: contenu, description: null }, {
+      plans: _plansEtat.plans, progs: _plansEtat.progs,
+      copie: true, nouveau: true, nomInitial: nom,          // enregistrement = création d'un nouveau plan
+      onFin: function() { renderPlansView(container); },
+    });
+  });
+  q('#pl-nn').addEventListener('keydown', function(ev) { if (ev.key === 'Enter') { ev.preventDefault(); d.ok.click(); } });
 }
 
 function _dialogRenommer(container, plan) {

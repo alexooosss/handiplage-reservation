@@ -21,7 +21,8 @@ function planValide(contenu) {
     if (typeof s.x !== 'number' || typeof s.y !== 'number' || !isFinite(s.x) || !isFinite(s.y)) return false;
     vus[s.id] = true;
   }
-  return ['tapisH', 'tapisV', 'showers', 'barnums'].every(function(k) {
+  if (contenu.frontMer != null && (typeof contenu.frontMer !== 'number' || !isFinite(contenu.frontMer))) return false;
+  return ['tapisH', 'tapisV', 'showers', 'barnums', 'barriers'].every(function(k) {
     return contenu[k] == null || Array.isArray(contenu[k]);
   });
 }
@@ -31,7 +32,7 @@ function appliquerPlan(config, contenu) {
   if (!PLAN_SECOURS) {
     PLAN_SECOURS = JSON.parse(JSON.stringify({
       spots: config.spots, tapisH: config.tapisH, tapisV: config.tapisV,
-      showers: config.showers, barnums: config.barnums || [],
+      showers: config.showers, barnums: config.barnums || [], barriers: config.barriers || [], frontMer: config.frontMer == null ? null : config.frontMer,
     }));
   }
   if (!planValide(contenu)) return false;
@@ -42,6 +43,8 @@ function appliquerPlan(config, contenu) {
   config.tapisV  = contenu.tapisV  || [];
   config.showers = contenu.showers || [];
   config.barnums = contenu.barnums || [];
+  config.barriers = Array.isArray(contenu.barriers) ? contenu.barriers : PLAN_SECOURS.barriers;   // plan sans barrières : barrières d'origine
+  config.frontMer = typeof contenu.frontMer === 'number' ? contenu.frontMer : null;  // null = mer à sa place habituelle
   return true;
 }
 
@@ -98,6 +101,20 @@ async function dupliquerPlan(plan, nom) {
   }).select().single();
   if (r.error) throw r.error;
   return r.data;
+}
+
+async function creerPlan(d) {
+  var r = await supabaseClient.from('plans').insert({
+    nom: d.nom, description: d.description || null, contenu: d.contenu, par_defaut: false, brouillon: !!d.brouillon,
+  }).select().single();
+  if (r.error) throw r.error;
+  return r.data;
+}
+
+async function enregistrerPlan(id, d) {
+  var r = await supabaseClient.from('plans')
+    .update({ nom: d.nom, contenu: d.contenu, brouillon: !!d.brouillon, updated_at: new Date().toISOString() }).eq('id', id);
+  if (r.error) throw r.error;
 }
 
 async function renommerPlan(id, nom, description) {

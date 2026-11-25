@@ -4069,3 +4069,175 @@ dialog.plan-dialog {
 .pl-dates[hidden] { display: none; }
 .pl-annuler { color: var(--text); border-color: var(--border); }
 @media (max-width: 640px) { .plans-view { padding: 16px; } .pl-grid { grid-template-columns: 1fr; } }
+
+/* ── Éditeur de plan ── */
+.plans-view.pe-mode { padding: 0; overflow: hidden; display: flex !important; flex-direction: column; }
+.pe { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff; }
+.pe-top { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; flex-wrap: wrap; }
+.pe-nom { font: inherit; font-size: 16px; font-weight: 800; color: var(--navy); border: 1.5px solid transparent; border-radius: 8px; padding: 6px 8px; width: 260px; max-width: 40vw; }
+.pe-nom:hover, .pe-nom:focus { border-color: var(--border); outline: none; }
+.pe-copie { font-size: 11.5px; font-weight: 800; color: #b45309; background: #fff3e0; border-radius: 999px; padding: 3px 9px; }
+.pe-ic { font-size: 16px; padding: 5px 10px; }
+.pe-ic:disabled, .pl-btn:disabled { opacity: .4; cursor: default; }
+.pe-sp { flex: 1; }
+.pe-compte { font-size: 13px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+.pe-compte b { color: var(--navy); }
+.pe-verif { font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 5px 12px; border: 1px solid; }
+.pe-okv { color: var(--green-dark); background: #e8f5e9; border-color: #a5d6a7; }
+.pe-ko { color: #b45309; background: #fff7ed; border-color: #fed7aa; }
+.pe-main { flex: 1; display: grid; grid-template-columns: 78px 1fr 270px; min-height: 0; }
+.pe-outils { border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; padding: 8px 6px; overflow-y: auto; }
+.pe-outils hr { border: none; border-top: 1px solid var(--border); margin: 4px 6px; width: calc(100% - 12px); }
+.pe-outil { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--text); background: none; border: none; border-radius: 10px; padding: 8px 2px; cursor: pointer; }
+.pe-outil i { font-style: normal; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-size: 16px; background: #f1f5f9; }
+.pe-outil:hover i { background: #e2e8f0; }
+.pe-outil.on { background: #e3f2fd; color: var(--blue); }
+.pe-outil.on i { background: var(--blue); color: #fff; }
+.pe-outil:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+.pe-zone { position: relative; background: #dfe6ee; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px 16px 40px; min-width: 0; }
+.pe-feuille { position: relative; flex-shrink: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  background-color: var(--sand);
+  background-image: linear-gradient(rgba(10,22,40,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(10,22,40,.05) 1px, transparent 1px); }
+.pe-monde { position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: crosshair; }
+.pe-feuille { background-size: 10px 10px; }
+.pe-decor { opacity: .9; }
+.pe-el { cursor: move; }
+.pe-place { font-size: 10px; }
+.pe-el.pe-sel { outline: 3px solid var(--blue); outline-offset: 2px; z-index: 5; }
+.spot.pe-chev { box-shadow: 0 0 0 3px #e53935 !important; }
+.pe-cadre { position: absolute; display: none; pointer-events: none; border: 1.5px dashed var(--blue); background: rgba(0, 85, 164, .08); border-radius: 3px; z-index: 20; }
+.pe-cadre.on { display: block; }
+.pe-cadre-tapis { background: rgba(21, 101, 192, .55); border-style: solid; }
+.pe-aide { position: absolute; left: 16px; bottom: 8px; margin: 0; font-size: 12px; color: var(--text-muted); background: #fff; border-radius: 8px; padding: 5px 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); max-width: calc(100% - 32px); white-space: normal; }
+.pe-props { border-left: 1px solid var(--border); padding: 14px; overflow-y: auto; font-size: 13.5px; display: flex; flex-direction: column; gap: 10px; }
+.pe-props h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--navy); }
+.pe-hint { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+.pe-alg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pe-alg .pl-btn { font-size: 12px; padding: 7px 6px; }
+.pe-sec { border-top: 1px solid var(--border); padding-top: 10px; }
+.pe-sec .pl-btn-del { margin-left: 0; }
+.pl-btn-pri { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pl-btn-pri:hover { background: var(--blue-dark); }
+@media (max-width: 900px) { .pe-main { grid-template-columns: 70px 1fr; } .pe-props { grid-column: 1 / -1; border-left: none; border-top: 1px solid var(--border); max-height: 200px; } }
+.pe-mer { position: absolute; background: linear-gradient(135deg, var(--sea1), var(--sea2)); border-radius: 0 70px 0 0; opacity: .8; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.pe-mer span { color: #fff; font-weight: 800; letter-spacing: .3em; text-transform: uppercase; font-size: 14px; opacity: .85; }
+.pe-poignee { position: absolute; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; border: 3px solid var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,.3); z-index: 30; }
+.pe-poignee-H { cursor: ew-resize; }
+.pe-poignee-V { cursor: ns-resize; }
+@media (pointer: coarse) { .pe-poignee { width: 26px; height: 26px; } }
+.pe-guide { position: absolute; pointer-events: none; z-index: 25; }
+.pe-guide-v { width: 0; border-left: 1.5px dashed #e91e63; }
+.pe-guide-h { height: 0; border-top: 1.5px dashed #e91e63; }
+.pe-fantome { position: absolute; border-radius: 50%; border: 2.5px dashed var(--green-dark); background: rgba(67, 160, 71, .25); pointer-events: none; z-index: 22; }
+.pe-fantome-nb { position: absolute; pointer-events: none; z-index: 23; white-space: nowrap; font-size: 13px; font-weight: 800; color: #fff; background: var(--green-dark); border-radius: 999px; padding: 3px 10px; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+
+/* ── Barnums (vus du dessus) : vue Plage et éditeur ── */
+.barnum-plage { --bc: #ee751d; --bf: rgba(238, 117, 29, .22);
+  position: absolute; box-sizing: border-box; pointer-events: none;
+  border: 3px solid var(--bc); border-radius: 4px;
+  background: repeating-linear-gradient(45deg, var(--bf) 0 10px, transparent 10px 20px), rgba(255, 255, 255, .35);
+  display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+.barnum-plage span { margin-top: 2px; font-size: 11px; font-weight: 800; color: #fff; background: var(--bc); border-radius: 999px; padding: 1px 8px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barnum-plage[data-couleur="bleu"]  { --bc: #1565c0; --bf: rgba(21, 101, 192, .2); }
+.barnum-plage[data-couleur="blanc"] { --bc: #90a4ae; --bf: rgba(255, 255, 255, .7); }
+.barnum-plage[data-couleur="blanc"] span { color: var(--navy); background: #fff; border: 1px solid #90a4ae; }
+.barnum-plage[data-couleur="vert"]  { --bc: #2e7d32; --bf: rgba(46, 125, 50, .2); }
+.barnum-plage[data-couleur="rouge"] { --bc: #c62828; --bf: rgba(198, 40, 40, .2); }
+.barnum-plage.pe-el { pointer-events: auto; }
+.pe-poignee-B { cursor: nwse-resize; }
+.pe-cadre-barnum { background: rgba(238, 117, 29, .25); border: 2px solid #c2560a; }
+.pe-couleurs { display: flex; gap: 8px; }
+.pe-couleur { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--border); }
+.pe-couleur[data-couleur="orange"] { background: #ee751d; }
+.pe-couleur[data-couleur="bleu"]   { background: #1565c0; }
+.pe-couleur[data-couleur="blanc"]  { background: #fff; box-shadow: 0 0 0 1.5px #90a4ae; }
+.pe-couleur[data-couleur="vert"]   { background: #2e7d32; }
+.pe-couleur[data-couleur="rouge"]  { background: #c62828; }
+.pe-couleur[aria-checked="true"] { box-shadow: 0 0 0 3px var(--navy); }
+.pe-couleur:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.barnum-plage.pe-sel { z-index: auto; }
+.pe-menu { min-width: 220px; }
+.pe-menu button { display: flex !important; justify-content: space-between; align-items: center; gap: 16px; }
+.pe-menu kbd { font: inherit; font-size: 11.5px; font-weight: 600; color: var(--text-muted); background: #f1f5f9; border-radius: 5px; padding: 1px 6px; }
+.pe-menu button:disabled { color: #b0bac6; cursor: default; background: none; }
+.pe-menu button:disabled kbd { color: #c3cbd5; }
+.pe-monde.pe-alt .pe-el { cursor: copy; }
+.pe-rac { border-top: 1px solid var(--border); padding-top: 10px; font-size: 12.5px; }
+.pe-rac summary { cursor: pointer; font-weight: 700; color: var(--blue); }
+.pe-rac dl { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; }
+.pe-rac dt { font-weight: 700; color: var(--navy); white-space: nowrap; }
+.pe-rac dd { margin: 0; color: var(--text-muted); }
+
+/* ── Front de mer (éditeur, miniatures) ── */
+.pe-mer-ligne { position: absolute; height: 0; border-top: 3px dashed rgba(255, 255, 255, .95); pointer-events: none; z-index: 2; }
+.pe-mer-ligne.on { border-top-color: #e91e63; }
+.pe-mer-poignee { position: absolute; transform: translate(-50%, -50%); z-index: 31; cursor: ns-resize; touch-action: none;
+  font: inherit; font-size: 12px; font-weight: 800; color: var(--blue); background: #fff; border: 2px solid var(--blue); border-radius: 999px; padding: 4px 10px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+.pe-mer-poignee:hover { background: #e3f2fd; }
+.pl-thumb.pl-thumb-mer { background: var(--sand); }
+.pl-m-mer { background: linear-gradient(135deg, var(--sea1), var(--sea2)); opacity: .8; border-radius: 0 60px 0 0; }
+
+/* ── Barrières déplaçables (éditeur, miniatures) ── */
+.pe-barriere { box-shadow: 0 0 0 1px rgba(10, 22, 40, .25); }
+.pe-barriere::before { content: ''; position: absolute; inset: -8px; }   /* zone de prise plus large que le trait */
+.pe-cadre-barriere { background: #fff; border: 1px solid #90a4ae; }
+.pl-m-barriere { background: #fff; box-shadow: 0 0 0 1px #b0bec5; }
+
+/* ── Rotation (éditeur) ── */
+.pe-rot { position: absolute; width: 24px; height: 24px; transform: translate(-50%, -50%); z-index: 32; cursor: grab; touch-action: none;
+  display: grid; place-items: center; font-size: 15px; font-weight: 800; line-height: 1; color: #fff; background: var(--blue); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 1px 5px rgba(0,0,0,.35); }
+.pe-rot:active { cursor: grabbing; }
+@media (pointer: coarse) { .pe-rot { width: 32px; height: 32px; } }
+.pe-rot-tige { position: absolute; width: 0; margin-left: -1px; border-left: 2px dashed var(--blue); transform-origin: 50% 100%; pointer-events: none; z-index: 31; }
+.pe-angle { display: flex; align-items: center; gap: 6px; }
+.pe-angle input { font: inherit; width: 90px; padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px; }
+.pe-rot-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; }
+.pe-rot-btns .pl-btn { font-size: 11.5px; padding: 6px 2px; }
+
+/* ── Icônes au trait de l'éditeur ── */
+.pe-svg { display: block; flex-shrink: 0; }
+.pe-outil i { width: 38px; height: 34px; border-radius: 10px; color: var(--navy); background: transparent; border: 1.5px solid var(--border); transition: background .15s, color .15s, border-color .15s; }
+.pe-outil:hover i { background: #f1f5f9; border-color: #cbd5e1; }
+.pe-outil.on i { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pe-outil { color: var(--text-muted); font-weight: 600; }
+.pe-outil.on { background: transparent; color: var(--blue); font-weight: 800; }
+.pe-ic { display: inline-flex; align-items: center; justify-content: center; padding: 6px 9px; color: var(--navy); }
+.pe-rot { font-size: 0; }
+.pe-rot .pe-svg { stroke-width: 2.4; }
+.pe-mer-poignee { display: inline-flex; align-items: center; gap: 4px; }
+.pe-mer-poignee .pe-svg { stroke-width: 2.4; }
+#pe-retour { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; }
+
+/* ── Carte « Nouveau plan » ── */
+.pl-nouveau { font: inherit; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+  border: 2px dashed #b6c2d2; border-radius: 14px; background: transparent; color: var(--text-muted); font-size: 15px; font-weight: 700; transition: background .15s, border-color .15s, color .15s; }
+.pl-nouveau small { font-size: 12.5px; font-weight: 500; }
+.pl-nouveau-plus { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 400; line-height: 1; border: 1.5px solid currentColor; }
+.pl-nouveau:hover { background: #fff; border-color: var(--blue); color: var(--blue); }
+.pl-nouveau:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.pe-nouveau { color: var(--green-dark); background: #e8f5e9; }
+.pl-f[hidden] { display: none; }
+.pe-route { position: absolute; background: var(--road-bg); display: flex; align-items: center; padding-left: 16px; box-sizing: border-box; pointer-events: none; }
+.pe-route span { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #37474f; }
+
+/* ── Éditeur sur tablette : sélection multiple ── */
+.pe-multi { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.pe-multi-btn { font: inherit; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; cursor: pointer;
+  color: var(--navy); background: #fff; border: 1.5px solid var(--border); border-radius: 10px; }
+.pe-multi-coche { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #94a3b8; display: grid; place-items: center; flex-shrink: 0; }
+.pe-multi-btn.on { background: #e3f2fd; border-color: var(--blue); color: var(--blue); }
+.pe-multi-btn.on .pe-multi-coche { background: var(--blue); border-color: var(--blue); }
+.pe-multi-btn.on .pe-multi-coche::after { content: ''; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.pe-multi .pl-btn { min-height: 40px; }
+/* Cibles plus grandes au doigt */
+@media (pointer: coarse) {
+  .pe-outil { padding: 10px 2px; }
+  .pe-outil i { width: 44px; height: 40px; }
+  .pe-ic { min-width: 44px; min-height: 40px; }
+  .pe-mer-poignee { padding: 8px 14px; }
+  .pe-rot-btns .pl-btn, .pe-alg .pl-btn { min-height: 40px; }
+}
+
+/* Vue Plage : le plan passe au-dessus de la mer (les rochers et la rampe entrent dans l'eau) */
+.beach-map-container { position: relative; z-index: 1; }
+.beach-sea { z-index: 0; }

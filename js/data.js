@@ -89,14 +89,14 @@ const BEACH_SHOWERS = [
   { x: 536, y: 260, label: 'Douche 3' },
 ];
 
-// Zone rocheuse — 5 points définissent le contour du clipPath SVG
+// Zone rocheuse — contour arrondi (les points sont reliés par une courbe douce).
+// Le bord gauche reste à distance de la rampe d'accès à l'eau.
 const ROCKS = {
   points: [
-    {id:'A', x:650, y:357},
-    {id:'B', x:765, y:357},
-    {id:'C', x:785, y:449},
-    {id:'D', x:660, y:449},
-    {id:'E', x:620, y:400},
+    {x:672, y:340}, {x:708, y:332}, {x:740, y:338}, {x:758, y:354}, {x:768, y:382},
+    {x:765, y:418}, {x:768, y:450}, {x:756, y:474}, {x:725, y:478}, {x:695, y:476},
+    {x:660, y:472}, {x:628, y:466}, {x:606, y:448}, {x:612, y:428}, {x:630, y:410},
+    {x:648, y:388}, {x:660, y:362},
   ],
 };
 
@@ -130,9 +130,20 @@ const RAMPE_METAL = {
   label: 'Rampe métal',
 };
 
+// Zone affichée (coordonnées du plan) : les barrières avec un peu de sable autour, un bout du bâtiment
+// à droite, les rochers en entier et le haut de la mer. La vue Plage l'ajuste à l'écran (mêmes proportions).
+const CADRAGE = { x: -44, y: -51, w: 914, h: 501 };
+
+// Écran de référence : Samsung Galaxy Tab A9+ en paysage dans Chrome (barres Android et navigateur déduites) :
+// panneau du plan d'environ 995 × 565 px, bande Parking de 32 px comprise.
+const ECRAN_TABLETTE = { largeur: 995, hauteur: 565, route: 32, marge: 0 };
+
 const BEACH_CONFIG = {
   mapWidth:   780,
   mapHeight:  340,
+  cadrage:    CADRAGE,
+  merFinX:    700,     // la mer s'étend jusque sous les rochers (ils touchent l'eau)
+  merDefaut:  400,     // front de mer habituel (haut de la mer)
   spotSize:   34,
   spots:      BEACH_SPOTS,
   tapisV:     TAPIS_V,

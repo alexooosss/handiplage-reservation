@@ -16,6 +16,7 @@ function renderMapStatic(container) {
     if (b.type === 'h') el.style.width  = `${b.width}px`;
     else                el.style.height = `${b.height}px`;
     el.title = b.label || '';
+    if (b.rot) el.style.transform = `rotate(${b.rot}deg)`;
     container.appendChild(el);
   });
 
@@ -26,6 +27,7 @@ function renderMapStatic(container) {
     el.style.top   = `${t.y}px`;
     el.style.left  = `${t.x}px`;
     el.style.width = `${t.width}px`;
+    if (t.rot) el.style.transform = `rotate(${t.rot}deg)`;
     container.appendChild(el);
   });
 
@@ -39,6 +41,7 @@ function renderMapStatic(container) {
       el.style.bottom = 'auto';
       el.style.height = `${t.height}px`;
     }
+    if (t.rot) el.style.transform = `rotate(${t.rot}deg)`;
     container.appendChild(el);
   });
 
@@ -49,7 +52,13 @@ function renderMapStatic(container) {
     el.style.left = `${s.x}px`;
     el.style.top  = `${s.y}px`;
     el.title = s.label;
+    if (s.rot) el.style.transform = `translate(-50%, -50%) rotate(${s.rot}deg)`;
     container.appendChild(el);
+  });
+
+  // Barnums (vus du dessus), sous les places et sans gêner les clics
+  (cfg.barnums || []).forEach(b => {
+    if (typeof barnumHtml === 'function') container.insertAdjacentHTML('beforeend', barnumHtml(b));
   });
 
   // Taille du conteneur
@@ -58,6 +67,30 @@ function renderMapStatic(container) {
 
   // Scaling proportionnel selon la taille de l'écran
   _initMapScaling(container);
+  _placerFrontMer(container);
+}
+
+// Front de mer réglé dans le plan : la mer commence à cette hauteur (coordonnées du plan).
+// Sans réglage, la mer garde sa place habituelle en bas du panneau.
+// La mer suit le plan : son bord est au front de mer (réglé dans le plan, sinon position habituelle)
+// et elle s'arrête avant les rochers, quelle que soit l'échelle d'affichage.
+function _placerFrontMer(mapEl) {
+  const panel = mapEl.closest('.beach-panel');
+  const sea = panel && panel.querySelector('.beach-sea');
+  if (!sea) return;
+  function placer() {
+    const fm = typeof BEACH_CONFIG.frontMer === 'number' ? BEACH_CONFIG.frontMer : BEACH_CONFIG.merDefaut;
+    const pr = panel.getBoundingClientRect(), mr = mapEl.getBoundingClientRect();
+    if (!pr.height || !mr.width) return;                     // panneau masqué
+    const s = mr.width / BEACH_CONFIG.mapWidth;
+    const haut = Math.max(0, Math.min(pr.height - 24, mr.top - pr.top + fm * s));
+    sea.style.top = haut + 'px';
+    sea.style.height = 'auto';
+    sea.style.width = Math.max(0, mr.left - pr.left + BEACH_CONFIG.merFinX * s) + 'px';
+    sea.style.borderRadius = '0 ' + Math.round(70 * s) + 'px 0 0';
+  }
+  new ResizeObserver(() => requestAnimationFrame(placer)).observe(mapEl.parentElement || panel);
+  requestAnimationFrame(placer);
 }
 
 // Rend ou met à jour tous les spots selon l'état des réservations
@@ -124,28 +157,30 @@ function _timerBadge(resa) {
 
 // ── Scaling proportionnel ─────────────────────────────────────────────────
 
+// Échelle du plan pour une zone d'affichage donnée : la zone utile remplit l'écran (agrandie ou réduite)
+function echellePlan(largeur, hauteur, marge) {
+  const v = BEACH_CONFIG.cadrage;
+  return Math.max(0.2, Math.min((largeur - 2 * marge) / v.w, (hauteur - 2 * marge) / v.h, 2.5));
+}
+
 function _initMapScaling(mapEl) {
-  const W    = BEACH_CONFIG.mapWidth;
-  const H    = BEACH_CONFIG.mapHeight;
+  const v    = BEACH_CONFIG.cadrage;
   const wrap = mapEl.parentElement; // .beach-map-container
   if (!wrap) return;
+  wrap.style.position = 'relative';
 
   function applyScale() {
-    const pad    = 24; // padding 12px de chaque côté
-    const availW = wrap.clientWidth  - pad;
-    const availH = wrap.clientHeight - pad;
-    const scale  = Math.min(availW / W, availH / H);
-
-    if (scale < 1) {
-      // Compensation des marges : réduit la "boîte layout" à la taille visuelle
-      const mx = ((scale - 1) * W / 2).toFixed(1);
-      const my = ((scale - 1) * H / 2).toFixed(1);
-      mapEl.style.transform = `scale(${scale.toFixed(4)})`;
-      mapEl.style.margin    = `${my}px ${mx}px`;
-    } else {
-      mapEl.style.transform = '';
-      mapEl.style.margin    = '';
-    }
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    if (!W || !H) return;                                  // vue masquée
+    const s  = echellePlan(W, H, 0);
+    const tx = (W - v.w * s) / 2 - v.x * s;                // centrée en largeur
+    const ty = Math.min((H - v.h * s) / 2, 0) - v.y * s;   // calée en haut : un écran plus haut montre plus de mer, pas plus de sable
+    mapEl.style.position = 'absolute';
+    mapEl.style.left = '0';
+    mapEl.style.top = '0';
+    mapEl.style.margin = '0';
+    mapEl.style.transformOrigin = '0 0';
+    mapEl.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s.toFixed(4)})`;
   }
 
   new ResizeObserver(applyScale).observe(wrap);
@@ -170,6 +205,11 @@ function _renderDecor(container, cfg) {
 
   const defs = document.createElementNS(NS, 'defs');
   svg.appendChild(defs);
+
+  // Rochers (sous le tapis diagonal et la rampe)
+  if (cfg.rocks) {
+    _renderRocks(svg, defs, cfg.rocks.points, NS);
+  }
 
   // Tapis PMR diagonal
   if (cfg.tapisPMR) {
@@ -196,10 +236,6 @@ function _renderDecor(container, cfg) {
     }
   }
 
-  // Rochers
-  if (cfg.rocks) {
-    _renderRocks(svg, defs, cfg.rocks.points, NS);
-  }
 
   // Bâtiment (polygone 9 points)
   if (cfg.batiment) {
@@ -223,98 +259,124 @@ function _renderDecor(container, cfg) {
   container.appendChild(svg);
 }
 
+// Formation rocheuse naturelle : gros blocs au cœur, plus petits vers les bords, quelques
+// galets épars autour. Rendu déterministe (même dessin à chaque chargement).
 function _renderRocks(svg, defs, zonePts, NS) {
-  const clipId = 'rocks-clip';
-  const clip = document.createElementNS(NS, 'clipPath');
-  clip.id = clipId;
-  const cpoly = document.createElementNS(NS, 'polygon');
-  cpoly.setAttribute('points', zonePts.map(p => p.x + ',' + p.y).join(' '));
-  clip.appendChild(cpoly);
-  defs.appendChild(clip);
+  const pts = zonePts.map(p => [p.x, p.y]);
 
-  const g = document.createElementNS(NS, 'g');
-  g.setAttribute('clip-path', 'url(#' + clipId + ')');
+  // Contour lissé (Catmull-Rom fermée → courbes de Bézier)
+  function cheminLisse(P) {
+    const n = P.length;
+    let dd = 'M' + P[0][0] + ',' + P[0][1];
+    for (let i = 0; i < n; i++) {
+      const p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      dd += 'C' + c1.map(v => v.toFixed(1)) + ' ' + c2.map(v => v.toFixed(1)) + ' ' + p2[0] + ',' + p2[1];
+    }
+    return dd + 'Z';
+  }
+  function dedans(x, y) {
+    let ok = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i], [xj, yj] = pts[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) ok = !ok;
+    }
+    return ok;
+  }
+  // Distance au bord (pour des blocs plus gros au cœur)
+  function distBord(x, y) {
+    let best = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [x1, y1] = pts[j], [x2, y2] = pts[i];
+      const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)));
+      best = Math.min(best, Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy)));
+    }
+    return best;
+  }
 
-  // Bounding box du polygone — la grille couvre toute la zone
-  const xs = zonePts.map(p => p.x), ys = zonePts.map(p => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  let seed = 7;
+  function rand(lo, hi) { seed = (seed * 1664525 + 1013904223) >>> 0; return lo + (seed / 0xffffffff) * (hi - lo); }
 
-  // Fond sableux couvrant toute la bbox
-  _svgEl(g, NS, 'rect', {x: minX - 10, y: minY - 10, width: maxX - minX + 20, height: maxY - minY + 20, fill: '#c8b898'});
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+
+  // Sable humide sous la formation, bords estompés
+  const flou = document.createElementNS(NS, 'filter');
+  flou.id = 'rocks-flou';
+  flou.setAttribute('x', '-20%'); flou.setAttribute('y', '-20%'); flou.setAttribute('width', '140%'); flou.setAttribute('height', '140%');
+  const fb = document.createElementNS(NS, 'feGaussianBlur'); fb.setAttribute('stdDeviation', '4');
+  flou.appendChild(fb); defs.appendChild(flou);
+  _svgEl(svg, NS, 'path', { d: cheminLisse(pts), fill: '#b9a57e', opacity: .55, filter: 'url(#rocks-flou)' });
+
+  // Blocs : tirage aléatoire dans la zone, taille selon la distance au bord
+  const rocks = [];
+  for (let k = 0; k < 1400 && rocks.length < 210; k++) {
+    const x = rand(minX, maxX), y = rand(minY, maxY);
+    if (!dedans(x, y)) continue;
+    const prof = Math.min(1, distBord(x, y) / 28);                      // 0 au bord → 1 au cœur
+    const rx = (prof > .6 && rand(0, 1) < .45) ? rand(11, 17) : rand(4, 7 + prof * 6);
+    if (rocks.some(r => Math.hypot(r.x - x, (r.y - y) * 1.3) < (r.rx + rx) * .5)) continue;   // évite les empilements
+    rocks.push({ x, y, rx, ry: rx * rand(.55, .85), rot: rand(-35, 35) });
+  }
+  // Galets épars juste autour de la formation (jamais côté rampe)
+  for (let k = 0; k < 500 && rocks.length < 245; k++) {
+    const x = rand(minX - 10, maxX + 10), y = rand(minY - 10, maxY + 6);
+    if (dedans(x, y)) continue;
+    const dist = distBord(x, y);
+    if (dist > 9 || x < 650 - (y - 350) + 18 || x > 770) continue;   // ni sur la rampe, ni dans le passage à droite
+    const rx = rand(2.2, 4.2);
+    rocks.push({ x, y, rx, ry: rx * rand(.6, .85), rot: rand(-40, 40) });
+  }
+  rocks.sort((p, q) => p.y - q.y);                                      // ceux du bas passent devant
 
   const COLORS = [
-    ['#8a8a8a','#6a6a6a'],['#9e9e9e','#7a7a7a'],['#ababab','#888'],
-    ['#b0a090','#8a7a70'],['#787060','#58504a'],['#bdbdbd','#999'],
-    ['#a09080','#807060'],['#c0b8a8','#a09888'],['#707070','#505050'],
+    ['#8a8a8a','#5f5f5f'],['#9e9e9e','#717171'],['#a9a39a','#7d776e'],
+    ['#b0a090','#857565'],['#7a7266','#544d44'],['#b8b8b8','#8c8c8c'],
+    ['#a09080','#74665a'],['#c2bba9','#958e7e'],['#6f6f6f','#4a4a4a'],
   ];
-
-  // LCG déterministe — même rendu à chaque chargement
-  let seed = 1;
-  function rand(a, b) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return a + (seed / 0xffffffff) * (b - a);
-  }
-
-  const rocks = [];
-  for (let cy = minY + 5; cy < maxY + 10; cy += 10) {
-    for (let cx = minX; cx < maxX + 15; cx += 15) {
-      const sc = rand(0, 1);
-      const rx = sc < 0.25 ? rand(3.5, 6) : sc < 0.65 ? rand(7, 11) : rand(12, 16);
-      rocks.push({ x: cx + rand(-3, 3), y: cy + rand(-2, 2), rx, ry: rx * rand(0.5, 0.85) });
-    }
-  }
-
-  function rockPath(cx, cy, rx, ry, s) {
-    const n = 6 + (s % 3);
-    const pts = [];
-    for (let i = 0; i < n; i++) {
-      const base = (2 * Math.PI * i) / n;
-      const jit  = (((s * 17 + i * 31) % 100) / 100 - 0.5) * (Math.PI / n) * 0.7;
-      const rf   = 0.45 + (((s * 13 + i * 47) % 100) / 100) * 0.6;
-      pts.push([(cx + Math.cos(base + jit) * rx * rf).toFixed(1),
-                (cy + Math.sin(base + jit) * ry * rf).toFixed(1)]);
-    }
-    return 'M' + pts.map(p => p.join(',')).join('L') + 'Z';
-  }
-
   function lighten(hex, amt) {
     const n = parseInt(hex.slice(1), 16);
-    return 'rgb(' + Math.min(255, (n >> 16) + amt) + ',' +
-                    Math.min(255, ((n >> 8) & 0xff) + amt) + ',' +
-                    Math.min(255, (n & 0xff) + amt) + ')';
+    return 'rgb(' + Math.min(255, (n >> 16) + amt) + ',' + Math.min(255, ((n >> 8) & 0xff) + amt) + ',' + Math.min(255, (n & 0xff) + amt) + ')';
+  }
+  // Bloc aux formes douces et irrégulières
+  function rockPath(cx, cy, rx, ry, s) {
+    const n = 7 + (s % 3), P = [];
+    for (let i = 0; i < n; i++) {
+      const ang = (2 * Math.PI * i) / n;
+      const rf = 0.78 + (((s * 13 + i * 47) % 100) / 100) * 0.32;
+      P.push([cx + Math.cos(ang) * rx * rf, cy + Math.sin(ang) * ry * rf]);
+    }
+    let dd = '';
+    for (let i = 0; i < n; i++) {
+      const p = P[i], q = P[(i + 1) % n], mid = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      dd += (i === 0 ? 'M' + ((P[n - 1][0] + p[0]) / 2).toFixed(1) + ',' + ((P[n - 1][1] + p[1]) / 2).toFixed(1) : '')
+        + 'Q' + p[0].toFixed(1) + ',' + p[1].toFixed(1) + ' ' + mid[0].toFixed(1) + ',' + mid[1].toFixed(1);
+    }
+    return dd + 'Z';
   }
 
+  const g = document.createElementNS(NS, 'g');
   rocks.forEach(function(r, i) {
     const [fill, dark] = COLORS[i % COLORS.length];
-    const gid = 'rk_' + i;
-    const s   = i * 137 + 42;
-
+    const gid = 'rk_' + i, s = i * 137 + 42;
     const grad = document.createElementNS(NS, 'radialGradient');
     grad.id = gid;
-    grad.setAttribute('cx', '32%'); grad.setAttribute('cy', '28%'); grad.setAttribute('r', '68%');
-    [['0%', lighten(fill, 28)], ['100%', dark]].forEach(function([off, col]) {
+    grad.setAttribute('cx', '35%'); grad.setAttribute('cy', '30%'); grad.setAttribute('r', '75%');
+    [['0%', lighten(fill, 34)], ['70%', fill], ['100%', dark]].forEach(function([off, col]) {
       const st = document.createElementNS(NS, 'stop');
       st.setAttribute('offset', off); st.setAttribute('stop-color', col);
       grad.appendChild(st);
     });
     defs.appendChild(grad);
-
-    _svgEl(g, NS, 'path', {d: rockPath(r.x + 2, r.y + 3, r.rx + 1, r.ry + 0.5, s), fill: 'rgba(0,0,0,0.2)'});
-    _svgEl(g, NS, 'path', {d: rockPath(r.x, r.y, r.rx, r.ry, s), fill: 'url(#' + gid + ')', stroke: dark, 'stroke-width': .6, 'stroke-opacity': .45});
-    if (r.rx > 6) {
-      _svgEl(g, NS, 'path', {d: rockPath(r.x - r.rx * .18, r.y - r.ry * .22, r.rx * .38, r.ry * .30, s + 7), fill: 'rgba(255,255,255,0.2)'});
-    }
+    const rg = document.createElementNS(NS, 'g');
+    rg.setAttribute('transform', 'rotate(' + r.rot.toFixed(1) + ' ' + r.x.toFixed(1) + ' ' + r.y.toFixed(1) + ')');
+    _svgEl(rg, NS, 'path', { d: rockPath(r.x + 1.5, r.y + 2.5, r.rx * 1.04, r.ry * 1.02, s), fill: 'rgba(40,30,15,0.28)' });   // ombre portée
+    _svgEl(rg, NS, 'path', { d: rockPath(r.x, r.y, r.rx, r.ry, s), fill: 'url(#' + gid + ')', stroke: dark, 'stroke-width': .5, 'stroke-opacity': .5 });
+    if (r.rx > 6) _svgEl(rg, NS, 'path', { d: rockPath(r.x - r.rx * .22, r.y - r.ry * .28, r.rx * .36, r.ry * .26, s + 7), fill: 'rgba(255,255,255,0.22)' });
+    g.appendChild(rg);
   });
-
   svg.appendChild(g);
-
-  // Contour de la zone rocheuse (tirets)
-  _svgEl(svg, NS, 'polygon', {
-    points: zonePts.map(p => p.x + ',' + p.y).join(' '),
-    fill: 'none', stroke: '#a09060', 'stroke-width': 1.5, 'stroke-dasharray': '5,3',
-  });
-
 }
 
 if (typeof module !== 'undefined') {

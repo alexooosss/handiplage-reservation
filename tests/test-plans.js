@@ -39,6 +39,21 @@ assert.strictEqual(c3.spots[1].label, 'Place 55', 'libellé par défaut');
 assert.deepStrictEqual(c3.tapisH, [], 'éléments absents = vides');
 assert.strictEqual(c3.barnums.length, 1);
 
+// 3b. Front de mer : transmis s'il est valide, sinon plan refusé
+const c4 = JSON.parse(JSON.stringify(BEACH_CONFIG));
+assert.ok(appliquerPlan(c4, Object.assign({}, origine, { frontMer: 360 })));
+assert.strictEqual(c4.frontMer, 360);
+assert.ok(appliquerPlan(c4, origine));
+assert.strictEqual(c4.frontMer, null, 'sans réglage : mer à sa place habituelle');
+assert.strictEqual(planValide(Object.assign({}, origine, { frontMer: 'haut' })), false);
+
+// 3c. Barrières : celles du plan si enregistrées, sinon celles d'origine
+const c5 = JSON.parse(JSON.stringify(BEACH_CONFIG));
+assert.ok(appliquerPlan(c5, Object.assign({}, origine, { barriers: [{ type: 'h', x: 0, y: 0, width: 100 }] })));
+assert.strictEqual(c5.barriers.length, 1);
+assert.ok(appliquerPlan(c5, origine));
+assert.strictEqual(c5.barriers.length, BEACH_CONFIG.barriers.length, 'plan sans barrières : barrières par défaut');
+
 // 4. Date locale au format AAAA-MM-JJ
 assert.strictEqual(_dateLocaleISO(new Date(2026, 6, 5)), '2026-07-05');
 
