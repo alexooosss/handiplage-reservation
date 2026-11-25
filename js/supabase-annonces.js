@@ -71,6 +71,29 @@ async function deactivateAnnonce(id) {
   if (result.error) throw result.error;
 }
 
+// ── Annonce de fermeture de la plage ──
+// Publiée depuis la main courante. Le contenu commence par « [FERMETURE AAAA-MM-JJ] » :
+// elle n'est affichée que ce jour-là, puis disparaît d'elle-même côté usagers.
+var FERMETURE_RE = /^\[FERMETURE (\d{4}-\d{2}-\d{2})\]\s*/;
+
+function parseFermetureAnnonce(annonce) {
+  if (!annonce || typeof annonce.contenu !== 'string') return null;
+  var m = annonce.contenu.match(FERMETURE_RE);
+  return m ? { date: m[1], message: annonce.contenu.replace(FERMETURE_RE, '') } : null;
+}
+
+function fermetureContenu(dateISO, message) {
+  return '[FERMETURE ' + dateISO + '] ' + message;
+}
+
+// Annonce à montrer aujourd'hui (null si c'est une fermeture d'un autre jour)
+function annonceDuJour(annonce, todayISO) {
+  var f = parseFermetureAnnonce(annonce);
+  if (f && f.date !== todayISO) return null;
+  return annonce;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { _rowToAnnonce, getActiveAnnonce, getAnnonces, createAnnonce, deactivateAnnonce };
+  module.exports = { _rowToAnnonce, getActiveAnnonce, getAnnonces, createAnnonce, deactivateAnnonce,
+    parseFermetureAnnonce, fermetureContenu, annonceDuJour };
 }

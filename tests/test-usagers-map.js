@@ -17,6 +17,21 @@ const { splitLocalisables, getFilterOptions, filterInscriptions, computeGeoStats
   assert.deepStrictEqual(unlocalized.map(i => i.id), ['2', '3']);
 }
 
+// ── splitLocalisables : même ville écrite différemment = une seule ville ──
+{
+  const o = { geoLat: 43.5, geoLng: 7.1, continent: 'Europe', pays: 'France', region: 'PACA' };
+  const valid = [
+    Object.assign({ id: '1', ville: 'vallauris' }, o),
+    Object.assign({ id: '2', ville: 'Vallauris' }, o),
+    Object.assign({ id: '3', ville: 'VALLAURIS ' }, o),
+    Object.assign({ id: '4', ville: 'saint-laurent-du-var' }, o),
+  ];
+  const { localized } = splitLocalisables(valid);
+  assert.deepStrictEqual(getFilterOptions(localized, {}).villes, ['Saint-Laurent-du-Var', 'Vallauris']);
+  assert.strictEqual(filterInscriptions(localized, { ville: 'Vallauris' }).length, 3);
+  assert.strictEqual(valid[0].ville, 'vallauris'); // la donnée d'origine n'est pas modifiée
+}
+
 // ── getFilterOptions ──
 {
   const localized = [

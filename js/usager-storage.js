@@ -38,7 +38,7 @@ function computePassBalance(reservations, quota) {
   var today    = new Date();
   var monthKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
   var used = reservations.filter(function(r) {
-    return r.statut !== 'annule' && r.date && r.date.startsWith(monthKey);
+    return r.date && r.date.startsWith(monthKey) && resaCompteDansQuota(r);
   }).length;
   return { used: used, remaining: Math.max(0, quota - used), quota: quota, monthKey: monthKey };
 }
@@ -115,13 +115,17 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
   var crRes  = await supabaseClient.from('creneaux').select('id, label, heure_debut, heure_fin, capacite_resa').order('id');
   var resaRes = await supabaseClient.from('reservations')
     .select('id, date, creneau_id, inscription_id, statut')
-    .gte('date', fromISO).lte('date', toISO).neq('statut', 'annule');
+    .gte('date', fromISO).lte('date', toISO).not('statut', 'in', '(annule,suspendu)');
 
   if (crRes.error)   throw crRes.error;
   if (resaRes.error) throw resaRes.error;
 
   var creneaux = crRes.data || [];
   var resas    = resaRes.data || [];
+  var fermetures = [];
+  if (typeof getFermetures === 'function') {
+    try { fermetures = await getFermetures(fromISO, toISO); } catch (e) { fermetures = []; }
+  }
 
   var counts           = {};
   var userBooked       = {};
@@ -149,6 +153,7 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
       var count          = counts[key] || 0;
       var booked         = !!userBooked[key];
       var dayLimitReached = !booked && (userDayCounts[dateISO] || 0) >= 2;
+      var ferme = creneauFerme(fermetures, dateISO, c.id);
       return {
         creneauId:  c.id,
         label:      c.label,
@@ -157,7 +162,8 @@ async function getAvailableDays(fromISO, toISO, inscriptionId) {
         capacity:   c.capacite_resa,
         count:      count,
         remaining:  Math.max(0, c.capacite_resa - count),
-        available:  !booked && !dayLimitReached && count < c.capacite_resa,
+        available:  !booked && !dayLimitReached && !ferme && count < c.capacite_resa,
+        ferme:      !!ferme,
         userBooked:    booked,
         resaId:        userResaId[key] || null,
         resaStatut:    userResaStatut[key] || null,
@@ -205,24 +211,30 @@ async function createUserReservation(inscription, dateISO, creneauId) {
   }
 
   // Vérification limite journalière (2 par jour)
+  // Plage fermée sur ce créneau ?
+  if (typeof getFermetures === 'function') {
+    var fs = await getFermetures(dateISO, dateISO);
+    if (creneauFerme(fs, dateISO, creneauId)) throw new Error('La Handiplage est fermée sur ce créneau : aucune réservation possible.');
+  }
+
   var dayRes = await supabaseClient.from('reservations')
-    .select('id', { count: 'exact', head: true })
+    .select('date, creneau_id, statut')
     .eq('inscription_id', inscription.id)
     .eq('date', dateISO)
     .neq('statut', 'annule');
   if (dayRes.error) throw dayRes.error;
-  if ((dayRes.count || 0) >= 2) throw new Error('Limite de 2 réservations par jour atteinte.');
+  if ((dayRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= 2) throw new Error('Limite de 2 réservations par jour atteinte.');
 
   // Vérification quota mensuel (40 par mois)
   var monthKey = dateISO.slice(0, 7);
   var monthRes = await supabaseClient.from('reservations')
-    .select('id', { count: 'exact', head: true })
+    .select('date, creneau_id, statut')
     .eq('inscription_id', inscription.id)
     .gte('date', monthKey + '-01')
     .lt('date', (function() { var d = new Date(monthKey + '-01'); d.setMonth(d.getMonth() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })())
     .neq('statut', 'annule');
   if (monthRes.error) throw monthRes.error;
-  if ((monthRes.count || 0) >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint.');
+  if ((monthRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint.');
 
   var result = await supabaseClient.from('reservations').insert({
     date:           dateISO,

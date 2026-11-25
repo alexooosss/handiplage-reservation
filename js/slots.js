@@ -61,6 +61,53 @@ function isLastSlot(slotId) {
   return slotId >= SLOTS[SLOTS.length - 1].id;
 }
 
+// ── Fermeture de la plage : règles communes staff / usagers ──
+function _isoLocal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Une réservation « suspendue » (plage fermée) dont le créneau est terminé est recréditée :
+// elle ne compte plus dans le quota. Tant que le créneau n'est pas fini, elle compte encore
+// (la plage peut rouvrir et la rétablir).
+function suspensionRecreditee(r, now) {
+  if (!r || r.statut !== 'suspendu') return false;
+  now = now || new Date();
+  var today = _isoLocal(now);
+  if (r.date < today) return true;
+  if (r.date > today) return false;
+  var slot = SLOTS.find(function(s) { return s.id === (r.creneau_id || r.creneauId); });
+  return !slot || (now.getHours() * 60 + now.getMinutes()) >= timeToMinutes(slot.end);
+}
+
+// Compte dans le quota du pass (et la limite journalière) ?
+function resaCompteDansQuota(r, now) {
+  if (!r || r.statut === 'annule') return false;
+  if (r.statut === 'suspendu') return !suspensionRecreditee(r, now);
+  return true;
+}
+
+// Le créneau est-il touché par une fermeture (intervalle [fermeture, réouverture[) ?
+function creneauFerme(fermetures, dateISO, creneauId) {
+  var slot = SLOTS.find(function(s) { return s.id === creneauId; });
+  if (!slot || !fermetures) return null;
+  var deb = timeToMinutes(slot.start), fin = timeToMinutes(slot.end);
+  for (var i = 0; i < fermetures.length; i++) {
+    var f = fermetures[i];
+    if (f.date !== dateISO) continue;
+    var hf = timeToMinutes(String(f.heure_fermeture).slice(0, 5));
+    var hr = f.heure_reouverture ? timeToMinutes(String(f.heure_reouverture).slice(0, 5)) : 24 * 60;
+    if (fin > hf && deb < hr) return f;
+  }
+  return null;
+}
+
+// Créneaux dont la fin est postérieure à une heure donnée (« HH:MM »)
+function creneauxNonTerminesA(heure) {
+  var m = timeToMinutes(String(heure).slice(0, 5));
+  return SLOTS.filter(function(s) { return timeToMinutes(s.end) > m; }).map(function(s) { return s.id; });
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { SLOTS, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot };
+  module.exports = { SLOTS, isWithinSeason, clampToSeasonEnd, timeToMinutes, getSlotStatus, getActiveSlot, getSlotById, minutesSinceSlotStart, isLastSlot,
+    suspensionRecreditee, resaCompteDansQuota, creneauFerme, creneauxNonTerminesA };
 }

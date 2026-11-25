@@ -209,7 +209,9 @@ function _renderSlots(slots, dateISO) {
         + '</div>'
         + '</div>';
     }
-    var badge = s.dayLimit
+    var badge = s.ferme
+      ? '<div class="usager-slot-badge full-badge">Plage fermée</div>'
+      : s.dayLimit
       ? '<div class="usager-slot-badge full-badge">Limite journalière atteinte</div>'
       : !s.available
         ? '<div class="usager-slot-badge full-badge">Complet</div>'

@@ -5,8 +5,8 @@ function _escRes(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-var STATUT_LABELS = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé' };
-var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-present', absent: 'resa-s-absent', annule: 'resa-s-annule' };
+var STATUT_LABELS = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé', suspendu: 'Suspendue — plage fermée' };
+var STATUT_CLS    = { attente: 'resa-s-attente', present: 'resa-s-present', parti: 'resa-s-present', absent: 'resa-s-absent', annule: 'resa-s-annule', suspendu: 'resa-s-suspendu' };
 var CRENEAU_LABELS = { 1: '8h30–10h15', 2: '10h30–12h15', 3: '12h30–14h15', 4: '14h30–16h15', 5: '16h30–18h15' };
 
 async function renderReservations(container, inscription, showView) {
@@ -19,7 +19,7 @@ async function renderReservations(container, inscription, showView) {
     var nowHHMM  = new Date().toTimeString().slice(0, 5); // "HH:MM"
 
     function _isUpcoming(r) {
-      if (r.statut === 'annule') return false;
+      if (r.statut === 'annule' || suspensionRecreditee(r)) return false;
       if (r.date > todayISO) return true;
       if (r.date < todayISO) return false;
       // Même jour : vérifier si l'heure de fin du créneau est déjà passée
@@ -35,7 +35,7 @@ async function renderReservations(container, inscription, showView) {
 
     var passHtml = '';
     if (seasonOver) {
-      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
+      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule' && !suspensionRecreditee(r); }).length;
       var seasonYear  = saisonDates.fin.slice(0, 4);
       passHtml = '<div class="usager-card usager-pass-banner">'
         + '<div class="usager-pass-banner-row">'
@@ -218,8 +218,9 @@ function _resaCard(r, isUpcoming) {
   var d = new Date(r.date + 'T00:00:00');
   var dateStr  = d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
   var slotLbl  = CRENEAU_LABELS[r.creneauId] || ('Créneau ' + r.creneauId);
-  var statutLbl = STATUT_LABELS[r.statut] || r.statut;
-  var statutCls = STATUT_CLS[r.statut] || '';
+  var recred    = suspensionRecreditee(r);
+  var statutLbl = recred ? 'Recréditée — plage fermée' : (STATUT_LABELS[r.statut] || r.statut);
+  var statutCls = recred ? 'resa-s-recredit' : (STATUT_CLS[r.statut] || '');
   var canCancel = isUpcoming && r.statut === 'attente' && canCancelReservation(r.date);
 
   return '<div class="usager-resa-card">'

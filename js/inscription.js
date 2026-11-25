@@ -1078,7 +1078,7 @@ function _loadHistory(inscriptionId) {
     if (typeof getPassMonthKey === 'function' && typeof PASS_QUOTA !== 'undefined') {
       var monthKey = getPassMonthKey();
       var usedThisMonth = rows.filter(function(r) {
-        return r.statut !== 'annule' && r.date && r.date.startsWith(monthKey);
+        return r.date && r.date.startsWith(monthKey) && resaCompteDansQuota(r);
       }).length;
       var remaining = Math.max(0, PASS_QUOTA - usedThisMonth);
       var countEl = document.querySelector('.pass-remaining-count');
@@ -1096,7 +1096,7 @@ function _loadHistory(inscriptionId) {
       histEl.innerHTML = '<em class="insc-history-empty">Aucune réservation enregistrée.</em>';
       return;
     }
-    var statutLabel = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé' };
+    var statutLabel = { attente: 'Réservation', present: 'Présent·e', parti: 'Présent·e', absent: 'Absent·e', annule: 'Annulé', suspendu: 'Suspendue (plage fermée)' };
     var slotLabel = {};
     if (typeof SLOTS !== 'undefined') {
       SLOTS.forEach(function(s) { slotLabel[s.id] = s.label; });

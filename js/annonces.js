@@ -53,6 +53,14 @@ function _paintAnnonce(container, annonce, draft) {
       +   '</div>'
       +   '<div id="annonce-staff-status" class="annonce-status" role="alert"></div>'
       + '</div>';
+  } else if (annonce && typeof parseFermetureAnnonce === 'function' && parseFermetureAnnonce(annonce)) {
+    // Annonce de fermeture : gérée depuis la main courante (réouverture = retrait)
+    html = _annonceHeaderHtml('<span class="annonce-chip annonce-chip-live"><span class="annonce-chip-dot"></span>Fermeture du jour en ligne</span>',
+        '<button type="button" class="nb-sec" id="annonce-btn-new">Remplacer par une autre annonce</button>')
+      + '<div class="annonce-preview">'
+      +   '<p class="annonce-preview-text"><b>Handiplage fermée aujourd\'hui.</b> ' + _escAn(parseFermetureAnnonce(annonce).message) + '</p>'
+      +   '<p class="annonce-preview-meta">Publiée depuis la main courante · retirée automatiquement à la réouverture ou le lendemain</p>'
+      + '</div>';
   } else if (annonce) {
     html = _annonceHeaderHtml(ANNONCE_CHIP_LIVE,
         '<button type="button" class="btn-secondary annonce-btn" id="annonce-btn-edit">Modifier</button>'
@@ -157,5 +165,10 @@ async function renderAnnonceStaffBlock(container) {
     return;
   }
 
+  // Une fermeture d'un autre jour n'est plus visible des usagers : on la considère comme absente
+  if (typeof annonceDuJour === 'function') {
+    var d = new Date();
+    annonce = annonceDuJour(annonce, d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+  }
   _paintAnnonce(container, annonce, null);
 }

@@ -63,7 +63,7 @@ function _rowToWaitingResa(row) {
 
 async function getReservations(date, slotId) {
   var result = await supabaseClient.from('reservations').select('*')
-    .eq('date', date).eq('creneau_id', slotId).not('spot_id', 'is', null);
+    .eq('date', date).eq('creneau_id', slotId).not('spot_id', 'is', null).neq('statut', 'suspendu');
   if (result.error) throw result.error;
   var map = {};
   (result.data || []).forEach(function(row) { map[row.spot_id] = _rowToSpotResa(row); });
@@ -72,7 +72,7 @@ async function getReservations(date, slotId) {
 
 async function getReservationList(date, slotId) {
   var result = await supabaseClient.from('reservations').select('*')
-    .eq('date', date).eq('creneau_id', slotId).is('spot_id', null)
+    .eq('date', date).eq('creneau_id', slotId).is('spot_id', null).neq('statut', 'suspendu')
     .order('created_at', { ascending: true });
   if (result.error) throw result.error;
   return (result.data || []).map(_rowToWaitingResa);
@@ -137,17 +137,17 @@ async function addReservation(date, slotId, data) {
   if (data.inscriptionId) {
     // Limite journalière : 2 réservations par jour
     var dayRes = await supabaseClient.from('reservations')
-      .select('id', { count: 'exact', head: true })
+      .select('date, creneau_id, statut')
       .eq('inscription_id', data.inscriptionId)
       .eq('date', date)
       .neq('statut', 'annule');
     if (dayRes.error) throw dayRes.error;
-    if ((dayRes.count || 0) >= 2) throw new Error('Limite de 2 réservations par jour atteinte pour cet usager.');
+    if ((dayRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= 2) throw new Error('Limite de 2 réservations par jour atteinte pour cet usager.');
 
     // Quota mensuel : 40 réservations par mois
     var monthKey = date.slice(0, 7);
     var monthRes = await supabaseClient.from('reservations')
-      .select('id', { count: 'exact', head: true })
+      .select('date, creneau_id, statut')
       .eq('inscription_id', data.inscriptionId)
       .gte('date', monthKey + '-01')
       .lt('date', (function() {
@@ -157,7 +157,7 @@ async function addReservation(date, slotId, data) {
       })())
       .neq('statut', 'annule');
     if (monthRes.error) throw monthRes.error;
-    if ((monthRes.count || 0) >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint pour cet usager.');
+    if ((monthRes.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length >= PASS_QUOTA) throw new Error('Quota mensuel de ' + PASS_QUOTA + ' réservations atteint pour cet usager.');
   }
 
   var row = {
@@ -203,7 +203,7 @@ async function getWeekReservationCounts(weekStartISO, weekEndISO) {
   var result = await supabaseClient.from('reservations')
     .select('date, creneau_id, type, statut, resa_type, spot_id, nb_usagers')
     .gte('date', weekStartISO).lte('date', weekEndISO)
-    .neq('statut', 'annule');
+    .not('statut', 'in', '(annule,suspendu)');
   if (result.error) throw result.error;
   var counts = {};
   (result.data || []).forEach(function(row) {
@@ -247,13 +247,13 @@ async function getPassRemainingCount(inscriptionId, monthISO) {
   var end = nextMonth.getFullYear() + '-'
     + String(nextMonth.getMonth() + 1).padStart(2, '0') + '-01';
   var result = await supabaseClient.from('reservations')
-    .select('id', { count: 'exact', head: true })
+    .select('date, creneau_id, statut')
     .eq('inscription_id', inscriptionId)
     .gte('date', start)
     .lt('date', end)
     .neq('statut', 'annule');
   if (result.error) throw result.error;
-  return result.count || 0;
+  return (result.data || []).filter(function(r) { return resaCompteDansQuota(r); }).length;
 }
 
 // ── Flux 2 étapes ──

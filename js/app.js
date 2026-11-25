@@ -328,14 +328,37 @@ const App = (() => {
   }
 
   let _refreshing = false;
+  function _afficherFermeturePlan(f) {
+    const panel = document.getElementById('beach-panel');
+    if (!panel) return;
+    let el = document.getElementById('fermeture-plan');
+    if (!f) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'fermeture-plan';
+      el.className = 'fermeture-plan';
+      el.setAttribute('role', 'status');
+      panel.insertBefore(el, panel.firstChild);
+    }
+    const h = String(f.heure_fermeture || '').slice(0, 5);
+    const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    el.innerHTML = '<b>Plage fermée</b>'
+      + (h && h !== '00:00' ? ' depuis ' + h.replace(':', 'h') : '')
+      + (f.motif ? ' — ' + esc(f.motif) : '')
+      + ' · réservations de ce créneau suspendues (voir la main courante)';
+  }
+
   async function refresh() {
     if (!_selectedSlotId || _refreshing) return;
     _refreshing = true;
     try {
-    const [reservations, waitingList] = await Promise.all([
+    const [reservations, waitingList, fermetures] = await Promise.all([
       getReservations(_date, _selectedSlotId),
       getReservationList(_date, _selectedSlotId),
+      typeof getFermetures === 'function' ? getFermetures(_date, _date).catch(() => []) : Promise.resolve([]),
     ]);
+    // Plage fermée sur ce créneau : bandeau au-dessus du plan
+    _afficherFermeturePlan(typeof creneauFerme === 'function' ? creneauFerme(fermetures, _date, _selectedSlotId) : null);
     _waitingList = waitingList;
     const slot      = getSlotById(_selectedSlotId);
     const mapEl     = document.getElementById('beach-map');

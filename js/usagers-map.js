@@ -56,16 +56,56 @@ var UsagersMap = (function () {
     return out;
   }
 
+  // ── Villes : « vallauris », « Vallauris », « VALLAURIS » = une seule ville ──
+  // Clé de comparaison : sans majuscules, accents, ni différence d'espaces / tirets / apostrophes.
+  function _villeCle(v) {
+    return String(v || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[\s\-'’]+/g, ' ');
+  }
+  var _PETITS_MOTS = { de: 1, du: 1, des: 1, la: 1, le: 1, les: 1, sur: 1, sous: 1, en: 1, et: 1, lès: 1, lez: 1 };
+  // « saint-laurent-du-var » → « Saint-Laurent-du-Var »
+  function _villeMajuscules(v) {
+    var i = 0;
+    return String(v).trim().toLowerCase().replace(/[^\s\-'’]+/g, function(mot) {
+      var premier = i++ === 0;
+      if (!premier && _PETITS_MOTS[mot]) return mot;
+      return mot.charAt(0).toUpperCase() + mot.slice(1);
+    });
+  }
+  // Pour chaque ville, l'écriture affichée : la plus fréquente parmi celles « bien écrites »
+  // (majuscule initiale, pas tout en capitales), sinon une version remise en forme.
+  function _villesCanoniques(list) {
+    var variantes = {};
+    list.forEach(function(i) {
+      if (!i.ville) return;
+      var k = _villeCle(i.ville), v = String(i.ville).trim();
+      variantes[k] = variantes[k] || {};
+      variantes[k][v] = (variantes[k][v] || 0) + 1;
+    });
+    var out = {};
+    Object.keys(variantes).forEach(function(k) {
+      var bien = Object.keys(variantes[k]).filter(function(v) {
+        return v.charAt(0) === v.charAt(0).toUpperCase() && v !== v.toUpperCase();
+      }).sort(function(a, b) { return variantes[k][b] - variantes[k][a]; });
+      out[k] = bien.length ? bien[0] : _villeMajuscules(Object.keys(variantes[k])[0]);
+    });
+    return out;
+  }
+
   // Sépare les usagers validés en géolocalisés (point possible sur le globe)
   // et non localisés (pas d'adresse, échec de géocodage, ou continent non résolu).
+  // Les usagers sont copiés avec une ville harmonisée : la donnée enregistrée n'est pas modifiée.
   function splitLocalisables(valid) {
     var localized = [];
     var unlocalized = [];
+    var canon = _villesCanoniques(valid);
     valid.forEach(function(i) {
+      var copie = i.ville ? Object.assign({}, i, { ville: canon[_villeCle(i.ville)] || i.ville }) : i;
       if (typeof i.geoLat === 'number' && typeof i.geoLng === 'number' && i.continent) {
-        localized.push(i);
+        localized.push(copie);
       } else {
-        unlocalized.push(i);
+        unlocalized.push(copie);
       }
     });
     return { localized: localized, unlocalized: unlocalized };

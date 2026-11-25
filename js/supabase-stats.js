@@ -14,7 +14,7 @@ async function fetchStatsResas(startDate, endDate) {
 async function fetchMcStats(startDate, endDate) {
   var result = await supabaseClient
     .from('main_courante')
-    .select('date, creneau_id, compteurs')
+    .select('date, creneau_id, compteurs, staff')
     .gte('date', startDate)
     .lte('date', endDate);
   if (result.error) throw result.error;

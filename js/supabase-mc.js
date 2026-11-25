@@ -54,6 +54,19 @@ async function saveMcData(date, data) {
   if (result.error) throw result.error;
 }
 
+// Toutes les mains courantes d'une période, regroupées par date : { 'AAAA-MM-JJ': mc, … }
+async function getMcRange(startDate, endDate) {
+  var result = await supabaseClient.from('main_courante').select('*')
+    .gte('date', startDate).lte('date', endDate)
+    .order('date', { ascending: true }).order('creneau_id', { ascending: true });
+  if (result.error) throw result.error;
+  var parDate = {};
+  (result.data || []).forEach(function(r) { (parDate[r.date] = parDate[r.date] || []).push(r); });
+  var out = {};
+  Object.keys(parDate).sort().forEach(function(d) { out[d] = _rowsToMcData(parDate[d]); });
+  return out;
+}
+
 async function getMcDates() {
   var result = await supabaseClient
     .from('main_courante')
@@ -86,6 +99,6 @@ function unsubscribeMc() {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { _mcDefault, _rowsToMcData, getMcData, saveMcData, getMcDates,
+  module.exports = { _mcDefault, _rowsToMcData, getMcData, saveMcData, getMcDates, getMcRange,
     subscribeMc, unsubscribeMc };
 }

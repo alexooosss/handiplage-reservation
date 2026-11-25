@@ -62,7 +62,10 @@ async function renderPlanning(container, weekOffset, onCellClick) {
   const days         = _weekDays(ws);
   const weekStartISO = _isoDate(ws);
   const weekEndISO   = _isoDate(days[6]);
-  const counts       = await getWeekReservationCounts(weekStartISO, weekEndISO);
+  const [counts, fermetures] = await Promise.all([
+    getWeekReservationCounts(weekStartISO, weekEndISO),
+    typeof getFermetures === 'function' ? getFermetures(weekStartISO, weekEndISO).catch(() => []) : Promise.resolve([]),
+  ]);
 
   // Bandeau : réservation en cours pour un groupe (lancée depuis l'onglet Groupes)
   const gp = window._hpGroupePreselect;
@@ -141,6 +144,9 @@ async function renderPlanning(container, weekOffset, onCellClick) {
       if (isPast)  classes += ' past';
       // Créneau en cours : seule la case d'aujourd'hui est mise en avant
       if (isNowRow && isToday) classes += runningSlot ? ' now-cell' : ' now-cell is-next';
+      // Plage fermée sur ce créneau (déclarée dans la main courante)
+      const fermeCell = typeof creneauFerme === 'function' ? creneauFerme(fermetures, iso, slot.id) : null;
+      if (fermeCell) classes += ' ferme-cell';
 
       const nCls = cntN >= CAPACITY_NORMAL ? 'phalf-count full'
                  : cntN >= CAPACITY_NORMAL * 0.8 ? 'phalf-count warn' : 'phalf-count';
@@ -153,7 +159,10 @@ async function renderPlanning(container, weekOffset, onCellClick) {
         : '';
 
       // Les compteurs sont mis via textContent après rendu pour éviter tout problème d'interprétation
-      gridHtml += '<div class="' + classes + '" data-date="' + iso + '" data-slot-id="' + slot.id + '" style="--slot-c:' + color + ';border-top:3px solid ' + (isToday ? 'transparent' : color) + '">'
+      gridHtml += '<div class="' + classes + '" data-date="' + iso + '" data-slot-id="' + slot.id + '"'
+        + (fermeCell ? ' title="Plage fermée' + (fermeCell.motif ? ' : ' + String(fermeCell.motif).replace(/"/g, '&quot;') : '') + '"' : '')
+        + ' style="--slot-c:' + color + ';border-top:3px solid ' + (isToday ? 'transparent' : color) + '">'
+        + (fermeCell ? '<span class="ferme-tag">Fermé</span>' : '')
         + '<div class="phalf-row">'
         + '<div class="phalf" style="background:' + color + '0d">'
         + '<span class="' + nCls + '" style="' + nSty + '" translate="no" data-cnt="' + cntN + '" data-cap="' + CAPACITY_NORMAL + '"></span>'

@@ -130,9 +130,30 @@ async function renderMc(container, date) {
         ? '<span class="nb-today">Aujourd\'hui</span>'
         : '<button type="button" id="mc-nav-today" class="nb-back">↩ Revenir à aujourd\'hui</button>')
     + '<span class="nb-sp"></span>'
+    + (st.fermee ? '' : '<button type="button" id="mc-fermer" class="mc-btn-fermer">Déclarer la plage fermée</button>')
+    + '<button type="button" id="mc-nav-pdf" class="nb-sec" aria-haspopup="dialog">Exporter en PDF</button>'
     + '<button type="button" id="mc-nav-entretien" class="nb-sec">Fiches d\'entretien</button>'
     + '<button type="button" id="mc-nav-list" class="nb-sec" aria-haspopup="dialog" aria-expanded="false">Historique <span aria-hidden="true">▾</span></button>'
     + '</div>';
+
+  // ── 0. Plage fermée ce jour ──
+  if (st.fermee) {
+    html += '<section class="mc-ferme" role="status" aria-labelledby="mc-ferme-title">'
+      + '<span class="mc-ferme-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></span>'
+      + '<div class="mc-ferme-txt">'
+      +   '<h2 id="mc-ferme-title">Handiplage fermée ' + (isToday ? 'aujourd\'hui' + (st.fermee_heure && st.fermee_heure !== '00:00' ? ' depuis ' + st.fermee_heure.replace(':', 'h') : '') : 'ce jour-là') + '</h2>'
+      +   '<p>' + _esc(st.fermee_motif || 'Motif non précisé') + (st.fermee_precision ? ' — ' + _esc(st.fermee_precision) : '') + '</p>'
+      +   '<p class="mc-ferme-usagers">' + (st.fermee_annonce_id ? '✓ Message affiché aux usagers sur leur accueil' : 'Aucun message affiché aux usagers') + '</p>'
+      + '</div>'
+      + '<button type="button" class="mc-btn-rouvrir" id="mc-rouvrir">Rouvrir la plage</button>'
+      + '</section>'
+      // Usagers dont la réservation est suspendue : à prévenir
+      + '<section class="mc-card mc-prevenir" aria-labelledby="mc-prev-t">'
+      +   '<div class="mc-card-hd"><h2 id="mc-prev-t">Usagers à prévenir</h2>'
+      +     '<p class="mc-card-sub">Réservations suspendues. Si la plage ne rouvre pas, elles seront recréditées automatiquement sur le pass, une fois le créneau terminé.</p></div>'
+      +   '<div id="mc-prev-liste"><p class="mc-card-sub">Chargement…</p></div>'
+      + '</section>';
+  }
 
   // ── 1. Ouverture de la journée ──
   const plageBtns = (val) =>
@@ -141,7 +162,9 @@ async function renderMc(container, date) {
     +   '<button type="button" class="mc-seg-btn' + (!val ? ' on' : '') + '" data-plage="0" aria-pressed="' + !val + '">Non</button>'
     + '</div>';
 
-  if (!ouvFaite || _mcEditOuv) {
+  if (st.fermee) {
+    // Plage fermée : pas d'ouverture de journée à saisir
+  } else if (!ouvFaite || _mcEditOuv) {
     html += '<section class="mc-card mc-ouv" aria-labelledby="mc-ouv-title">'
       + '<div class="mc-card-hd"><h2 id="mc-ouv-title">Ouverture de la journée</h2>'
       +   '<p class="mc-card-sub">À remplir une fois, en début de journée.</p></div>'
@@ -194,9 +217,9 @@ async function renderMc(container, date) {
 
   // ── 2. Maintenant : matériel + police + note ──
   const sd = _mcCurrentData.slots[matSlot] || {};
-  html += '<div class="mc-now">';
+  html += '<div class="mc-now' + (st.fermee ? ' mc-now-ferme' : '') + '">';
 
-  html += '<section class="mc-card mc-mat" aria-labelledby="mc-mat-title">'
+  if (!st.fermee) html += '<section class="mc-card mc-mat" aria-labelledby="mc-mat-title">'
     + '<div class="mc-card-hd mc-card-hd-row"><h2 id="mc-mat-title">Matériel utilisé</h2></div>'
     + '<div class="mc-mat-slots" role="group" aria-label="Créneau">'
     + SLOTS.map((s, si) => {
@@ -316,6 +339,48 @@ async function renderMc(container, date) {
 
   // ── Wiring : valider / modifier l'ouverture ──
   const rerender = () => renderMc(container, date).catch(console.error);
+
+  if (st.fermee) _mcChargerAPrevenir(date);
+
+  // ── Wiring : export PDF ──
+  const pdfBtn = document.getElementById('mc-nav-pdf');
+  if (pdfBtn) pdfBtn.addEventListener('click', () => _mcDialogExport(date, allDates));
+
+  // ── Wiring : plage fermée / réouverture ──
+  const fermerBtn = document.getElementById('mc-fermer');
+  if (fermerBtn) fermerBtn.addEventListener('click', () => _mcDialogFermeture(date, isToday, rerender));
+  const rouvrirBtn = document.getElementById('mc-rouvrir');
+  if (rouvrirBtn) rouvrirBtn.addEventListener('click', async () => {
+    const d = _mcCurrentData;
+    if (!confirm('Rouvrir la plage ?\n\n'
+      + (isToday
+          ? 'Les réservations des créneaux pas encore terminés seront rétablies. Celles des créneaux passés pendant la fermeture restent recréditées.'
+          : 'Jour passé : la fermeture sera annulée et toutes les réservations suspendues rétablies.')
+      + (d.staff.fermee_annonce_id ? '\n\nLe message de fermeture sera retiré de l\'accueil des usagers.' : ''))) return;
+    rouvrirBtn.disabled = true;
+    try {
+      // Aujourd'hui : réservations des créneaux pas encore terminés rétablies, les autres restent recréditées.
+      // Jour passé : il s'agit d'une erreur de saisie → tout est rétabli.
+      const heure = isToday ? _heureCourante() : '00:00';
+      let res = { retablies: 0 };
+      if (typeof rouvrirPlage === 'function') {
+        let fid = d.staff.fermee_id;
+        if (!fid && typeof getFermetureOuverte === 'function') { const f = await getFermetureOuverte(date).catch(() => null); fid = f && f.id; }
+        res = await rouvrirPlage(fid, date, heure);
+      }
+      await _mcRetirerAnnonceFermeture(d.staff);
+      ['fermee', 'fermee_motif', 'fermee_precision', 'fermee_annonce_id', 'fermee_annonce_prec', 'fermee_heure', 'fermee_id', 'fermee_suspendues'].forEach(k => { delete d.staff[k]; });
+      if (!d.notes) d.notes = [];
+      d.notes.unshift({ ts: isToday ? Date.now() : new Date(date + 'T12:00:00').getTime(),
+        text: 'Plage rouverte' + (isToday ? ' à ' + heure.replace(':', 'h') : '') + ' · ' + res.retablies + ' réservation' + (res.retablies > 1 ? 's' : '') + ' rétablie' + (res.retablies > 1 ? 's' : ''),
+        reporter: _lsGet(MC_REPORTER_KEY), type: 'reouverture' });
+      await _mcSave(date, d);
+      rerender();
+    } catch (e) {
+      rouvrirBtn.disabled = false;
+      alert('Réouverture impossible : ' + (e.message || e));
+    }
+  });
   const ouvValider = document.getElementById('mc-ouv-valider');
   if (ouvValider) {
     ouvValider.addEventListener('click', async () => {
@@ -524,6 +589,341 @@ async function renderMc(container, date) {
   }
 }
 
+// ── Export PDF des mains courantes (une journée ou une période) ──
+function _mcDialogExport(date, allDates) {
+  const old = document.getElementById('mc-export-dlg');
+  if (old) old.remove();
+  const today = _mcTodayISO();
+  const debutMois = date.slice(0, 8) + '01';
+  const dlg = document.createElement('dialog');
+  dlg.id = 'mc-export-dlg';
+  dlg.className = 'mc-ferme-dlg mc-export-dlg';
+  dlg.setAttribute('aria-labelledby', 'mc-ex-t');
+  dlg.innerHTML = '<form method="dialog" class="mc-fd">'
+    + '<h2 id="mc-ex-t" class="mc-ex-t">Exporter la main courante en PDF</h2>'
+    + '<label class="mc-ex-opt"><input type="radio" name="mc-ex-mode" value="jour" checked>'
+    +   '<span><b>Cette journée</b><small class="mc-ex-date">' + _fmtDateFr(date) + '</small></span></label>'
+    + '<label class="mc-ex-opt"><input type="radio" name="mc-ex-mode" value="periode">'
+    +   '<span><b>Plusieurs journées</b><small>une journée par page</small></span></label>'
+    + '<div class="mc-ex-periode" id="mc-ex-periode" hidden>'
+    +   '<label>Du <input type="date" id="mc-ex-du" value="' + debutMois + '" max="' + today + '"></label>'
+    +   '<label>au <input type="date" id="mc-ex-au" value="' + date + '" max="' + today + '"></label>'
+    +   '<p class="mc-ex-nb" id="mc-ex-nb" aria-live="polite"></p>'
+    + '</div>'
+    + '<div class="mc-fd-acts">'
+    +   '<button type="button" class="mc-btn-ghost" id="mc-ex-annuler">Annuler</button>'
+    +   '<button type="button" class="mc-btn-primary" id="mc-ex-ok">Exporter</button>'
+    + '</div>'
+    + '<p class="mc-fd-err" id="mc-ex-err" role="alert"></p>'
+    + '</form>';
+  document.body.appendChild(dlg);
+
+  const mode = () => dlg.querySelector('input[name="mc-ex-mode"]:checked').value;
+  const du = dlg.querySelector('#mc-ex-du'), au = dlg.querySelector('#mc-ex-au');
+  function maj() {
+    dlg.querySelector('#mc-ex-periode').hidden = mode() !== 'periode';
+    const n = (allDates || []).filter(d => d >= du.value && d <= au.value).length;
+    dlg.querySelector('#mc-ex-nb').textContent = (du.value > au.value)
+      ? 'La date de début doit précéder la date de fin.'
+      : n + ' main' + (n > 1 ? 's' : '') + ' courante' + (n > 1 ? 's' : '') + ' enregistrée' + (n > 1 ? 's' : '') + ' sur cette période.';
+  }
+  dlg.addEventListener('change', maj);
+  dlg.addEventListener('input', maj);
+  maj();
+
+  const close = () => { if (dlg.open) dlg.close(); dlg.remove(); };
+  dlg.querySelector('#mc-ex-annuler').addEventListener('click', close);
+  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
+  dlg.querySelector('#mc-ex-ok').addEventListener('click', async () => {
+    const ok = dlg.querySelector('#mc-ex-ok'), err = dlg.querySelector('#mc-ex-err');
+    err.textContent = '';
+    try {
+      let jours;
+      if (mode() === 'jour') {
+        jours = [{ date: date, mc: _mcCurrentData }];
+      } else {
+        if (!du.value || !au.value || du.value > au.value) { err.textContent = 'Choisissez une période valide.'; return; }
+        ok.disabled = true; ok.textContent = 'Préparation…';
+        const parDate = await getMcRange(du.value, au.value);
+        // La journée affichée : on prend la version à l'écran (compteurs à jour)
+        if (date >= du.value && date <= au.value && _mcCurrentData) parDate[date] = _mcCurrentData;
+        jours = Object.keys(parDate).sort().map(d => ({ date: d, mc: parDate[d] }));
+        if (!jours.length) { ok.disabled = false; ok.textContent = 'Exporter'; err.textContent = 'Aucune main courante enregistrée sur cette période.'; return; }
+      }
+      close();
+      _mcExportPdf(jours);
+    } catch (e) {
+      ok.disabled = false; ok.textContent = 'Exporter';
+      err.textContent = 'Export impossible : ' + (e.message || e);
+    }
+  });
+  dlg.showModal();
+}
+
+const MC_PDF_LABELS = {
+  resa: 'Usagers avec réservation', walkin: 'Usagers sans réservation', acc_total: 'Accompagnants',
+  gpe_pers: 'Personnes en groupe', gpe_acc: 'Accompagnants de groupe',
+  tiralos: 'Tiralo', hippocampes: 'Hippocampe', audioplage: 'Audioplage', transferts: 'Transferts', leve_personne: 'Lève-personne',
+};
+
+function _mcPageHtml(date, mc) {
+  const st = mc.staff || {};
+  const nom = v => v ? _esc(v) : '<span class="vide">—</span>';
+  const notes = (mc.notes || []).slice().sort((a, b) => a.ts - b.ts);
+  const police = notes.filter(n => n.type === 'police');
+  const tag = { police: 'Police', fermeture: 'Fermeture', reouverture: 'Réouverture' };
+
+  let tableau = '<table class="recap"><thead><tr><th></th>'
+    + SLOTS.map(s => '<th>' + _esc(s.label) + '</th>').join('') + '<th class="tot">Total</th></tr></thead><tbody>';
+  MC_COLS.forEach(c => {
+    let tot = 0;
+    tableau += '<tr' + (c.auto ? '' : ' class="mat"') + '><td class="lab">' + _esc(MC_PDF_LABELS[c.key] || c.key) + '</td>';
+    SLOTS.forEach(s => {
+      const v = Number(((mc.slots || {})[s.id] || {})[c.key]) || 0;
+      tot += v;
+      tableau += '<td' + (v ? '' : ' class="z"') + '>' + v + '</td>';
+    });
+    tableau += '<td class="tot">' + tot + '</td></tr>';
+  });
+  tableau += '</tbody></table>';
+
+  return '<section class="page">'
+    + '<header><img src="' + new URL('logo-handiplage-mot-bleu.svg', location.href).href + '" alt="Handiplage">'
+    +   '<div class="t"><h1>Main courante</h1><p><span class="d">' + _esc(_fmtDateFr(date)) + '</span> · Handiplage d\'Antibes · CCAS</p></div></header>'
+    + (st.fermee
+        ? '<div class="ferme"><b>Plage fermée</b> — ' + _esc(st.fermee_motif || 'motif non précisé') + (st.fermee_precision ? ' : ' + _esc(st.fermee_precision) : '')
+          + (st.fermee_annonce_id ? ' · message affiché aux usagers' : '') + '</div>'
+        : '')
+    + '<div class="cols">'
+    +   '<div class="bloc"><h2>Équipe</h2><table class="kv">'
+    +     '<tr><td>Entretien — matin</td><td>' + nom(st.entretien_matin) + '</td></tr>'
+    +     '<tr><td>Accueil — matin</td><td>' + nom(st.accueil_matin) + '</td></tr>'
+    +     '<tr><td>Entretien — après-midi</td><td>' + nom(st.entretien_aprem) + '</td></tr>'
+    +     '<tr><td>Accueil — après-midi</td><td>' + nom(st.accueil_aprem) + '</td></tr>'
+    +   '</table></div>'
+    +   '<div class="bloc"><h2>Plage et sécurité</h2><table class="kv">'
+    +     '<tr><td>Plage nettoyée par la ville</td><td>' + (st.plage_nettoyee ? 'Oui' : 'Non') + '</td></tr>'
+    +     '<tr><td>Passages de la police</td><td>' + (police.length ? police.map(p => _fmt(p.ts)).join(', ') : (st.police ? 'Oui (heure non notée)' : 'Aucun')) + '</td></tr>'
+    +   '</table></div>'
+    + '</div>'
+    + '<div class="bloc"><h2>Fréquentation et matériel par créneau</h2>' + tableau + '</div>'
+    + '<div class="bloc"><h2>Journal du jour</h2>'
+    +   (notes.length
+          ? '<table class="journal">' + notes.map(n =>
+              '<tr class="' + (n.type || '') + '"><td class="h">' + _fmt(n.ts) + '</td>'
+              + '<td class="ty">' + (tag[n.type] || '') + '</td>'
+              + '<td class="qui">' + _esc(n.reporter || '') + '</td>'
+              + '<td>' + _escHtml(n.text) + '</td></tr>').join('') + '</table>'
+          : '<p class="vide">Rien de noté.</p>')
+    + '</div>'
+    + '<footer><span>Document généré le ' + new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span>'
+    +   '<div class="visa">Visa du responsable<br><span>Date :</span><span>Signature :</span></div></footer>'
+    + '</section>';
+}
+
+function _mcExportPdf(jours) {
+  const titre = jours.length === 1
+    ? 'Main courante — ' + _fmtDateFr(jours[0].date)
+    : 'Mains courantes — du ' + _fmtDateFr(jours[0].date) + ' au ' + _fmtDateFr(jours[jours.length - 1].date);
+  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>' + _esc(titre) + '</title><style>'
+    + '@page{size:A4 portrait;margin:13mm 12mm 14mm}'
+    + '*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Arial,sans-serif;font-size:9.5pt;color:#1f2a3d;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + '.page{break-after:page}.page:last-child{break-after:auto}'
+    + 'header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #05559b;padding-bottom:6px;margin-bottom:10px}'
+    + 'header img{height:28px}header .t{text-align:right}header h1{margin:0;font-size:15pt;color:#05559b}header p{margin:2px 0 0;font-size:9pt;color:#5b6576}header .d{text-transform:capitalize}'
+    + 'h2{font-size:9pt;text-transform:uppercase;letter-spacing:.06em;color:#05559b;margin:0 0 6px}'
+    + '.bloc{border:1px solid #dfe6ee;border-radius:8px;padding:8px 10px;margin-bottom:9px;break-inside:avoid}'
+    + '.cols{display:grid;grid-template-columns:1fr 1fr;gap:9px}'
+    + '.ferme{background:#fde8e8;border:1.5px solid #c62828;color:#7f1d1d;border-radius:8px;padding:7px 10px;margin-bottom:9px}.ferme b{color:#b71c1c}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + '.kv td{padding:3px 0;border-bottom:1px solid #eef2f6;font-size:9.5pt}.kv td:first-child{color:#5b6576;width:55%}.kv td:last-child{font-weight:700;text-transform:capitalize}'
+    + '.recap th,.recap td{border:1px solid #d5dde7;padding:3px 4px;text-align:center;font-size:8.5pt}'
+    + '.recap thead th{background:#05559b;color:#fff;font-weight:700}.recap thead th:first-child{background:#fff;border:none}'
+    + '.recap td.lab{text-align:left;font-weight:600;width:24%}.recap tr.mat td.lab{color:#05559b}'
+    + '.recap td.z{color:#a0a9b6}.recap .tot{font-weight:800;background:#f1f5fa}.recap thead .tot{background:#043f73}'
+    + '.journal td{padding:4px 4px;border-bottom:1px solid #eef2f6;vertical-align:top;font-size:9pt}'
+    + '.journal td.h{width:42px;font-weight:700;color:#9a3c00}.journal td.ty{width:72px;font-size:7.5pt;font-weight:800;text-transform:uppercase}'
+    + '.journal td.qui{width:90px;font-weight:700;color:#05559b}'
+    + '.journal tr.police td.ty{color:#05559b}.journal tr.fermeture td.ty{color:#b71c1c}.journal tr.reouverture td.ty{color:#2e7d32}'
+    + '.vide{color:#8a94a3;font-style:italic;margin:0}'
+    + 'footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:12px;font-size:8pt;color:#5b6576}'
+    + '.visa{border:1px solid #8a97a8;border-radius:4px;padding:4px 8px;min-width:230px;height:46px;font-weight:700;color:#1f2a3d}'
+    + '.visa span{display:inline-block;width:48%;font-weight:400;margin-top:12px}'
+    + '</style></head><body>' + jours.map(j => _mcPageHtml(j.date, j.mc)).join('') + '</body></html>';
+
+  const old = document.getElementById('mc-print-frame');
+  if (old) old.remove();
+  const f = document.createElement('iframe');
+  f.id = 'mc-print-frame';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const doc = f.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  const go = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { alert('Impression impossible : ' + e.message); } };
+  const img = doc.querySelector('header img');
+  if (img && !img.complete) { img.onload = img.onerror = () => setTimeout(go, 50); }
+  else setTimeout(go, 100);
+}
+
+// Liste des réservations suspendues, avec téléphone (usager) ou référent (groupe)
+async function _mcChargerAPrevenir(date) {
+  const el = document.getElementById('mc-prev-liste');
+  if (!el) return;
+  if (typeof getReservationsSuspendues !== 'function') { el.innerHTML = ''; return; }
+  let rows;
+  try { rows = await getReservationsSuspendues(date); }
+  catch (e) { el.innerHTML = '<p class="mc-card-sub">Liste indisponible : ' + _esc(e.message || String(e)) + '</p>'; return; }
+  if (!rows.length) { el.innerHTML = '<p class="mc-card-sub">Aucune réservation concernée.</p>'; return; }
+
+  const groupes = (typeof getCachedGroupes === 'function') ? getCachedGroupes() : [];
+  const tel = t => {
+    const d = String(t || '').replace(/\D/g, '');
+    return d ? '<a class="mc-prev-tel" href="tel:' + _esc(d) + '">' + _esc(d.length === 10 ? d.replace(/(\d{2})(?=\d)/g, '$1 ') : t) + '</a>' : '<span class="mc-card-sub">pas de téléphone</span>';
+  };
+  // Un groupe réserve plusieurs places : une seule ligne par groupe et par créneau
+  const vus = {};
+  const lignes = [];
+  rows.forEach(r => {
+    if (r.resa_type === 'groupe') {
+      const k = (r.groupe_id || r.nom) + '|' + r.creneau_id;
+      if (vus[k]) { vus[k].places++; return; }
+      const g = groupes.find(x => x.id === r.groupe_id) || {};
+      vus[k] = { groupe: true, nom: g.nom || r.nom, ref: g.referentNom, tel: g.referentTel, creneau: r.creneau_id, places: 1 };
+      lignes.push(vus[k]);
+    } else {
+      lignes.push({ nom: (r.nom || '').toUpperCase() + ' ' + (r.prenom || ''), tel: r.inscriptions && r.inscriptions.telephone, creneau: r.creneau_id });
+    }
+  });
+  el.innerHTML = '<p class="mc-prev-nb">' + lignes.length + ' à prévenir</p><ul class="mc-prev-list">' + lignes.map(l => {
+    const slot = SLOTS.find(s => s.id === l.creneau);
+    return '<li><span class="mc-prev-slot">' + _esc(slot ? slot.label : '') + '</span>'
+      + '<span class="mc-prev-nom">' + _esc(l.nom) + (l.groupe ? ' <span class="mc-prev-g">Groupe · ' + l.places + ' place' + (l.places > 1 ? 's' : '') + (l.ref ? ' · réf. ' + _esc(l.ref) : '') + '</span>' : '') + '</span>'
+      + tel(l.tel) + '</li>';
+  }).join('') + '</ul>';
+}
+
+// ── Fermeture de la plage ──
+const MC_MOTIFS_FERMETURE = [
+  'Météo défavorable',
+  'Baignade interdite (pollution, méduses…)',
+  'Problème technique',
+  'Manque de personnel',
+  'Autre',
+];
+
+function _mcMessageFermeture(motif, precision) {
+  const m = motif === 'Autre' ? '' : motif;
+  const detail = [m, precision].filter(Boolean).join(' : ');
+  return (detail ? 'Motif : ' + detail + '. ' : '') + 'Nous vous prions de nous excuser pour la gêne occasionnée.';
+}
+
+// Retire l'annonce de fermeture (si c'est encore celle en ligne) et remet l'annonce précédente
+async function _mcRetirerAnnonceFermeture(st) {
+  if (!st.fermee_annonce_id || typeof getActiveAnnonce !== 'function') return;
+  const active = await getActiveAnnonce();
+  if (active && active.id === st.fermee_annonce_id) {
+    await deactivateAnnonce(active.id);
+    if (st.fermee_annonce_prec) await createAnnonce(st.fermee_annonce_prec);
+  }
+}
+
+function _mcDialogFermeture(date, isToday, onDone) {
+  const old = document.getElementById('mc-ferme-dlg');
+  if (old) old.remove();
+  const dlg = document.createElement('dialog');
+  dlg.id = 'mc-ferme-dlg';
+  dlg.className = 'mc-ferme-dlg';
+  dlg.setAttribute('aria-labelledby', 'mc-ferme-dlg-t');
+  dlg.innerHTML = '<form method="dialog" class="mc-fd">'
+    + '<h2 id="mc-ferme-dlg-t">Déclarer la plage fermée</h2>'
+    + '<p class="mc-fd-sub">' + _fmtDateFr(date) + '</p>'
+    + '<fieldset class="mc-fd-motifs"><legend>Motif</legend>'
+    +   MC_MOTIFS_FERMETURE.map((m, i) =>
+          '<label class="mc-fd-motif"><input type="radio" name="mc-fd-motif" value="' + _esc(m) + '"' + (i === 0 ? ' checked' : '') + '><span>' + _esc(m) + '</span></label>').join('')
+    + '</fieldset>'
+    + '<label class="mc-fd-lab" for="mc-fd-prec">Précision <span>(facultatif)</span></label>'
+    + '<input type="text" id="mc-fd-prec" maxlength="140" placeholder="Ex. : vent fort, drapeau rouge" autocomplete="off">'
+    + (isToday
+        ? '<label class="mc-fd-check"><input type="checkbox" id="mc-fd-notif" checked> Afficher un message aux usagers sur leur accueil</label>'
+          + '<div class="mc-fd-apercu" id="mc-fd-apercu" aria-live="polite"></div>'
+        : '<p class="mc-fd-note">Jour passé : la fermeture est seulement enregistrée (statistiques, fiches d\'entretien), sans message aux usagers.</p>')
+    + '<div class="mc-fd-acts">'
+    +   '<button type="button" class="mc-btn-ghost" id="mc-fd-annuler">Annuler</button>'
+    +   '<button type="button" class="mc-btn-danger" id="mc-fd-ok">Fermer la plage</button>'
+    + '</div>'
+    + '<p class="mc-fd-err" id="mc-fd-err" role="alert"></p>'
+    + '</form>';
+  document.body.appendChild(dlg);
+
+  const motif = () => (dlg.querySelector('input[name="mc-fd-motif"]:checked') || {}).value || '';
+  const prec  = () => dlg.querySelector('#mc-fd-prec').value.trim();
+  const notif = () => { const c = dlg.querySelector('#mc-fd-notif'); return !!(c && c.checked); };
+  function apercu() {
+    const el = dlg.querySelector('#mc-fd-apercu');
+    if (!el) return;
+    el.hidden = !notif();
+    el.innerHTML = '<span class="mc-fd-apercu-l">Aperçu côté usagers</span>'
+      + '<b>Handiplage fermée aujourd\'hui</b><br>' + _esc(_mcMessageFermeture(motif(), prec()));
+  }
+  dlg.addEventListener('input', apercu);
+  dlg.addEventListener('change', apercu);
+  apercu();
+
+  const close = () => { if (dlg.open) dlg.close(); dlg.remove(); };
+  dlg.querySelector('#mc-fd-annuler').addEventListener('click', close);
+  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
+
+  dlg.querySelector('#mc-fd-ok').addEventListener('click', async () => {
+    const ok = dlg.querySelector('#mc-fd-ok');
+    const err = dlg.querySelector('#mc-fd-err');
+    ok.disabled = true; ok.textContent = 'Enregistrement…';
+    try {
+      const d = _mcCurrentData;
+      const st = d.staff;
+      // 1) Fermeture enregistrée + réservations des créneaux non terminés suspendues
+      const heure = isToday ? _heureCourante() : '00:00';
+      let resultat;
+      try {
+        resultat = await fermerPlage(date, heure, motif(), prec());
+      } catch (e) {
+        throw new Error((/fermetures|suspendu|check constraint|schema cache/i.test(e.message || '')
+          ? 'la base de données n\'est pas encore à jour (script supabase/migration-fermetures.sql à exécuter dans Supabase). '
+          : '') + (e.message || e));
+      }
+      st.fermee = true;
+      st.fermee_motif = motif();
+      st.fermee_precision = prec();
+      st.fermee_heure = heure;
+      st.fermee_id = resultat.fermeture.id;
+      st.fermee_suspendues = resultat.suspendues;
+      delete st.fermee_annonce_id; delete st.fermee_annonce_prec;
+      if (isToday && notif() && typeof createAnnonce === 'function') {
+        // On garde l'annonce en cours pour la remettre à la réouverture
+        const prev = await getActiveAnnonce();
+        if (prev && !(typeof parseFermetureAnnonce === 'function' && parseFermetureAnnonce(prev))) st.fermee_annonce_prec = prev.contenu;
+        const created = await createAnnonce(fermetureContenu(date, _mcMessageFermeture(st.fermee_motif, st.fermee_precision)));
+        st.fermee_annonce_id = created.id;
+      }
+      if (!d.notes) d.notes = [];
+      d.notes.unshift({
+        ts: isToday ? Date.now() : new Date(date + 'T12:00:00').getTime(),
+        text: 'Plage fermée' + (isToday ? ' à ' + heure.replace(':', 'h') : '') + ' — ' + st.fermee_motif + (st.fermee_precision ? ' : ' + st.fermee_precision : '')
+          + ' · ' + resultat.suspendues + ' réservation' + (resultat.suspendues > 1 ? 's' : '') + ' suspendue' + (resultat.suspendues > 1 ? 's' : ''),
+        reporter: _lsGet(MC_REPORTER_KEY), type: 'fermeture',
+      });
+      await _mcSave(date, d);
+      close();
+      onDone();
+    } catch (e) {
+      ok.disabled = false; ok.textContent = 'Fermer la plage';
+      err.textContent = 'Enregistrement impossible : ' + (e.message || e);
+    }
+  });
+
+  dlg.showModal();
+}
+
 function _renderNotes(notes) {
   if (!notes || notes.length === 0) {
     return '<div class="planning-empty" style="padding:12px 0">Rien de noté pour l\'instant.</div>';
@@ -533,9 +933,9 @@ function _renderNotes(notes) {
     .map((n, i) => ({ n, i }))
     .sort((a, b) => b.n.ts - a.n.ts)
     .map(({ n, i }) =>
-      '<div class="mc-note-item' + (n.type === 'police' ? ' mc-note-police' : '') + '">'
+      '<div class="mc-note-item' + (n.type ? ' mc-note-' + n.type : '') + '">'
       + '<span class="mc-note-time">' + _fmt(n.ts) + '</span>'
-      + '<span class="mc-note-tag">' + (n.type === 'police' ? 'Police' : '') + '</span>'
+      + '<span class="mc-note-tag">' + ({ police: 'Police', fermeture: 'Fermeture', reouverture: 'Réouverture' }[n.type] || '') + '</span>'
       + '<span class="mc-note-reporter">' + _escHtml(n.reporter || '') + '</span>'
       + '<span class="mc-note-text">' + _escHtml(n.text) + '</span>'
       + '<button class="mc-note-del" data-idx="' + i + '" title="Supprimer" aria-label="Supprimer cette entrée">✕</button>'

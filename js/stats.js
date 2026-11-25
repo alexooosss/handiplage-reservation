@@ -68,10 +68,11 @@ var StatsView = (function () {
     var presents = u.filter(function (r) { return r.statut === 'present' || r.statut === 'parti'; }).length;
     var absents  = u.filter(function (r) { return r.statut === 'absent' || r.statut === 'pas_venu'; }).length;
     var annules  = u.filter(function (r) { return r.statut === 'annule'; }).length;
+    var suspendues = u.filter(function (r) { return r.statut === 'suspendu'; }).length;
     var attentes = u.filter(function (r) { return r.statut === 'attente'; }).length;
     var honored  = presents + absents;
     return {
-      total: u.length - annules, presents: presents, absents: absents, annules: annules, attentes: attentes,
+      total: u.length - annules - suspendues, presents: presents, absents: absents, annules: annules, attentes: attentes, suspendues: suspendues,
       taux: honored > 0 ? Math.round((presents / honored) * 100) : null,
     };
   }
@@ -80,7 +81,7 @@ var StatsView = (function () {
   function _bilanGroupes(resas) {
     var map = {};
     resas.filter(_isGroupe).forEach(function (r) {
-      if (r.statut === 'annule') return;
+      if (r.statut === 'annule' || r.statut === 'suspendu') return;
       var k = (r.groupe_id || r.nom) + '|' + r.date + '|' + r.creneau_id;
       if (!map[k]) map[k] = { places: 0, venu: false };
       map[k].places++;
@@ -98,13 +99,15 @@ var StatsView = (function () {
   function _bilanMc(rows) {
     var t = { resa: 0, walkin: 0, acc_total: 0, gpe_pers: 0, gpe_acc: 0 };
     MATERIEL.forEach(function (m) { t[m.key] = 0; });
-    var jours = {};
+    var jours = {}, fermes = {};
     rows.forEach(function (r) {
       var c = r.compteurs || {};
       Object.keys(t).forEach(function (k) { t[k] += Number(c[k]) || 0; });
-      jours[r.date] = true;
+      if (r.staff && r.staff.fermee) fermes[r.date] = r.staff.fermee_motif || '';
+      else jours[r.date] = true;
     });
-    t.jours = Object.keys(jours).length;
+    t.jours = Object.keys(jours).length;          // jours ouverts avec main courante remplie
+    t.fermetures = Object.keys(fermes).sort().map(function (d) { return { date: d, motif: fermes[d] }; });
     t.personnes = t.resa + t.walkin + t.acc_total + t.gpe_pers + t.gpe_acc;
     return t;
   }
@@ -129,7 +132,8 @@ var StatsView = (function () {
       { n: b.absents,  l: 'Absents',    c: 'st-seg-ko' },
       { n: b.attentes, l: 'En attente', c: 'st-seg-wait' },
       { n: b.annules,  l: 'Annulés',    c: 'st-seg-na' },
-    ];
+      { n: b.suspendues, l: 'Suspendues (plage fermée)', c: 'st-seg-sus' },
+    ].filter(function (p) { return p.n || p.c !== 'st-seg-sus'; });
     var tot = parts.reduce(function (s, p) { return s + p.n; }, 0);
     if (!tot) return _vide('Aucune réservation sur cette période.');
     return '<div class="st-bar" role="img" aria-label="' + parts.map(function (p) { return p.l + ' ' + p.n; }).join(', ') + '">'
@@ -195,7 +199,7 @@ var StatsView = (function () {
   function _topTable(resas) {
     var map = {};
     _usagerResas(resas).forEach(function (r) {
-      if (r.statut === 'annule') return;
+      if (r.statut === 'annule' || r.statut === 'suspendu') return;
       var key = r.inscription_id || ((r.nom || '') + '|' + (r.prenom || ''));
       if (!map[key]) map[key] = { nom: r.nom, prenom: r.prenom, inscriptionId: r.inscription_id, total: 0, presents: 0, absents: 0 };
       map[key].total++;
@@ -256,13 +260,13 @@ var StatsView = (function () {
     while (d <= end) { dates.push(_iso(d)); d.setDate(d.getDate() + 1); }
     var counts = {};
     dates.forEach(function (x) { counts[x] = 0; });
-    _usagerResas(resas).forEach(function (r) { if (r.statut !== 'annule' && counts[r.date] !== undefined) counts[r.date]++; });
+    _usagerResas(resas).forEach(function (r) { if (r.statut !== 'annule' && r.statut !== 'suspendu' && counts[r.date] !== undefined) counts[r.date]++; });
     return { labels: dates.map(function (x) { return _fmtJ(x, { day: '2-digit', month: '2-digit' }); }), data: dates.map(function (x) { return counts[x]; }), dates: dates };
   }
   function _creneauSeries(resas) {
     var counts = {};
     CRENEAUX.forEach(function (c) { counts[c.id] = 0; });
-    _usagerResas(resas).forEach(function (r) { if (r.statut !== 'annule' && counts[r.creneau_id] !== undefined) counts[r.creneau_id]++; });
+    _usagerResas(resas).forEach(function (r) { if (r.statut !== 'annule' && r.statut !== 'suspendu' && counts[r.creneau_id] !== undefined) counts[r.creneau_id]++; });
     return CRENEAUX.map(function (c) { return counts[c.id]; });
   }
   function _weeklySeries(resas, sy) {
@@ -276,7 +280,7 @@ var StatsView = (function () {
       d.setDate(d.getDate() + 7);
     }
     _usagerResas(resas).forEach(function (r) {
-      if (r.statut === 'annule') return;
+      if (r.statut === 'annule' || r.statut === 'suspendu') return;
       var w = weeks.find(function (w) { return r.date >= w.start && r.date <= w.end; });
       if (w) w.count++;
     });
@@ -301,6 +305,9 @@ var StatsView = (function () {
     add('Usagers avec réservation', L.mc.resa); add('Usagers sans réservation', L.mc.walkin);
     add('Accompagnants', L.mc.acc_total); add('Personnes en groupe', L.mc.gpe_pers); add('Accompagnants de groupe', L.mc.gpe_acc);
     add('Total personnes accueillies', L.mc.personnes);
+    add('');
+    add('Jours de fermeture', L.mc.fermetures.length);
+    L.mc.fermetures.forEach(function (f) { add(_fmtJ(f.date, { day: '2-digit', month: '2-digit', year: 'numeric' }), f.motif || ''); });
     add('');
     add('Matériel utilisé');
     MATERIEL.forEach(function (m) { add(m.label, L.mc[m.key]); });
@@ -368,7 +375,7 @@ var StatsView = (function () {
       +   kpi(L.b.total, 'Réservations', 'usagers, hors annulations')
       +   kpi(L.b.taux == null ? '—' : L.b.taux + ' %', 'Taux de présence', L.b.taux == null ? 'aucun pointage' : L.b.presents + ' présents / ' + (L.b.presents + L.b.absents) + ' pointés')
       +   kpi(L.b.absents, 'Absences', 'réservations non honorées')
-      +   kpi(L.active, 'Inscrits actifs', 'inscriptions validées')
+      +   kpi(L.mc.fermetures.length, 'Jours de fermeture', L.mc.fermetures.length ? L.mc.fermetures.map(function (f) { return _fmtJ(f.date, { day: 'numeric', month: 'short' }); }).slice(0, 5).join(', ') + (L.mc.fermetures.length > 5 ? '…' : '') : 'aucune fermeture')
       + '</div>'
 
       + '<div class="cols">'
@@ -470,7 +477,14 @@ var StatsView = (function () {
       // Fréquentation & matériel (main courante)
       + '<section class="stats-card st-card">'
       +   '<div class="st-card-hd"><h3 class="stats-card-title">Fréquentation et matériel</h3>'
-      +     '<span class="st-src">d\'après la main courante · ' + mc.jours + ' jour' + (mc.jours > 1 ? 's' : '') + ' rempli' + (mc.jours > 1 ? 's' : '') + '</span></div>'
+      +     '<span class="st-src">d\'après la main courante · ' + mc.jours + ' jour' + (mc.jours > 1 ? 's' : '') + ' d\'ouverture rempli' + (mc.jours > 1 ? 's' : '') + '</span>'
+      +     (mc.fermetures.length
+              ? '<span class="st-ferme" title="' + _esc(mc.fermetures.map(function (f) { return _fmtJ(f.date, { day: 'numeric', month: 'short' }) + (f.motif ? ' — ' + f.motif : ''); }).join('\n')) + '">'
+                + mc.fermetures.length + ' jour' + (mc.fermetures.length > 1 ? 's' : '') + ' de fermeture : '
+                + mc.fermetures.slice(0, 6).map(function (f) { return _fmtJ(f.date, { day: 'numeric', month: 'short' }); }).join(', ')
+                + (mc.fermetures.length > 6 ? '…' : '') + '</span>'
+              : '')
+      +   '</div>'
       +   (mc.jours
           ? '<div class="st-freq">'
             + '<div class="st-freq-total"><span class="st-big">' + mc.personnes + '</span><span>personnes accueillies</span></div>'

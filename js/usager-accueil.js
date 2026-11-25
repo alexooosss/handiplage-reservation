@@ -24,7 +24,7 @@ async function renderAccueil(container, inscription, showView) {
     var nowMin  = now.getHours() * 60 + now.getMinutes();
 
     var upcoming = resas.filter(function(r) {
-      if (r.statut === 'annule') return false;
+      if (r.statut === 'annule' || r.statut === 'suspendu') return false;
       if (r.date < today) return false;
       if (r.date === today && typeof getSlotById === 'function') {
         var slot = getSlotById(r.creneauId);
@@ -60,7 +60,7 @@ async function renderAccueil(container, inscription, showView) {
     var fillCls  = balance.remaining === 0 ? 'empty' : balance.remaining <= 10 ? 'low' : '';
     var passCard;
     if (seasonOver) {
-      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule'; }).length;
+      var seasonCount = resas.filter(function(r) { return r.statut !== 'annule' && !suspensionRecreditee(r); }).length;
       var seasonYear  = saisonDates.fin.slice(0, 4);
       passCard = '<div class="usager-summary-card">'
         +   '<div class="usager-summary-label">Saison ' + seasonYear + '</div>'
@@ -88,7 +88,10 @@ async function renderAccueil(container, inscription, showView) {
       ? '<div class="usager-demo-banner"><img src="icone%20demo.svg" alt="" style="height:16px;vertical-align:middle;margin-right:7px;filter:brightness(0)invert(1)">Compte démo — vos actions ne seront pas enregistrées</div>'
       : '';
 
-    var annonceHtml = annonce ? _annonceBannerHtml(annonce) : '';
+    // Fermeture de la plage : bandeau dédié, affiché uniquement le jour concerné
+    if (typeof annonceDuJour === 'function') annonce = annonceDuJour(annonce, today);
+    var fermeture = (annonce && typeof parseFermetureAnnonce === 'function') ? parseFermetureAnnonce(annonce) : null;
+    var annonceHtml = fermeture ? _fermetureBannerHtml(fermeture) : (annonce ? _annonceBannerHtml(annonce) : '');
 
     container.innerHTML = demoBanner
       + annonceHtml
@@ -152,6 +155,20 @@ function _annonceSetCollapsed(id, collapsed) {
     if (collapsed) localStorage.setItem(ANNONCE_REDUITE_KEY, id);
     else localStorage.removeItem(ANNONCE_REDUITE_KEY);
   } catch (e) { /* stockage indisponible : réduction non mémorisée */ }
+}
+
+function _fermetureBannerHtml(f) {
+  return '<section class="usager-fermeture" role="alert" aria-labelledby="usager-fermeture-title">'
+    +   '<span class="usager-fermeture-icon" aria-hidden="true">'
+    +     '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+    +       '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'
+    +     '</svg>'
+    +   '</span>'
+    +   '<div>'
+    +     '<p class="usager-fermeture-title" id="usager-fermeture-title">Handiplage fermée aujourd\'hui</p>'
+    +     (f.message ? '<p class="usager-fermeture-text">' + _escA(f.message).replace(/\n/g, '<br>') + '</p>' : '')
+    +   '</div>'
+    + '</section>';
 }
 
 function _annonceBannerHtml(annonce) {
