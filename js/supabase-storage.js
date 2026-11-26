@@ -208,7 +208,9 @@ async function getWeekReservationCounts(weekStartISO, weekEndISO) {
     if (!counts[d][s]) counts[d][s] = { waiting_normal:0, waiting_groupe:0, arrived_reserved:0, arrived_groupe:0, walkins:0 };
     var c = counts[d][s];
     if (row.spot_id === null) {
-      if (row.resa_type === 'groupe') c.waiting_groupe += (row.nb_usagers || 1);
+      // Venu sans réservation, pas encore placé : ne prend pas une place réservée en ligne
+      if (row.type === 'walkin') c.walkins++;
+      else if (row.resa_type === 'groupe') c.waiting_groupe += (row.nb_usagers || 1);
       else c.waiting_normal++;
     } else {
       if (row.type === 'walkin') c.walkins++;

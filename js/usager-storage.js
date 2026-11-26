@@ -119,13 +119,21 @@ async function getUserInscription() {
   var sessionResult = await supabaseClient.auth.getSession();
   var session = sessionResult.data.session;
   if (!session) throw new Error('Non connecté');
+  // Seulement les champs utiles à l'espace usager : pas les justificatifs ni la signature
+  // (images en base64 dans metadata), qui étaient téléchargés à chaque connexion
   var result = await supabaseClient
     .from('inscriptions')
-    .select('*')
+    .select('id,nom,prenom,mail,telephone,statut,pass_actif,pass_activated_at,derniere_saison_validee,'
+      + 'adresse:metadata->>adresse,codePostal:metadata->>codePostal,ville:metadata->>ville,'
+      + 'absenceOverrideMonth:metadata->>absenceOverrideMonth')
     .eq('user_id', session.user.id)
     .single();
   if (result.error) throw result.error;
-  return _rowToUsagerInscription(result.data);
+  var obj = _rowToUsagerInscription(result.data);
+  ['adresse', 'codePostal', 'ville', 'absenceOverrideMonth'].forEach(function(k) {
+    if (result.data[k] != null) obj[k] = result.data[k];
+  });
+  return obj;
 }
 
 /**

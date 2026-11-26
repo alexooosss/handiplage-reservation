@@ -307,116 +307,130 @@ async function renderPlanning(container, weekOffset, onCellClick) {
 }
 
 // ── Export PDF d'un créneau ──
-async function exportSlotPDF(dateISO, slot) {
+// Mêmes listes que la fenêtre du créneau : Réservations (attendues + placées), Sans réservation
+// (placées ou non), Groupes (en emplacements). capa : places du créneau (réglage du jour ou normal).
+async function exportSlotPDF(dateISO, slot, capa) {
   const [list, spots] = await Promise.all([
     getReservationList(dateISO, slot.id),
     getReservations(dateISO, slot.id),
   ]);
+  const CAP_N = (capa && capa.usagers != null) ? capa.usagers : CAPACITY_NORMAL;
+  const CAP_G = (capa && capa.groupes != null) ? capa.groupes : CAPACITY_GROUPE;
 
-  const normal  = list.filter(r => !r.resaType || r.resaType === 'normal');
-  const groupes = list.filter(r => r.resaType === 'groupe');
-  const walkins = Object.entries(spots).filter(([, r]) => r.type === 'walkin');
+  const actives  = list.filter(r => r.status !== 'annule');
+  const placees  = Object.entries(spots).filter(([spotId]) => spotId && spotId !== 'null').map(([spotId, r]) => Object.assign({}, r, { _spot: spotId }));
+  const estNormal = r => !r.resaType || r.resaType === 'normal';
 
-  // Repère les emplacements assignés (type reserved) pour les croiser avec la liste
-  const assignedByName = {};
-  Object.entries(spots).forEach(([spotId, r]) => {
-    if (r.type === 'reserved') {
-      assignedByName[(r.nom + r.prenom).replace(/\s/g,'').toUpperCase()] = spotId;
-    }
+  // Réservations : en attente (pas encore placées) + arrivées et placées
+  const reservations = actives.filter(r => r.type !== 'walkin' && estNormal(r)).map(r => Object.assign({}, r, { _spot: null }))
+    .concat(placees.filter(r => r.type === 'reserved' && estNormal(r) && r.status !== 'annule'));
+  // Sans réservation : placées + arrivées pas encore placées
+  const walkins = placees.filter(r => r.type === 'walkin')
+    .concat(actives.filter(r => r.type === 'walkin').map(r => Object.assign({}, r, { _spot: null })));
+  // Groupes : en attente (n emplacements) + arrivés (une ligne par groupe, avec ses emplacements)
+  const groupesAttente = actives.filter(r => r.type !== 'walkin' && r.resaType === 'groupe');
+  const groupesPlaces = {};
+  placees.filter(r => r.resaType === 'groupe').forEach(r => {
+    const k = String(r.nom || '').toUpperCase();
+    (groupesPlaces[k] = groupesPlaces[k] || { nom: r.nom, spots: [], checkinTime: r.checkinTime, status: r.status }).spots.push(r._spot);
   });
+  const groupes = groupesAttente.map(r => ({ nom: r.nom, empl: r.nbUsagers || 1, spots: [], status: r.status }))
+    .concat(Object.values(groupesPlaces).map(g => ({ nom: g.nom, empl: g.spots.length, spots: g.spots, checkinTime: g.checkinTime, status: 'present' })));
+  const emplGroupes = groupes.reduce((s, g) => s + g.empl, 0);
+
+  const tri = (a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr') || String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr');
+  reservations.sort(tri); walkins.sort(tri); groupes.sort(tri);
 
   const dateObj = new Date(dateISO + 'T12:00:00');
   const dateFr  = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const cap     = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const acc     = n => n === 0 ? 'Seul·e' : n === 1 ? '1 acc.' : n + ' acc.';
+  const acc     = n => n == null ? '—' : n === 0 ? 'Seul·e' : n === 1 ? '1' : String(n);
+  const heure   = ts => { if (!ts) return '—'; const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0'); };
   const now     = new Date();
-  const genTime = now.toLocaleDateString('fr-FR') + ' à '
-    + String(now.getHours()).padStart(2,'0') + 'h' + String(now.getMinutes()).padStart(2,'0');
-
-  const ep = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const mkRow = (r, i, withSpot) => {
-    const spot = withSpot
-      ? assignedByName[(r.nom + r.prenom).replace(/\s/g,'').toUpperCase()] || '—'
-      : null;
-    return '<tr>'
-      + '<td class="num">' + (i + 1) + '</td>'
-      + '<td>' + ep(r.nom) + ' ' + ep(r.prenom) + '</td>'
-      + '<td>' + acc(r.accompagnants) + '</td>'
-      + (withSpot ? '<td class="spot">' + ep(spot) + '</td>' : '')
-      + '</tr>';
+  const genTime = now.toLocaleDateString('fr-FR') + ' à ' + heure(now.getTime());
+  const ep = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const statut = r => {
+    if (r.status === 'pas_venu' || r.status === 'absent') return '<span class="st rouge">Pas venu·e</span>';
+    if (r.status === 'departed') return '<span class="st gris">Parti·e</span>';
+    if (r._spot || r.status === 'present' || r.status === 'walkin') return r._spot ? '<span class="st vert">Arrivé·e</span>' : '<span class="st orange">À placer</span>';
+    return '<span class="st bleu">Attendu·e</span>';
   };
+  const idxSlot = SLOTS.findIndex(s => s.id === slot.id);
+  const couleur = (typeof SLOT_COLORS !== 'undefined' && SLOT_COLORS[idxSlot]) || '#05559b';
+  const nbAcc = reservations.concat(walkins).reduce((s, r) => s + (Number(r.accompagnants) || 0), 0);
 
-  const mkWalkinRow = ([spotId, r], i) =>
-    '<tr>'
+  const ligne = (r, i) => '<tr>'
     + '<td class="num">' + (i + 1) + '</td>'
-    + '<td>' + ep(r.prenom) + ' ' + ep(r.nom) + '</td>'
-    + '<td>' + acc(r.accompagnants) + '</td>'
-    + '<td class="spot">' + ep(spotId) + '</td>'
+    + '<td class="nom"><b>' + ep(String(r.nom || '').toUpperCase()) + '</b> ' + ep(r.prenom) + '</td>'
+    + '<td class="c">' + acc(r.accompagnants) + '</td>'
+    + '<td>' + statut(r) + '</td>'
+    + '<td class="c spot">' + ep(r._spot || '—') + '</td>'
+    + '<td class="c">' + heure(r.checkinTime) + '</td>'
     + '</tr>';
+  const ligneGroupe = (g, i) => '<tr>'
+    + '<td class="num">' + (i + 1) + '</td>'
+    + '<td class="nom"><b>' + ep(g.nom) + '</b></td>'
+    + '<td class="c">' + g.empl + '</td>'
+    + '<td>' + (g.spots.length ? '<span class="st vert">Arrivé·e</span>' : '<span class="st bleu">Attendu</span>') + '</td>'
+    + '<td class="c spot">' + ep(g.spots.join(', ') || '—') + '</td>'
+    + '<td class="c">' + heure(g.checkinTime) + '</td>'
+    + '</tr>';
+  const vide = '<tr><td colspan="6" class="vide">Personne</td></tr>';
+  const tete = (col3) => '<thead><tr><th class="num">#</th><th>Nom</th><th class="c">' + col3 + '</th><th>Statut</th><th class="c">Emplacement</th><th class="c">Arrivée</th></tr></thead>';
+  const section = (titre, compte, corps, col3) => '<section><h3><span>' + titre + '</span><em>' + compte + '</em></h3>'
+    + '<table><colgroup><col style="width:6%"><col style="width:34%"><col style="width:11%"><col style="width:19%"><col style="width:17%"><col style="width:13%"></colgroup>' + tete(col3 || 'Accomp.') + '<tbody>' + corps + '</tbody></table></section>';
 
-  const emptyRow = cols => '<tr><td colspan="' + cols + '" class="empty">Aucune entrée</td></tr>';
-
-  const sectionNormal = normal.length === 0 ? emptyRow(4)
-    : normal.map((r, i) => mkRow(r, i, true)).join('');
-  const sectionGroupes = groupes.length === 0 ? emptyRow(3)
-    : groupes.map((r, i) => mkRow(r, i, false)).join('');
-  const sectionWalkins = walkins.length === 0 ? emptyRow(4)
-    : walkins.map((entry, i) => mkWalkinRow(entry, i)).join('');
-
-  const html = '<!DOCTYPE html><html lang="fr"><head>'
-    + '<meta charset="UTF-8">'
-    + '<title>Handiplage – ' + slot.label + ' · ' + dateFr + '</title>'
+  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    + '<title>Handiplage – ' + slot.label + ' · ' + cap(dateFr) + '</title>'
     + '<style>'
-    + '* { margin:0; padding:0; box-sizing:border-box; }'
-    + 'body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #1a2340; padding: 0; }'
-    + '@page { margin: 1.8cm 2cm; size: A4 portrait; }'
-    + '.wrap { max-width: 780px; margin: 0 auto; padding: 24px 0; }'
-    + '.hdr { border-bottom: 3px solid #0055a4; padding-bottom: 14px; margin-bottom: 20px; display:flex; align-items:center; gap:14px; }'
-    + '.hdr-logo { height: 56px; width: auto; display:block; }'
-    + 'h2 { font-size: 13pt; font-weight: 700; margin-top: 6px; color: #1a2340; }'
-    + '.summary { display: flex; gap: 14px; margin-bottom: 22px; }'
-    + '.sbox { flex:1; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align:center; }'
-    + '.sbox .n { font-size: 24pt; font-weight: 900; color: #0055a4; display:block; line-height:1.1; }'
-    + '.sbox .l { font-size: 8.5pt; color: #64748b; margin-top:2px; display:block; }'
-    + '.sbox.hi { background:#f0f6ff; border-color:#0055a4; }'
-    + '.sec { margin-bottom: 22px; }'
-    + '.sec-title { font-size: 11.5pt; font-weight: 800; color: #0055a4; padding-bottom: 5px; border-bottom: 2px solid #e2e8f0; margin-bottom: 8px; }'
-    + 'table { width:100%; border-collapse:collapse; font-size: 10pt; }'
-    + 'thead th { background:#0055a4; color:#fff; padding: 7px 10px; text-align:left; font-weight:700; }'
-    + 'tbody tr:nth-child(even) { background:#f8fafc; }'
-    + 'tbody td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }'
-    + 'td.num { text-align:center; color:#94a3b8; width:34px; }'
-    + 'td.spot { text-align:center; color:#0055a4; font-weight:700; width:90px; }'
-    + 'td.empty { text-align:center; color:#94a3b8; font-style:italic; padding: 12px; }'
-    + '.footer { margin-top:28px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8pt; color:#94a3b8; display:flex; justify-content:space-between; }'
-    + '.print-btn { position:fixed; top:14px; right:14px; background:#0055a4; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:11pt; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.2); }'
-    + '@media print { .print-btn { display:none; } }'
+    + '*{margin:0;padding:0;box-sizing:border-box}'
+    + 'body{font-family:"Segoe UI",system-ui,Arial,sans-serif;font-size:10.5pt;color:#0f1b2e;background:#fff}'
+    + '@page{margin:1.5cm 1.6cm;size:A4 portrait}'
+    + '.wrap{max-width:780px;margin:0 auto;padding:24px 0}'
+    + '.hdr{display:flex;align-items:center;gap:16px;padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid #e2e8f0}'
+    + '.hdr img{height:34px;width:auto}'
+    + '.titre{flex:1;border-left:6px solid ' + couleur + ';padding-left:12px}'
+    + '.titre h1{font-size:18pt;font-weight:800;line-height:1.1}'
+    + '.titre p{font-size:10pt;color:#5b6576;margin-top:3px;font-weight:600}'
+    + '.chiffres{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}'
+    + '.ch{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px}'
+    + '.ch small{display:block;font-size:8.5pt;color:#5b6576;font-weight:600}'
+    + '.ch b{display:block;font-size:20pt;font-weight:800;line-height:1.15}'
+    + '.ch b span{font-size:10pt;color:#5b6576;font-weight:700}'
+    + '.ch em{display:block;font-style:normal;font-size:8pt;color:#5b6576}'
+    + 'section{margin-bottom:18px;page-break-inside:auto}'
+    + 'h3{display:flex;align-items:center;justify-content:space-between;font-size:9pt;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#5b6576;margin-bottom:6px}'
+    + 'h3 em{font-style:normal;font-size:9pt;background:#eef2f6;color:#3b4658;border-radius:999px;padding:1px 9px;letter-spacing:0}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:fixed}'
+    + 'thead th{text-align:left;font-size:8pt;font-weight:800;color:#5b6576;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1.5px solid #cbd5e1}'
+    + 'tbody td{padding:7px 8px;border-bottom:1px solid #edf1f5;vertical-align:middle}'
+    + 'tbody tr{page-break-inside:avoid}'
+    + '.num{width:28px;color:#94a3b8;text-align:center}'
+    + '.c{text-align:center}'
+    + '.spot{font-weight:800;color:#05559b}'
+    + '.vide{text-align:center;color:#94a3b8;font-style:italic;padding:12px}'
+    + '.st{display:inline-block;font-size:8pt;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap}'
+    + '.st.vert{background:#e8f5e9;color:#1b5e20}.st.bleu{background:#eaf2fb;color:#05559b}.st.orange{background:#fff4e5;color:#8a4b00}.st.rouge{background:#ffebee;color:#c62828}.st.gris{background:#eef2f6;color:#4a5568}'
+    + '.pied{margin-top:24px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:8pt;color:#94a3b8;display:flex;justify-content:space-between}'
+    + '.imprimer{position:fixed;top:14px;right:14px;background:#05559b;color:#fff;border:none;border-radius:999px;padding:10px 20px;font:inherit;font-size:11pt;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(5,85,155,.3)}'
+    + '@media print{.imprimer{display:none}.wrap{padding:0}}'
     + '</style></head><body>'
-    + '<button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer PDF</button>'
+    + '<button class="imprimer" onclick="window.print()">Imprimer / Enregistrer en PDF</button>'
     + '<div class="wrap">'
-    + '<div class="hdr"><img class="hdr-logo" src="' + (typeof LOGO_B64 !== 'undefined' ? LOGO_B64 : '') + '" alt="Handiplage"><div>'
-    + '<h2 style="margin-top:0">' + slot.label + ' · ' + cap(dateFr) + '</h2>'
-    + '</div></div>'
-    + '<div class="summary">'
-    + '<div class="sbox hi"><span class="n">' + normal.length + '</span><span class="l">Réservations inscrites</span></div>'
-    + '<div class="sbox"><span class="n">' + groupes.length + '</span><span class="l">Groupes</span></div>'
-    + '<div class="sbox"><span class="n">' + walkins.length + '</span><span class="l">Sans réservation</span></div>'
-    + '<div class="sbox"><span class="n">' + (normal.length + groupes.length + walkins.length) + '</span><span class="l">Total</span></div>'
+    + '<div class="hdr">'
+    +   '<img src="' + new URL('logo-handiplage-mot-bleu.svg', document.baseURI).href + '" alt="Handiplage">'
+    +   '<div class="titre"><h1>' + slot.label + '</h1><p>' + cap(dateFr) + '</p></div>'
     + '</div>'
-    + '<div class="sec"><div class="sec-title">Réservations (' + normal.length + ' / ' + CAPACITY_NORMAL + ')</div>'
-    + '<table><thead><tr><th>#</th><th>Nom Prénom</th><th>Accompagnants</th><th>Emplacement</th></tr></thead>'
-    + '<tbody>' + sectionNormal + '</tbody></table></div>'
-    + (groupes.length > 0
-        ? '<div class="sec"><div class="sec-title">Groupes (' + groupes.length + ' / ' + CAPACITY_GROUPE + ')</div>'
-          + '<table><thead><tr><th>#</th><th>Référent</th><th>Accompagnants</th></tr></thead>'
-          + '<tbody>' + sectionGroupes + '</tbody></table></div>'
-        : '')
-    + (walkins.length > 0
-        ? '<div class="sec"><div class="sec-title">Sans réservation (' + walkins.length + ')</div>'
-          + '<table><thead><tr><th>#</th><th>Nom Prénom</th><th>Accompagnants</th><th>Emplacement</th></tr></thead>'
-          + '<tbody>' + sectionWalkins + '</tbody></table></div>'
-        : '')
-    + '<div class="footer"><span>Handiplage Juan-les-Pins · Antibes</span><span>Généré le ' + genTime + '</span></div>'
+    + '<div class="chiffres">'
+    +   '<div class="ch"><small>Réservations</small><b>' + reservations.length + '<span>/' + CAP_N + '</span></b><em>' + Math.max(0, CAP_N - reservations.length) + ' places restantes</em></div>'
+    +   '<div class="ch"><small>Sans réservation</small><b>' + walkins.length + '</b><em>venues sur place</em></div>'
+    +   '<div class="ch"><small>Groupes</small><b>' + emplGroupes + '<span>/' + CAP_G + '</span></b><em>' + groupes.length + ' groupe' + (groupes.length > 1 ? 's' : '') + '</em></div>'
+    +   '<div class="ch"><small>Usagers</small><b>' + (reservations.length + walkins.length) + '</b><em>+ ' + nbAcc + ' accompagnant' + (nbAcc > 1 ? 's' : '') + '</em></div>'
+    + '</div>'
+    + section('Réservations', reservations.length + ' / ' + CAP_N, reservations.length ? reservations.map(ligne).join('') : vide)
+    + section('Sans réservation', walkins.length, walkins.length ? walkins.map(ligne).join('') : vide)
+    + section('Groupes', emplGroupes + ' / ' + CAP_G, groupes.length ? groupes.map(ligneGroupe).join('') : vide, 'Empl.')
+    + '<div class="pied"><span>Handiplage · CCAS d\'Antibes</span><span>Généré le ' + genTime + '</span></div>'
     + '</div></body></html>';
 
   const win = window.open('', '_blank', 'width=900,height=760');

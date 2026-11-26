@@ -263,6 +263,30 @@
 <script src="js/supabase-config.js"></script>
 <script src="js/inscription-publique.js"></script>
 <script>
+  // Ouvert depuis l'interface staff (téléphone) : retour vers les inscrits, et enchaîner les inscriptions
+  (function () {
+    if (!/[?&]depuis=staff\b/.test(location.search)) return;
+    var retour = 'index.html#inscrits';
+    document.querySelectorAll('a[href="login.html"]').forEach(function (a) { a.href = retour; });
+    var back = document.querySelector('.pub-header-back');
+    if (back) back.textContent = '← Inscrits';
+    var succ = document.getElementById('pub-success');
+    if (!succ) return;
+    var p = succ.querySelector('p');
+    if (p) p.innerHTML = 'La demande est enregistrée « en attente ».<br>Le justificatif sera vérifié depuis la tablette ou l\'ordinateur.';
+    var acts = document.createElement('div');
+    acts.className = 'pub-staff-acts';
+    acts.innerHTML = '<a class="pub-staff-btn" href="inscription-publique.html?depuis=staff">Inscrire une autre personne</a>'
+      + '<a class="pub-staff-btn sec" href="' + retour + '">Retour aux inscrits</a>';
+    succ.appendChild(acts);
+    var st = document.createElement('style');
+    st.textContent = '.pub-staff-acts{display:flex;flex-direction:column;gap:10px;margin-top:20px}'
+      + '.pub-staff-btn{display:block;text-align:center;padding:13px;border-radius:12px;font-weight:800;text-decoration:none;background:#05559b;color:#fff}'
+      + '.pub-staff-btn.sec{background:#fff;color:#05559b;border:1.5px solid #05559b}';
+    document.head.appendChild(st);
+  })();
+</script>
+<script>
   // Peupler les sélecteurs de date
   (function() {
     var dobJ = document.getElementById('f-dob-j');

@@ -156,6 +156,9 @@ function _msgRenderDetail() {
   var panel = document.getElementById('mx-detail');
   if (!panel) return;
   var msg = _msgAll.find(function(m) { return m.id === _msgSelectedId; });
+  // Téléphone : un message ouvert prend tout l'écran (voir css/staff-tel.css)
+  var lay = panel.closest('.mx-layout');
+  if (lay) lay.classList.toggle('mx-msg-ouvert', !!msg);
   if (!msg) { _msgRenderOverview(panel); return; }
 
   var isUsager = _msgIsUsager(msg);

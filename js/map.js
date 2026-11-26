@@ -149,7 +149,7 @@ function _spotLabel(spot, resa) {
 function _timerBadge(resa) {
   if (!resa || (resa.status !== 'present' && resa.status !== 'walkin')) return '';
   if (!resa.slotId) return '';
-  const ms = (typeof slotEndMs === 'function') ? slotEndMs(resa.slotId) : 0;
+  const ms = (typeof resaEndMs === 'function') ? resaEndMs(resa) : ((typeof slotEndMs === 'function') ? slotEndMs(resa.slotId) : 0);
   const urgency = getUrgencyLevel(ms);
   const cssClass = urgency === 'critical' ? 'critical' : '';
   return `<span class="timer-badge ${cssClass}">${formatCountdown(ms)}</span>`;

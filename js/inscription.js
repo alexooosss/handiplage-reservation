@@ -18,12 +18,15 @@ function _docKind(dataUrl) {
   return null;
 }
 
-function _renderDocPreview(dataUrl, name, key, aVerifier) {
+function _renderDocPreview(dataUrl, name, key, aVerifier, entete) {
   if (!name) return '';
-  var kind  = _docKind(dataUrl);
-  var thumb = kind === 'image'
+  var charge = typeof dataUrl === 'string' && dataUrl.length > 0;
+  // Pas encore téléchargé : le type vient du début du fichier (ou, à défaut, de son nom)
+  var kind  = charge ? _docKind(dataUrl)
+            : (_docKind(entete) || (/\.pdf$/i.test(name) ? 'pdf' : /\.(jpe?g|png|webp|gif|heic)$/i.test(name) ? 'image' : null));
+  var thumb = kind === 'image' && charge
     ? '<img src="' + dataUrl + '" alt="Aperçu : ' + _escI(name) + '" class="insc-doc-thumb">'
-    : '<span class="insc-doc-thumb insc-doc-thumb-file">' + (kind === 'pdf' ? 'PDF' : '?') + '</span>';
+    : '<span class="insc-doc-thumb insc-doc-thumb-file">' + (kind === 'pdf' ? 'PDF' : kind === 'image' ? 'IMG' : '?') + '</span>';
   return '<div class="insc-file-existing insc-doc-card" id="' + key + '-existing">'
     +   (kind ? '<button type="button" class="insc-doc-open insc-doc-thumb-btn" data-doc="' + key + '" title="Ouvrir en grand">' + thumb + '</button>' : thumb)
     +   '<div class="insc-doc-meta">'
@@ -31,7 +34,7 @@ function _renderDocPreview(dataUrl, name, key, aVerifier) {
     +     (kind
           ? (aVerifier
               ? '<button type="button" class="insc-doc-open insc-doc-verify" data-doc="' + key + '">Vérifier le justificatif</button>'
-              : '<button type="button" class="insc-doc-open insc-doc-open-link" data-doc="' + key + '">Ouvrir en grand</button>')
+              : '<button type="button" class="insc-doc-open insc-doc-open-link" data-doc="' + key + '">Voir le justificatif</button>')
           : '<span class="insc-doc-unavailable">Aperçu indisponible (format non pris en charge)</span>')
     +   '</div>'
     +   '<button type="button" class="insc-file-del" id="del-' + key + '" title="Supprimer ce document">✕</button>'
@@ -287,6 +290,8 @@ async function renderInscription(container, selectedId) {
   });
 
   document.getElementById('insc-new-btn').addEventListener('click', function() {
+    // Téléphone : formulaire d'inscription classique, celui des usagers
+    if (typeof estTelStaff === 'function' && estTelStaff()) { location.href = 'inscription-publique.html?depuis=staff'; return; }
     _showForm(container, null);
   });
 
@@ -550,6 +555,11 @@ function _renderListItems(list, query) {
 function _bindListItems(container) {
   container.querySelectorAll('.insc-list-item').forEach(function(el) {
     el.addEventListener('click', async function() {
+      // Téléphone : profil de la personne (lecture et appel), pas le dossier complet
+      if (typeof estTelStaff === 'function' && estTelStaff() && typeof telProfil === 'function') {
+        telProfil(container, el.dataset.id).catch(console.error);
+        return;
+      }
       container.querySelectorAll('.insc-list-item').forEach(function(e) { e.classList.remove('active'); });
       el.classList.add('active');
       try {
@@ -711,10 +721,10 @@ function _showForm(container, insc) {
     +   '</div>'
     +   '<p class="insc-doc-info">Joindre le justificatif du handicap RECTO-VERSO, avec identité et date de validité lisible <span class="req">*</span><br><em>Carte Mobilité Inclusion (CMI) — les documents de l\'assurance maladie ne sont pas valables.</em></p>'
     +   '<div class="insc-field" style="margin-top:12px"><label>Document principal (recto-verso) <span class="req">*</span></label>'
-    +     _renderDocPreview(v.justificatif1, v.justificatif1Name, 'doc1', !isNew && _justifStatut(v) !== 'valide')
+    +     _renderDocPreview(v.justificatif1, v.justificatif1Name, 'doc1', !isNew && _justifStatut(v) !== 'valide', v.justificatif1Entete)
     +     '<input type="file" id="f-doc1" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:8px"><label>Deuxième document <span class="insc-optional">(verso si le premier n\'est pas recto-verso)</span></label>'
-    +     _renderDocPreview(v.justificatif2, v.justificatif2Name, 'doc2', !isNew && _justifStatut(v) !== 'valide')
+    +     _renderDocPreview(v.justificatif2, v.justificatif2Name, 'doc2', !isNew && _justifStatut(v) !== 'valide', v.justificatif2Entete)
     +     '<input type="file" id="f-doc2" accept="image/*,.pdf" class="insc-file-input"></div>'
     +   '<div class="insc-field" style="margin-top:16px"><label>Signature <span class="req">*</span> — <span class="insc-hint">La saisie de vos nom et prénom vaut signature</span></label><input type="text" id="f-signature" value="' + _escI(v.signature) + '" placeholder="Prénom NOM"></div>'
     + '</div>'
@@ -867,11 +877,38 @@ function _showForm(container, insc) {
       document.querySelectorAll('.insc-doc-verify, .insc-doc-open-link').forEach(function(b) {
         const aVerifier = js !== 'valide';
         b.className = 'insc-doc-open ' + (aVerifier ? 'insc-doc-verify' : 'insc-doc-open-link');
-        b.textContent = aVerifier ? 'Vérifier le justificatif' : 'Ouvrir en grand';
+        b.textContent = aVerifier ? 'Vérifier le justificatif' : 'Voir le justificatif';
       });
     }
 
-    function _openViewer(key) {
+    async function _openViewer(key) {
+      if (v._docsNonCharges) {
+        const btns = document.querySelectorAll('.insc-doc-open');
+        const textes = [];
+        btns.forEach(function(b) { textes.push(b.innerHTML); b.disabled = true; if (!b.querySelector('img, .insc-doc-thumb')) b.textContent = 'Chargement…'; });
+        try {
+          const docs = await getJustificatifs(v.id);
+          v.justificatif1 = docs.justificatif1;
+          v.justificatif2 = docs.justificatif2;
+          v._docsNonCharges = false;
+        } catch (err) {
+          alert('Impossible de charger le justificatif : ' + (err.message || err));
+          return;
+        } finally {
+          btns.forEach(function(b, i) { b.innerHTML = textes[i]; b.disabled = false; });
+        }
+        // Les miniatures des images apparaissent maintenant qu'elles sont téléchargées
+        ['doc1', 'doc2'].forEach(function(k, i) {
+          const data = i === 0 ? v.justificatif1 : v.justificatif2;
+          const card = document.getElementById(k + '-existing');
+          const vignette = card && card.querySelector('.insc-doc-thumb-file');
+          if (vignette && _docKind(data) === 'image') {
+            const img = document.createElement('img');
+            img.src = data; img.className = 'insc-doc-thumb'; img.alt = 'Aperçu du justificatif';
+            vignette.replaceWith(img);
+          }
+        });
+      }
       _openDocViewer({
         v: v,
         key: key,

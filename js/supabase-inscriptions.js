@@ -13,6 +13,23 @@ var STRUCTURED_COLS = [
 ];
 
 var _inscriptionsCache = null;
+var _vueFicheDispo = null;   // vue « inscriptions_fiche » disponible ? (null = pas encore testé)
+
+// Champs ajoutés à l'objet local pour l'affichage : jamais enregistrés en base
+var _CHAMPS_LOCAUX_FICHE = ['_docsNonCharges', 'justificatif1Entete', 'justificatif2Entete'];
+
+/**
+ * Justificatifs d'une inscription, téléchargés à la demande (bouton « Voir le justificatif »).
+ */
+async function getJustificatifs(id) {
+  var result = await supabaseClient
+    .from('inscriptions')
+    .select('justificatif1:metadata->>justificatif1,justificatif2:metadata->>justificatif2')
+    .eq('id', id)
+    .single();
+  if (result.error) throw result.error;
+  return { justificatif1: result.data.justificatif1 || null, justificatif2: result.data.justificatif2 || null };
+}
 
 // ── Transformations pures ──────────────────────────────────────────────────
 
@@ -116,6 +133,22 @@ async function getInscriptionsListe() {
 }
 
 /**
+ * Cache léger pour les suggestions de noms et le pass (fenêtres de réservation) :
+ * colonnes simples uniquement, SANS metadata (justificatifs et signature en base64, très lourds).
+ * Lecture seule : rien n'est jamais réécrit en base à partir de ce cache.
+ * (getInscriptions() reste la version complète, utilisée par la carte des usagers.)
+ */
+async function chargerCacheInscriptions() {
+  var result = await supabaseClient
+    .from('inscriptions')
+    .select('id,user_id,nom,prenom,mail,telephone,statut,pass_actif,pass_activated_at,derniere_saison_validee,created_at,updated_at')
+    .order('nom');
+  if (result.error) throw result.error;
+  _inscriptionsCache = (result.data || []).map(_rowToInscription);
+  return _inscriptionsCache;
+}
+
+/**
  * Retourne le cache synchrone (jamais null : [] si vide).
  */
 function getCachedInscriptions() {
@@ -126,6 +159,25 @@ function getCachedInscriptions() {
  * SELECT * FROM inscriptions WHERE id = id
  */
 async function getInscriptionById(id) {
+  // Fiche sans les justificatifs (vue inscriptions_fiche, voir supabase/migration-justificatifs.sql) :
+  // ils ne sont téléchargés qu'au clic sur « Voir le justificatif » (getJustificatifs).
+  if (_vueFicheDispo !== false) {
+    var leger = await supabaseClient.from('inscriptions_fiche').select('*').eq('id', id).single();
+    if (!leger.error) {
+      _vueFicheDispo = true;
+      var obj = _rowToInscription(leger.data);
+      obj._docsNonCharges      = true;
+      obj.justificatif1Entete  = leger.data.justificatif1_entete || '';
+      obj.justificatif2Entete  = leger.data.justificatif2_entete || '';
+      return obj;
+    }
+    // Vue absente (migration pas encore exécutée) : on charge tout, comme avant
+    if (leger.error.code === '42P01' || leger.error.code === 'PGRST205' || /inscriptions_fiche/.test(leger.error.message || '')) {
+      _vueFicheDispo = false;
+    } else {
+      throw leger.error;
+    }
+  }
   var result = await supabaseClient
     .from('inscriptions')
     .select('*')
@@ -175,17 +227,29 @@ async function updateInscription(id, partial) {
   if (partial.prenom            !== undefined) row.prenom            = partial.prenom;
   if (partial.mail              !== undefined) row.mail              = partial.mail;
   if (partial.telephone         !== undefined) row.telephone         = partial.telephone;
-  if (partial.metadata          !== undefined) row.metadata          = partial.metadata;
+  if (partial.metadata          !== undefined) {
+    row.metadata = Object.assign({}, partial.metadata);
+    _CHAMPS_LOCAUX_FICHE.forEach(function(k) { delete row.metadata[k]; });
+    // Fiche ouverte sans les justificatifs : on ne les envoie pas du tout (clé absente).
+    // Le garde-fou en base (trigger garder_justificatifs) les conserve alors tels quels.
+    // Une suppression explicite (null) ou un nouveau document reste bien enregistré.
+    if (partial.metadata._docsNonCharges) {
+      ['justificatif1', 'justificatif2'].forEach(function(k) {
+        if (row.metadata[k] === undefined) delete row.metadata[k];
+      });
+    }
+  }
   row.updated_at = new Date().toISOString();
 
   var result = await supabaseClient
     .from('inscriptions')
     .update(row)
     .eq('id', id)
-    .select()
+    .select(_vueFicheDispo ? 'id' : '*')
     .single();
   if (result.error) throw result.error;
-  var updated = _rowToInscription(result.data);
+  // Avec la vue : on relit la fiche sans les justificatifs (quelques Ko au lieu de plusieurs Mo)
+  var updated = _vueFicheDispo ? await getInscriptionById(id) : _rowToInscription(result.data);
 
   if (_inscriptionsCache !== null) {
     var idx = _inscriptionsCache.findIndex(function(i) { return i.id === id; });
@@ -251,6 +315,7 @@ if (typeof module !== 'undefined') {
     getInscriptions,
     getCachedInscriptions,
     getInscriptionById,
+    getJustificatifs,
     createInscription,
     updateInscription,
     deleteInscription,

@@ -16,9 +16,11 @@ const App = (() => {
     _renderClock();
     setInterval(_renderClock, 1000);
 
-    // Préchargement inscriptions (pour autocomplete pass)
-    if (typeof getInscriptions === 'function') {
-      getInscriptions().catch(function(err) { console.warn('Preload inscriptions:', err); });
+    // Préchargement inscriptions (pour autocomplete pass) : version légère, sans les justificatifs
+    const _chargerCacheInsc = typeof chargerCacheInscriptions === 'function' ? chargerCacheInscriptions
+                            : (typeof getInscriptions === 'function' ? getInscriptions : null);
+    if (_chargerCacheInsc) {
+      _chargerCacheInsc().catch(function(err) { console.warn('Preload inscriptions:', err); });
     }
     // Préchargement groupes (pour autocomplete planning)
     if (typeof getGroupes === 'function') {
@@ -28,7 +30,7 @@ const App = (() => {
     // Realtime : s'abonner aux inscriptions
     if (typeof subscribeInscriptions === 'function') {
       subscribeInscriptions(function() {
-        getInscriptions().catch(function() {});
+        if (_chargerCacheInsc) _chargerCacheInsc().catch(function() {});
         // Rafraîchit la liste sans fermer la fiche éventuellement ouverte
         if (_currentView === 'inscription' && typeof refreshInscriptionListe === 'function') {
           refreshInscriptionListe(document.getElementById('insc-view')).catch(console.error);
@@ -50,7 +52,11 @@ const App = (() => {
     const defaultSlot = active || upcoming || SLOTS[0];
     selectSlot(defaultSlot.id);
 
-    setInterval(function() { if (!_refreshing) refresh().catch(console.error); }, 30000);
+    setInterval(function() { if (!_refreshing && !document.hidden) refresh().catch(console.error); }, 30000);
+    // Retour sur l'écran (tablette réveillée, onglet réaffiché) : mise à jour immédiate
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && !_refreshing && _currentView === 'carte') refresh().catch(console.error);
+    });
 
     // Mise à jour automatique quand un créneau commence / se termine (ou au changement de jour)
     let _phaseKey = _computePhaseKey();
@@ -246,6 +252,7 @@ const App = (() => {
     document.querySelectorAll('#app-header .planning-tab-btn.active').forEach(b => {
       b.setAttribute('aria-current', 'page');
     });
+    document.dispatchEvent(new CustomEvent('hp:vue', { detail: view }));
   }
 
   function _mcDateOffset(iso, delta) {
@@ -325,7 +332,7 @@ const App = (() => {
       _planningWeekOffset = 0; _renderPlanning();
     };
     container._onCapacite = () => { _renderPlanning(); };
-    await renderPlanning(container, _planningWeekOffset, async (dateISO, slot) => {
+    const surCreneau = async (dateISO, slot) => {
       const isToday = dateISO === _date;
       openSlotPlanningModal(dateISO, slot, {
         onAdd:    async data => { await addReservation(dateISO, slot.id, data); await _renderPlanning(); },
@@ -335,7 +342,27 @@ const App = (() => {
         capacite: typeof capaciteDe === 'function' ? capaciteDe(container._capaIndex || {}, dateISO, slot.id) : null,
         onCapacite: () => _renderPlanning(),
       });
-    });
+    };
+    if (typeof estTelStaff === 'function' && estTelStaff() && typeof renderPlanningTel === 'function') {
+      await renderPlanningTel(container, surCreneau);
+    } else {
+      await renderPlanning(container, _planningWeekOffset, surCreneau);
+    }
+    // Ouvert depuis le volet de la Plage : la fenêtre du créneau s'ouvre directement
+    if (_creneauAOuvrir) {
+      const s = getSlotById(_creneauAOuvrir);
+      _creneauAOuvrir = null;
+      if (s) surCreneau(_date, s);
+    }
+  }
+
+  // Volet de la Plage → « Ouvrir le planning » : onglet Planning, semaine (ou jour) en cours, créneau ouvert
+  let _creneauAOuvrir = null;
+  function _ouvrirCreneauDansPlanning(slotId) {
+    _creneauAOuvrir = slotId || null;
+    _planningWeekOffset = 0;
+    if (typeof _telJour !== 'undefined') _telJour = _date;
+    showView('planning');
   }
 
   function selectSlot(slotId) {
@@ -352,9 +379,12 @@ const App = (() => {
   }
 
   let _refreshing = false;
+  let _fermetureCreneau = null;   // fermeture du créneau affiché (affichage uniquement)
   function _afficherFermeturePlan(f) {
     const panel = document.getElementById('beach-panel');
     if (!panel) return;
+    _fermetureCreneau = f || null;
+    panel.classList.toggle('plage-fermee', !!f);
     let el = document.getElementById('fermeture-plan');
     if (!f) { if (el) el.remove(); return; }
     if (!el) {
@@ -362,25 +392,84 @@ const App = (() => {
       el.id = 'fermeture-plan';
       el.className = 'fermeture-plan';
       el.setAttribute('role', 'status');
-      panel.insertBefore(el, panel.firstChild);
+      const route = panel.querySelector('.beach-road');
+      if (route) route.appendChild(el); else panel.insertBefore(el, panel.firstChild);
     }
     const h = String(f.heure_fermeture || '').slice(0, 5);
     const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    el.innerHTML = '<b>Plage fermée</b>'
+    el.innerHTML = '<span><b>Plage fermée</b>'
       + (h && h !== '00:00' ? ' depuis ' + h.replace(':', 'h') : '')
       + (f.motif ? ' — ' + esc(f.motif) : '')
-      + ' · réservations de ce créneau suspendues (voir la main courante)';
+      + ' · réservations de ce créneau suspendues</span>'
+      + ' <button type="button" class="fermeture-plan-lien" id="fermeture-plan-mc">Main courante →</button>';
+    const lien = document.getElementById('fermeture-plan-mc');
+    if (lien) lien.addEventListener('click', () => showView('mc'));
+  }
+
+  // Panneau de droite : habillage selon l'état de la plage, après le rendu habituel.
+  // N'ajoute qu'un affichage et une confirmation : les actions elles-mêmes ne changent pas.
+  function _habillerPanneau(panelEl, slot) {
+    const f = _fermetureCreneau;
+    // Compteur « libres » → « Plage fermée »
+    const chips = panelEl.querySelectorAll('.panel-stats .stat-chip');
+    const chipLibres = chips[chips.length - 1];
+    if (f && chipLibres) {
+      chipLibres.classList.add('stat-chip-ferme');
+      chipLibres.innerHTML = '<span class="stat-dot" style="background:#ff5252"></span>Plage fermée';
+    }
+    // Ajouter / Sans réservation : toujours possibles, mais après confirmation
+    if (f) {
+      ['btn-add-resa', 'btn-walkin'].forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.classList.add('btn-plage-fermee');
+        b.addEventListener('click', e => {
+          if (!confirm('La plage est fermée sur ce créneau. Ajouter quand même ?')) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+      });
+    }
+    // Liste vide : quoi faire ensuite
+    const vide = panelEl.querySelector('.resa-list .empty-state');
+    if (vide) {
+      if (f) {
+        vide.innerHTML = '<p class="empty-titre">Plage fermée sur ce créneau</p>'
+          + '<p class="empty-sous">Pour rouvrir la plage, passez par la main courante.</p>'
+          + '<button type="button" class="empty-btn" id="empty-rouvrir">Rouvrir la plage →</button>';
+        document.getElementById('empty-rouvrir').addEventListener('click', () => showView('mc'));
+      } else {
+        const idx = SLOTS.findIndex(s => slot && s.id === slot.id);
+        const suivant = idx >= 0 ? SLOTS[idx + 1] : null;
+        vide.innerHTML = '<p class="empty-titre">Aucune réservation pour ce créneau</p>'
+          + (suivant
+              ? '<button type="button" class="empty-btn" id="empty-suivant">Créneau suivant · ' + String(suivant.start).replace(':', 'h') + ' →</button>'
+              : '<p class="empty-sous">C\'est le dernier créneau de la journée.</p>');
+        const bs = document.getElementById('empty-suivant');
+        if (bs) bs.addEventListener('click', () => selectSlot(suivant.id));
+      }
+    }
   }
 
   async function refresh() {
     if (!_selectedSlotId || _refreshing) return;
     _refreshing = true;
     try {
-    const [reservations, waitingList, fermetures] = await Promise.all([
+    const [reservations, waitingList, fermetures, suivantes] = await Promise.all([
       getReservations(_date, _selectedSlotId),
       getReservationList(_date, _selectedSlotId),
       typeof getFermetures === 'function' ? getFermetures(_date, _date).catch(() => []) : Promise.resolve([]),
+      // Créneau suivant : sert à repérer les personnes qui restent 2 créneaux (temps restant juste)
+      getSlotById(_selectedSlotId + 1) ? getReservations(_date, _selectedSlotId + 1).catch(() => ({})) : Promise.resolve({}),
     ]);
+    Object.keys(reservations).forEach(spotId => {
+      const r = reservations[spotId], n = suivantes[spotId];
+      if (r && n && String(n.nom || '').toUpperCase() === String(r.nom || '').toUpperCase()
+          && String(n.prenom || '').toUpperCase() === String(r.prenom || '').toUpperCase()) {
+        r._finSlotId = _selectedSlotId + 1;
+      }
+    });
     // Plage fermée sur ce créneau : bandeau au-dessus du plan
     _afficherFermeturePlan(typeof creneauFerme === 'function' ? creneauFerme(fermetures, _date, _selectedSlotId) : null);
     _waitingList = waitingList;
@@ -412,9 +501,15 @@ const App = (() => {
     } else {
       banner.style.display = 'none';
     }
+    if (typeof telPlacer === 'function') {
+      telPlacer(_selectionMode, reservations,
+        spotId => _doPlaceOnSpot(spotId, reservations).catch(console.error),
+        () => { _selectionMode = null; refresh(); });
+    }
 
     renderPanel(panelEl, slot, reservations, waitingList, {
       onAddReservation: () => _openAddReservation(),
+      onOpenPlanning:   () => _ouvrirCreneauDansPlanning(_selectedSlotId),
       onWalkin:         () => _openWalkinEntry(),
       onMarkArrival:    resa => _onMarkArrival(resa),
       onPlace:          resa => _openPlace(resa),
@@ -438,6 +533,7 @@ const App = (() => {
       onPasVenu: async resaId => { await updateReservationStatus(resaId, 'pas_venu'); await refresh(); },
       onAnnule:  async resaId => { await updateReservationStatus(resaId, 'annule'); await refresh(); },
     });
+    _habillerPanneau(panelEl, slot);
     } finally { _refreshing = false; }
   }
 

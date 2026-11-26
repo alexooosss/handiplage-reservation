@@ -33,6 +33,33 @@ function slotEndMs(slotId) {
   return Math.max(0, t.getTime() - Date.now());
 }
 
+// Dernier créneau de la présence d'une personne :
+// - _finSlotId : repéré par app.js (la même personne est inscrite sur le même emplacement au créneau suivant) ;
+// - nbCreneaux > 1 : arrivée sans réservation enregistrée pour 2 créneaux.
+function resaFinSlotId(resa) {
+  if (!resa || !resa.slotId) return null;
+  if (resa._finSlotId) return resa._finSlotId;
+  if (resa.nbCreneaux > 1) {
+    var suivant = (typeof getSlotById === 'function') ? getSlotById(resa.slotId + 1) : null;
+    if (suivant) return resa.slotId + 1;
+  }
+  return resa.slotId;
+}
+
+// Millisecondes restantes jusqu'à la fin réelle de la présence (1 ou 2 créneaux)
+function resaEndMs(resa) {
+  var fin = resaFinSlotId(resa);
+  return fin ? slotEndMs(fin) : 0;
+}
+
+// Durée totale de la présence prévue (du début du créneau d'arrivée à la fin du dernier créneau)
+function resaDureeMs(resa) {
+  var debut = (resa && typeof getSlotById === 'function') ? getSlotById(resa.slotId) : null;
+  var fin   = (typeof getSlotById === 'function') ? getSlotById(resaFinSlotId(resa)) : null;
+  if (!debut || !fin || typeof timeToMinutes !== 'function') return 0;
+  return (timeToMinutes(fin.end) - timeToMinutes(debut.start)) * 60000;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { DURATION_MS, DURATION_MS_DOUBLE, getTimeRemaining, formatCountdown, getUrgencyLevel, slotEndMs };
+  module.exports = { DURATION_MS, DURATION_MS_DOUBLE, getTimeRemaining, formatCountdown, getUrgencyLevel, slotEndMs, resaFinSlotId, resaEndMs, resaDureeMs };
 }
