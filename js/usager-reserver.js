@@ -5,18 +5,45 @@ function _escR(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Pictos des messages (traits, couleur héritée)
+var _MSG_ICONES = {
+  saison: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 30a14 14 0 0 1 28 0"/><path d="M24 8v4M9.9 13.9l2.8 2.8M38.1 13.9l-2.8 2.8M4 30h4M40 30h4"/><path d="M4 37c4 0 4-2.5 8-2.5s4 2.5 8 2.5 4-2.5 8-2.5 4 2.5 8 2.5 4-2.5 8-2.5"/><path d="M8 43c4 0 4-2.5 8-2.5s4 2.5 8 2.5 4-2.5 8-2.5 4 2.5 8 2.5"/></svg>',
+  pass:   '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="21" width="28" height="21" rx="5"/><path d="M16 21v-6a8 8 0 0 1 16 0v6"/><path d="M24 30v5"/></svg>',
+  pause:  '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="10" width="36" height="32" rx="6"/><path d="M6 19h36M16 6v8M32 6v8"/><path d="M20 26v10M28 26v10"/></svg>',
+};
+
+// Message plein écran de la page Réserver (saison terminée, pass inactif, réservations suspendues)
+// o = { ton: 'bleu'|'orange', icone, surtitre, titre, texte (HTML), infos: [[libellé, valeur HTML]], actions: [[libellé, vue, principal]] }
+function _blocMessage(container, showView, o) {
+  container.innerHTML = '<button class="usager-back" id="back-accueil-msg">← Accueil</button>'
+    + '<div class="um um-' + (o.ton || 'bleu') + '">'
+    +   '<div class="um-haut">'
+    +     '<div class="um-icone">' + (_MSG_ICONES[o.icone] || '') + '</div>'
+    +     '<div><div class="um-surtitre">' + o.surtitre + '</div><h2 class="um-titre">' + o.titre + '</h2></div>'
+    +   '</div>'
+    +   '<div class="um-corps">'
+    +     '<p class="um-texte">' + o.texte + '</p>'
+    +     (o.infos && o.infos.length ? '<div class="um-infos">' + o.infos.map(function(i) {
+            return '<div class="um-info"><small>' + i[0] + '</small><b>' + i[1] + '</b></div>';
+          }).join('') + '</div>' : '')
+    +     (o.actions && o.actions.length ? '<div class="um-actions">' + o.actions.map(function(a) {
+            return '<button type="button" class="um-btn' + (a[2] ? ' principal' : '') + '" data-vue="' + a[1] + '">' + a[0] + '</button>';
+          }).join('') + '</div>' : '')
+    +   '</div>'
+    + '</div>';
+  container.querySelector('#back-accueil-msg').addEventListener('click', function() { showView('accueil'); });
+  container.querySelectorAll('.um-btn').forEach(function(b) {
+    b.addEventListener('click', function() { showView(b.dataset.vue); });
+  });
+}
+
 async function renderReserver(container, inscription, showView) {
   if (!inscription.passActif) {
-    container.innerHTML = '<button class="usager-back" id="back-accueil-pass">← Accueil</button>'
-      + '<div class="usager-absence-block">'
-      +   '<div class="usager-absence-icon">🔒</div>'
-      +   '<div class="usager-absence-title">Pass non activé</div>'
-      +   '<div class="usager-absence-body">'
-      +     '<p>La réservation en ligne est réservée aux usagers disposant d\'un <strong>pass Handiplage actif</strong>.</p>'
-      +     '<p>Contactez l\'équipe Handiplage pour activer votre pass.</p>'
-      +   '</div>'
-      + '</div>';
-    container.querySelector('#back-accueil-pass').addEventListener('click', function() { showView('accueil'); });
+    _blocMessage(container, showView, {
+      ton: 'bleu', icone: 'pass', surtitre: 'Réservation en ligne', titre: 'Pass non activé',
+      texte: 'La réservation en ligne est réservée aux usagers disposant d\'un <strong>pass Handiplage actif</strong>. L\'équipe peut l\'activer pour vous.',
+      actions: [['Contacter l\'équipe', 'contact', true], ['Infos pratiques', 'infos']],
+    });
     return;
   }
 
@@ -27,17 +54,14 @@ async function renderReserver(container, inscription, showView) {
     var saisonDates = await getSaisonDates();
     // Saison terminée : plus aucune réservation possible au-delà de la fermeture de la plage
     if (todayISO > saisonDates.fin) {
-      var finLabel = new Date(saisonDates.fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-      container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
-        + '<div class="usager-absence-block">'
-        +   '<div class="usager-absence-icon">🏖️</div>'
-        +   '<div class="usager-absence-title">Saison terminée</div>'
-        +   '<div class="usager-absence-body">'
-        +     '<p>La Handiplage a fermé pour la saison le <strong>' + finLabel + '</strong>.</p>'
-        +     '<p>Les réservations en ligne rouvriront à la prochaine saison estivale.</p>'
-        +   '</div>'
-        + '</div>';
-      container.querySelector('#back-accueil').addEventListener('click', function() { showView('accueil'); });
+      var finLabel = new Date(saisonDates.fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      var anneeSuivante = Number(saisonDates.fin.slice(0, 4)) + 1;
+      _blocMessage(container, showView, {
+        ton: 'bleu', icone: 'saison', surtitre: 'À l\'année prochaine', titre: 'La saison est terminée',
+        texte: 'La Handiplage est fermée jusqu\'à l\'été prochain. Les réservations en ligne rouvriront avec la nouvelle saison.',
+        infos: [['Fermeture', finLabel], ['Prochaine saison', 'Été ' + anneeSuivante + ', dates annoncées ici']],
+        actions: [['Mes réservations', 'reservations', true], ['Nous contacter', 'contact']],
+      });
       return;
     }
     // Vérification blocage absences avant tout chargement
@@ -47,17 +71,12 @@ async function renderReserver(container, inscription, showView) {
       nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
       nextMonthDate.setDate(1);
       var nextMonthStr = nextMonthDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      container.innerHTML = '<button class="usager-back" id="back-accueil">← Accueil</button>'
-        + '<div class="usager-absence-block">'
-        +   '<div class="usager-absence-icon">⚠️</div>'
-        +   '<div class="usager-absence-title">Réservations suspendues</div>'
-        +   '<div class="usager-absence-body">'
-        +     '<p>Vous avez <strong>' + absents + ' absences non justifiées</strong> ce mois. Conformément au règlement, les nouvelles réservations sont suspendues après 3 absences.</p>'
-        +     '<p>Vous pouvez continuer à vous rendre à la Handiplage <strong>sans réservation</strong>.</p>'
-        +     '<p>Les réservations seront réactivées automatiquement en <strong>' + nextMonthStr + '</strong>, ou plus tôt sur demande auprès du staff.</p>'
-        +   '</div>'
-        + '</div>';
-      container.querySelector('#back-accueil').addEventListener('click', function() { showView('accueil'); });
+      _blocMessage(container, showView, {
+        ton: 'orange', icone: 'pause', surtitre: 'Règle des absences', titre: 'Réservations suspendues',
+        texte: 'Vous avez <strong>' + absents + ' absences non justifiées</strong> ce mois-ci. Conformément au règlement, les nouvelles réservations sont suspendues après 3 absences. Vous pouvez continuer à venir à la Handiplage <strong>sans réservation</strong>.',
+        infos: [['Absences ce mois', absents + ' / 3'], ['Réactivation automatique', nextMonthStr]],
+        actions: [['Écrire au staff', 'contact', true], ['Mes réservations', 'reservations']],
+      });
       return;
     }
 

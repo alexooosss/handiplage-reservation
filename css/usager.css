@@ -1093,3 +1093,34 @@ html, body { overflow-x: clip; }
 .ur-dlg-annuler:hover { background: #a91f1f; }
 .ur-dlg button:focus-visible { outline: 3px solid #90caf9; outline-offset: 2px; }
 @media (max-width: 420px) { .ur-dlg-actions { flex-direction: column; } }
+
+/* ═══ Messages de la page Réserver (saison terminée, pass inactif, suspension) ═══ */
+.um { background: #fff; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; --c: #1565c0; --c-fond: #e8f1fc; --c-trait: #c9dcf3; }
+.um-orange { --c: #c25400; --c-fond: #fff3e8; --c-trait: #f6d2b3; }
+.um-haut { display: flex; align-items: center; gap: 18px; padding: 24px 24px 20px; background: linear-gradient(135deg, var(--c-fond), #fff 85%); border-bottom: 1px solid var(--c-trait); }
+.um-icone { width: 64px; height: 64px; flex-shrink: 0; border-radius: 18px; background: var(--c); display: grid; place-items: center; box-shadow: 0 8px 20px rgba(10,22,40,.15); }
+.um-icone svg { width: 38px; height: 38px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.um-surtitre { font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--c); }
+.um-titre { font-size: 1.5rem; font-weight: 800; color: #0f1b2e; margin: 2px 0 0; line-height: 1.2; }
+.um-corps { padding: 20px 24px 24px; }
+.um-texte { font-size: .975rem; color: #3b4658; line-height: 1.6; margin: 0; }
+.um-texte strong { color: #0f1b2e; }
+.um-infos { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 18px; }
+.um-info { background: #f6f8fb; border-radius: 14px; padding: 12px 14px; }
+.um-info small { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.um-info b { display: block; font-size: 1.02rem; color: #0f1b2e; margin-top: 3px; }
+.um-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.um-btn { font: inherit; font-weight: 800; font-size: .95rem; border-radius: 999px; padding: 11px 20px; cursor: pointer; background: #fff; color: var(--c); border: 1.5px solid var(--c-trait); }
+.um-btn:hover { background: var(--c-fond); }
+.um-btn.principal { background: var(--c); color: #fff; border-color: var(--c); box-shadow: 0 4px 12px rgba(10,22,40,.18); }
+.um-btn.principal:hover { filter: brightness(1.08); }
+.um-btn:focus-visible { outline: 3px solid #90caf9; outline-offset: 2px; }
+@media (max-width: 560px) {
+  .um-haut { padding: 18px 16px 16px; gap: 14px; }
+  .um-icone { width: 52px; height: 52px; border-radius: 15px; }
+  .um-icone svg { width: 30px; height: 30px; }
+  .um-titre { font-size: 1.25rem; }
+  .um-corps { padding: 16px; }
+  .um-actions { flex-direction: column; }
+  .um-btn { width: 100%; }
+}
