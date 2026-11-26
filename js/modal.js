@@ -7,6 +7,33 @@ function closeModal() {
   _dialog().close();
 }
 
+// Fenêtres du créneau et de l'onglet Plage : un clic sur le fond assombri, en dehors de la
+// fenêtre, la ferme comme la croix. Pas pour les fenêtres de saisie (on perdrait ce qui est tapé). Le clic doit commencer ET finir sur le fond, pour ne pas
+// fermer quand on sélectionne du texte en glissant hors de la fenêtre.
+function _sansClicDehors() { delete _dialog().dataset.fermeDehors; }
+
+function _fermerAuClicDehors() {
+  var dlg = _dialog();
+  dlg.dataset.fermeDehors = '1';
+  if (dlg._clicDehorsPose) return;
+  dlg._clicDehorsPose = true;
+  var surFond = function(e) {
+    if (e.target !== dlg) return false;
+    var r = dlg.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  var departFond = false;
+  dlg.addEventListener('pointerdown', function(e) { departFond = surFond(e); });
+  dlg.addEventListener('click', function(e) {
+    var ok = departFond && surFond(e);
+    departFond = false;
+    if (ok && dlg.open && dlg.dataset.fermeDehors === '1') closeModal();
+  });
+  // La permission vaut pour la fenêtre ouverte seulement : retirée à chaque fermeture
+  // (sauf si une autre fenêtre a déjà été rouverte entre-temps : l'événement close arrive en différé)
+  dlg.addEventListener('close', function() { if (!dlg.open) delete dlg.dataset.fermeDehors; });
+}
+
 // ── Modale 1 : Ajouter une réservation à la liste d'attente ──
 // Appelée avant l'arrivée de la personne (saisie anticipée)
 // onConfirm({ nom, prenom, accompagnants, inscriptionId })
@@ -162,6 +189,7 @@ function openAddReservationModal(onConfirm) {
     onConfirm({ nom, prenom, accompagnants, inscriptionId: _linkedInscriptionId });
   });
 
+  _sansClicDehors();
   _dialog().showModal();
   nomInp.focus();
 }
@@ -221,6 +249,7 @@ function openAssignSpotModal(resa, freeSpots, onConfirm) {
     onConfirm(spotId);
   });
 
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -372,6 +401,7 @@ function openWalkinEntryModal(onConfirm, opts) {
     onConfirm({ nom, prenom, accompagnants, nbCreneaux });
   });
 
+  _sansClicDehors();
   _dialog().showModal();
   document.getElementById('wk-nom').focus();
 }
@@ -439,6 +469,7 @@ function openPlacementPickerModal(arrivedList, spotId, onConfirm, onWalkin) {
     });
   });
 
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -507,6 +538,7 @@ function openCheckinModal(freeSpots, preselectedSpotId, onConfirm) {
     onConfirm(spotId, { nom, prenom, accompagnants, type: 'walkin', checkinTime: Date.now(), status: 'present' });
   });
 
+  _fermerAuClicDehors();
   _dialog().showModal();
   document.getElementById('f-prenom').focus();
 }
@@ -651,6 +683,7 @@ function openSpotDetailModal(spotId, resa, callbacks, history) {
     document.getElementById('btn-depart').addEventListener('click', () => { closeModal(); callbacks.onDepart && callbacks.onDepart(spotId); });
   }
 
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -694,6 +727,7 @@ function openDepartedModal(spotId, resa, history) {
   document.getElementById('modal-close').addEventListener('click', closeModal);
   _bindProfilBtn('departed-body', 'btn-profil', history || []);
 
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -742,6 +776,7 @@ function openWaitingDetailModal(resa, history, callbacks) {
     const hint = document.querySelector('#accomp-row .edit-hint'); if (hint) hint.remove();
   }
 
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -847,6 +882,7 @@ function openGroupCheckinModal(resa, freeSpots, onConfirm, nbSpotsHint) {
   }
 
   _draw();
+  _fermerAuClicDehors();
   _dialog().showModal();
 }
 
@@ -1423,6 +1459,7 @@ function openSlotPlanningModal(dateISO, slot, callbacks) {
   }
 
   _dialog().classList.add('plan-dialog');
+  _fermerAuClicDehors();
   _dialog().showModal();
   // Aucun champ sélectionné à l'ouverture : sur tablette, le clavier ne s'ouvre pas tout seul
   // (on choisit d'abord l'action ; le clavier vient quand on touche Nom ou Prénom).
@@ -1494,6 +1531,7 @@ function openOpenSeasonModal(saisonCourante, saisonDates, onConfirm) {
     onConfirm({ debut: debut, fin: fin });
   });
 
+  _sansClicDehors();
   _dialog().showModal();
 }
 
