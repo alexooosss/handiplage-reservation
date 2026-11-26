@@ -998,3 +998,98 @@ html, body { overflow-x: clip; }
 @media (pointer: coarse) {
   input, select, textarea { font-size: max(16px, 1em) !important; }
 }
+
+/* ═══ Mes réservations (refonte) ═══ */
+.ur { container-type: inline-size; }
+.ur-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.ur-stats.seul { grid-template-columns: 1fr; }
+.ur-stat { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); padding: 16px 18px; min-width: 0; }
+.ur-stat > small { display: block; font-size: .75rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.ur-n { font-size: 2.5rem; font-weight: 800; line-height: 1.1; margin-top: 4px; color: #0f1b2e; }
+.ur-n span { font-size: 1.05rem; color: var(--text-muted); font-weight: 700; }
+.ur-n.ur-pass { color: var(--green); }
+.ur-n.ur-pass.bas { color: #e65100; }
+.ur-n.ur-pass.vide, .ur-n.ur-rouge { color: var(--red); }
+.ur-n.ur-bleu { color: var(--blue); }
+.ur-barre { height: 8px; background: #e8edf3; border-radius: 99px; overflow: hidden; margin: 8px 0; }
+.ur-barre i { display: block; height: 100%; background: var(--green); border-radius: 99px; transition: width .3s; }
+.ur-barre.bas i { background: #e65100; }
+.ur-barre.vide i { background: var(--red); }
+.ur-pips { display: flex; gap: 6px; margin: 10px 0 8px; }
+.ur-pips i { flex: 1; height: 8px; border-radius: 99px; background: #e8edf3; }
+.ur-pips i.orange { background: #e65100; }
+.ur-pips i.rouge { background: var(--red); }
+.ur-petit { font-size: .8rem; color: var(--text-muted); line-height: 1.45; }
+.ur-stat .usager-absence-contact-btn { margin-top: 10px; border-radius: 999px; font-weight: 700; }
+.ur-stat .usager-contact-form { margin-top: 10px; }
+
+.ur-hero { display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 18px; color: #fff;
+  background: linear-gradient(135deg, #1565c0, #05559b 70%); box-shadow: 0 10px 26px rgba(5,85,155,.28); }
+.ur-jour { width: 74px; flex-shrink: 0; background: #fff; color: #0f1b2e; border-radius: 14px; text-align: center; padding: 8px 0 9px; }
+.ur-jour small { display: block; font-size: .72rem; font-weight: 800; color: #05559b; text-transform: uppercase; letter-spacing: .06em; }
+.ur-jour b { display: block; font-size: 1.9rem; line-height: 1.05; }
+.ur-jour span { display: block; font-size: .72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.ur-hero-infos { flex: 1; min-width: 0; }
+.ur-surtitre { font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.ur-hero h3 { font-size: 1.3rem; margin: 2px 0 3px; color: #fff; }
+.ur-hero p { font-size: .9rem; opacity: .92; margin: 0; }
+.ur-dans { display: inline-block; margin-top: 8px; background: rgba(255,255,255,.18); border-radius: 999px; padding: 3px 11px; font-size: .8rem; font-weight: 700; }
+.ur-hero .usager-resa-statut { margin-top: 8px; display: inline-block; }
+.usager-cancel-btn.ur-annuler-clair { color: #fff; border: 1.5px solid rgba(255,255,255,.55); background: transparent; align-self: flex-start; }
+.usager-cancel-btn.ur-annuler-clair:hover { background: rgba(255,255,255,.14); }
+
+.ur-titre { display: flex; align-items: center; justify-content: space-between; font-size: .8rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin: 22px 2px 10px; }
+.ur-titre em { font-style: normal; font-size: .75rem; background: #e3e9f1; color: #3b4658; border-radius: 999px; padding: 2px 9px; letter-spacing: 0; }
+.ur-liste { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; }
+.ur-ligne { display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-top: 1px solid #edf1f5; }
+.ur-ligne:first-child, .ur-bilan + .ur-ligne { border-top: none; }
+.ur-mini { width: 46px; flex-shrink: 0; text-align: center; border-radius: 10px; background: #f2f6fb; padding: 4px 0; }
+.ur-mini small { display: block; font-size: .66rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+.ur-mini b { display: block; font-size: 1.2rem; line-height: 1.1; color: #0f1b2e; }
+.ur-txt { flex: 1; min-width: 0; }
+.ur-txt b { display: block; font-size: .95rem; color: #0f1b2e; }
+.ur-txt span { font-size: .85rem; color: var(--text-muted); }
+.ur-txt span i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.ur .usager-cancel-btn { border-radius: 999px; border-width: 1.5px; border-color: #f3b5b5; font-weight: 700; padding: 6px 14px; flex-shrink: 0; }
+.ur .usager-resa-statut { border-radius: 999px; padding: 3px 10px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
+.ur .resa-s-annule { background: #eef2f6; color: #6b7686; }
+
+.ur-mois { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.ur-mois::-webkit-scrollbar { display: none; }
+.ur-mois button { font: inherit; font-size: .85rem; font-weight: 700; border-radius: 999px; padding: 6px 14px; border: 1.5px solid var(--border); background: #fff; color: #3b4658; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.ur-mois button:hover { border-color: var(--blue); }
+.ur-mois button.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+.ur-bilan { display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #edf1f5; font-size: .8rem; color: var(--text-muted); flex-wrap: wrap; }
+.ur-bilan b { color: #0f1b2e; font-size: .95rem; }
+.ur .resa-month-more { margin: 0; border-radius: 0; border-top: 1px solid #edf1f5; background: #f7f9fc; color: var(--blue); font-weight: 700; padding: 10px; }
+.ur .resa-month-extra .ur-ligne:first-child { border-top: 1px solid #edf1f5; }
+.ur-vide { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); text-align: center; color: var(--text-muted); padding: 24px 16px; font-size: .95rem; }
+
+@container (max-width: 520px) {
+  .ur-stat { padding: 14px; }
+  .ur-n { font-size: 2rem; }
+  .ur-stats:not(.seul) .ur-stat > .ur-petit { font-size: .74rem; }
+  .ur-hero { flex-wrap: wrap; padding: 16px; gap: 14px; }
+  .ur-jour { width: 64px; }
+  .ur-hero .usager-cancel-btn.ur-annuler-clair { width: 100%; text-align: center; padding: 9px; }
+  .ur-ligne { padding: 12px; gap: 11px; }
+  .ur-ligne .usager-cancel-btn { padding: 6px 11px; }
+}
+
+/* Fenêtre « Annuler cette réservation ? » */
+.ur-dlg-fond { position: fixed; inset: 0; z-index: 1000; background: rgba(10,22,40,.45); display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity .18s; }
+.ur-dlg-fond.ouvert { opacity: 1; }
+.ur-dlg { background: #fff; border-radius: 20px; box-shadow: 0 20px 50px rgba(10,22,40,.3); width: 100%; max-width: 420px; padding: 22px; transform: translateY(12px) scale(.98); transition: transform .18s; }
+.ur-dlg-fond.ouvert .ur-dlg { transform: none; }
+.ur-dlg h3 { font-size: 1.2rem; color: #0f1b2e; margin: 0 0 14px; }
+.ur-dlg-resa { display: flex; align-items: center; gap: 12px; background: #f6f8fb; border-radius: 14px; padding: 12px; }
+.ur-dlg-resa .ur-mini { background: #fff; }
+.ur-dlg p { font-size: .9rem; color: var(--text-muted); line-height: 1.5; margin: 14px 0 18px; }
+.ur-dlg-actions { display: flex; gap: 10px; }
+.ur-dlg-actions button { flex: 1; font: inherit; font-weight: 800; font-size: .95rem; border-radius: 999px; padding: 12px 14px; cursor: pointer; }
+.ur-dlg-garder { background: #fff; color: var(--blue); border: 1.5px solid #c5d5ea; }
+.ur-dlg-garder:hover { background: var(--blue-light); }
+.ur-dlg-annuler { background: var(--red); color: #fff; border: 1.5px solid var(--red); box-shadow: 0 4px 12px rgba(198,40,40,.28); }
+.ur-dlg-annuler:hover { background: #a91f1f; }
+.ur-dlg button:focus-visible { outline: 3px solid #90caf9; outline-offset: 2px; }
+@media (max-width: 420px) { .ur-dlg-actions { flex-direction: column; } }
