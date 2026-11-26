@@ -70,8 +70,18 @@ function renderEquipements(container, inscription, showView) {
 
   container.querySelectorAll('.usager-equip-photo img').forEach(function(img) {
     function fallback() { img.parentNode.innerHTML = EQUIP_PLACEHOLDER; }
+    // Photo en hauteur : affichée en entier (pas rognée en 4:3), sur un fond flouté d'elle-même
+    function orientation() {
+      if (img.naturalHeight > img.naturalWidth) {
+        img.parentNode.classList.add('portrait');
+        img.parentNode.style.setProperty('--fond', 'url("' + img.src + '")');
+      }
+    }
     if (img.complete && img.naturalWidth === 0) fallback();
-    else img.addEventListener('error', fallback);
+    else {
+      img.addEventListener('error', fallback);
+      if (img.complete) orientation(); else img.addEventListener('load', orientation);
+    }
   });
 
   document.getElementById('equip-back').addEventListener('click', function() {

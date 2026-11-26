@@ -1124,3 +1124,8 @@ html, body { overflow-x: clip; }
   .um-actions { flex-direction: column; }
   .um-btn { width: 100%; }
 }
+
+/* Équipements : photo prise en hauteur, montrée en entier sur un fond flouté */
+.usager-equip-photo.portrait { position: relative; overflow: hidden; }
+.usager-equip-photo.portrait::before { content: ''; position: absolute; inset: -24px; background: var(--fond) center / cover no-repeat; filter: blur(16px) brightness(.92); }
+.usager-equip-photo.portrait img { position: relative; object-fit: contain; }
